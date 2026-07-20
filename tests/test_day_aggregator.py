@@ -132,7 +132,7 @@ class DayAggregatorTests(unittest.TestCase):
         self.assertEqual(payload["journal"]["activity_summary_markdown"], "编码/刷题 2.0h。")
         self.assertEqual(len(payload["journal"]["kina_advice"]), 2)
         self.assertIn("用户在建议后的自由正文", payload["journal"]["body_markdown"])
-        self.assertTrue(payload["overview"]["review_completed"])
+        self.assertTrue(payload["overview"]["review_has_content"])
         self.assertEqual(payload["overview"]["active_seconds"], 600)
         self.assertEqual(payload["overview"]["offline_seconds"], 4800)
         self.assertEqual(payload["overview"]["combined_nonoverlap_seconds"], 4800)

@@ -16,7 +16,9 @@ Historical date: `2026-07-15`.
 - `一天活动小总结` was present.
 - Five numbered `Kina 建议` items were parsed.
 - Free journal text after the advice section was preserved.
-- The completion task was recognized.
+- The editable `freeform_markdown` field was present in the response.
+- Legacy completion-checkbox state was absent from the API.
+- The calendar review index was derived from actual user-authored content.
 - KinaWatch's direct ActivityWatch REST adapter returned a stable
   `time_accounting.wall_duration_seconds` of `10925.161`, exactly matching the
   pre-migration v1 result for the same date.
@@ -44,7 +46,7 @@ Historical date: `2026-07-15`.
 ## Test Suite
 
 ```text
-Ran 59 tests in 1.799s
+Ran 65 tests in 1.812s
 OK
 ```
 

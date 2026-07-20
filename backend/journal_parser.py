@@ -7,7 +7,12 @@ from .models import JournalDocument, OfflineActivity, ParseWarning, WorkflowNote
 
 
 HEADING_RE = re.compile(r"^##\s+(.+?)\s*$")
-COMPLETION_RE = re.compile(r"^\s*-\s*\[(?P<mark>[ xX])\]\s*完成复盘\s*$")
+# Older Kina templates used this checkbox as review state. It is no longer a
+# product field, but silently consume the exact legacy line so historical
+# notes do not surface it as ordinary journal prose.
+LEGACY_COMPLETION_RE = re.compile(
+    r"^\s*-\s*\[[ xX]\]\s*(?:完成复盘|完成今天的复盘回应)\s*$"
+)
 ADVICE_RE = re.compile(r"^\s*(?P<number>\d+)[\.\)、]\s+(?P<text>.+?)\s*$")
 WIKILINK_RE = re.compile(r"\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]")
 TIME_RANGE_RE = re.compile(
@@ -49,7 +54,7 @@ WORKFLOW_STANDALONE_BLOCK_RE = re.compile(
 )
 REVIEW_GROUP_TITLE_RE = re.compile(r"^复盘$")
 REVIEW_GROUP_ENTRY_RE = re.compile(
-    r"^\s*\*\*(?P<title>我的总结|今日总结|今日产出|明天的计划|明日第一步)\*\*\s*$"
+    r"^\s*\*\*(?P<title>我的总结|今日总结|今日产出|明天的计划|明日第一步|自由记录)\*\*\s*$"
 )
 LEGACY_PLUS_WORKFLOW_RE = re.compile(
     r"^\s*-\+\*\*工作流\+"
@@ -64,6 +69,7 @@ SECTION_ALIASES = {
     "今日产出": "outputs",
     "明天的计划": "next_action",
     "明日第一步": "next_action",
+    "自由记录": "freeform",
     "离线活动": "offline",
     "一天活动小总结": "activity_summary",
     "Kina 建议": "kina_advice",
@@ -413,8 +419,6 @@ def parse_journal(content: str) -> JournalDocument:
     body_lines: list[str] = []
     current_section: str | None = None
     current_lines: list[str] = []
-    completion_exists = False
-    completion_checked = False
     workflow_notes_by_start: dict[str, WorkflowNote] = {}
 
     def flush_current() -> None:
@@ -470,10 +474,7 @@ def parse_journal(content: str) -> JournalDocument:
             workflow_notes_by_start[workflow_note.start_time] = workflow_note
             continue
 
-        completion_match = COMPLETION_RE.match(raw_line)
-        if completion_match:
-            completion_exists = True
-            completion_checked = completion_match.group("mark").lower() == "x"
+        if LEGACY_COMPLETION_RE.match(raw_line):
             continue
 
         heading_match = HEADING_RE.match(raw_line)
@@ -507,6 +508,7 @@ def parse_journal(content: str) -> JournalDocument:
     personal_summary = _clean_markdown(sections["personal_summary"])
     outputs_markdown = _clean_markdown(sections["outputs"])
     next_action = _clean_markdown(sections["next_action"])
+    freeform = _clean_markdown(sections["freeform"])
     activity_summary = _clean_markdown(sections["activity_summary"])
     body = _clean_markdown(body_lines)
     project_source = "\n".join(
@@ -515,6 +517,7 @@ def parse_journal(content: str) -> JournalDocument:
             personal_summary,
             outputs_markdown,
             next_action,
+            freeform,
             activity_summary,
             body,
         ]
@@ -525,13 +528,12 @@ def parse_journal(content: str) -> JournalDocument:
         personal_summary_markdown=personal_summary,
         outputs=_parse_outputs(outputs_markdown),
         next_action_markdown=next_action,
+        freeform_markdown=freeform,
         workflow_notes=list(workflow_notes_by_start.values()),
         offline_activities=offline_activities,
         offline_unparsed=offline_unparsed,
         activity_summary_markdown=activity_summary,
         kina_advice=list(sections["kina_advice"]),
-        completion_task_exists=completion_exists,
-        completion_task_checked=completion_checked,
         projects=_extract_projects(project_source),
         parse_warnings=warnings,
     )

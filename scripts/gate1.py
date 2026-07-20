@@ -60,9 +60,14 @@ def main() -> int:
         ),
         "kina_advice_present": bool(first["journal"]["kina_advice"]),
         "free_body_present": bool(first["journal"]["body_markdown"]),
-        "completion_task_recognized": first["journal"][
-            "completion_task_exists"
-        ],
+        "freeform_field_present": "freeform_markdown" in first["journal"],
+        "legacy_completion_state_absent": not any(
+            "completion" in key for key in first["journal"]
+        ),
+        "review_index_is_content_based": first["overview"][
+            "review_has_content"
+        ]
+        is True,
         "activitywatch_total_is_stable": abs(
             first["overview"]["active_seconds"]
             - direct_reload["time_accounting"]["wall_duration_seconds"]

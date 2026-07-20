@@ -1,7 +1,7 @@
 # KinaWatch
 
 KinaWatch 是一个低能耗、本地优先的个人活动复盘面板：把 ActivityWatch 的
-客观活动记录与工作流说明、总结、产出和计划放在同一天里查看。复盘记录既可
+客观活动记录与工作流说明、总结、产出、计划和自由记录放在同一天里查看。复盘记录既可
 保存在 KinaWatch 自带的本地 Markdown 存储中，也可选择接入 Obsidian。
 
 > Early open-source release. The interface and documentation are currently
@@ -177,8 +177,8 @@ Gate 1 只读取历史日记与 ActivityWatch 数据，不应拿真实日记执�
 - 不修改 ActivityWatch，不复制或迁移其 SQLite 数据库。
 - 不持续扫描本地存储或 vault，不自动保存，不批量迁移日记。
 - 写入白名单仅包含所选日期的一条工作流描述，或 `我的总结`、`今日产出`、
-  `明天的计划` 中的一项。
-- 完成任务、自由正文、Kina 生成内容、离线活动、properties 和其他日期均只读。
+  `明天的计划`、`自由记录` 中的一项。
+- 旧日记里未归入上述字段的正文、Kina 生成内容、离线活动、properties 和其他日期均只读。
 - 所有写入测试只使用临时 fixture。
 
 更详细的安全说明见 [SECURITY.md](SECURITY.md)。

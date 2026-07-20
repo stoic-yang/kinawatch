@@ -29,11 +29,17 @@ TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 MAX_NOTE_CHARACTERS = 4000
 MAX_REVIEW_FIELD_CHARACTERS = 8000
 WORKFLOW_DAY_START_MINUTES = 6 * 60
-REVIEW_FIELD_ORDER = ("personal_summary", "outputs", "next_action")
+REVIEW_FIELD_ORDER = (
+    "personal_summary",
+    "outputs",
+    "next_action",
+    "freeform",
+)
 REVIEW_FIELD_LABELS = {
     "personal_summary": "我的总结",
     "outputs": "今日产出",
     "next_action": "明天的计划",
+    "freeform": "自由记录",
 }
 WEEK_ID_RE = re.compile(r"^(?P<year>\d{4})-W(?P<week>\d{2})$")
 

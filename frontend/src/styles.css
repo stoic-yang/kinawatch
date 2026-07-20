@@ -215,11 +215,11 @@ body {
   background: transparent;
 }
 
-.cal-dot-reviewed {
+.cal-dot-recorded {
   background: var(--done);
 }
 
-.cal-day-selected .cal-dot-reviewed {
+.cal-day-selected .cal-dot-recorded {
   background: rgba(255, 255, 255, 0.8);
 }
 
@@ -1209,38 +1209,6 @@ button.year-cell:focus-visible {
 
 .review {
   padding-top: 6px;
-}
-
-.review-empty-state {
-  position: relative;
-  padding: 9px 0 9px 18px;
-}
-
-.review-empty-state::before {
-  content: "";
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: 0;
-  width: 3px;
-  border-radius: 3px;
-  background: var(--accent);
-}
-
-.review-empty-title {
-  color: var(--ink);
-  font-size: 15px;
-  font-weight: 650;
-  line-height: 1.45;
-  margin: 0 0 5px;
-}
-
-.review-empty-copy {
-  max-width: 36em;
-  margin: 0;
-  color: var(--text-2);
-  font-size: 13px;
-  line-height: 1.65;
 }
 
 .review-section {

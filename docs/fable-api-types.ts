@@ -124,11 +124,10 @@ export interface JournalData {
   personal_summary_markdown: string;
   outputs: string[];
   next_action_markdown: string;
+  freeform_markdown: string;
   workflow_notes: WorkflowNote[];
   activity_summary_markdown: string;
   kina_advice: string[];
-  completion_task_exists: boolean;
-  completion_task_checked: boolean;
   projects: string[];
   offline_activities: OfflineActivity[];
   offline_unparsed: string[];
@@ -151,7 +150,7 @@ export interface DayResponse {
     longest_focus_seconds: number;
     meaningful_switches: number;
     classification_coverage: number;
-    review_completed: boolean;
+    review_has_content: boolean;
   };
   quality: {
     complete: boolean;
@@ -205,7 +204,11 @@ export interface WorkflowSaveResponse {
   journal_fingerprint: FileFingerprint;
 }
 
-export type ReviewField = "personal_summary" | "outputs" | "next_action";
+export type ReviewField =
+  | "personal_summary"
+  | "outputs"
+  | "next_action"
+  | "freeform";
 
 export interface ReviewSaveRequest {
   date: string;

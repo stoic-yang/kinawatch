@@ -56,7 +56,7 @@ class FixtureJournalRepository:
 
     @staticmethod
     def initial_content() -> str:
-        return "- [ ] 完成复盘\n## 一天活动小总结\n## Kina 建议"
+        return "## 一天活动小总结\n## Kina 建议"
 
     @staticmethod
     def weekly_review_initial_content(week_id: str) -> str:
@@ -161,6 +161,7 @@ class WorkflowFormattingTests(unittest.TestCase):
                 "personal_summary": "今天完成了安全写回。",
                 "outputs": "- 复盘编辑器\n- 周复盘幂等入口",
                 "next_action": "验证真实页面。",
+                "freeform": "记住：简单的界面更容易持续使用。",
             }
         )
 
@@ -175,12 +176,19 @@ class WorkflowFormattingTests(unittest.TestCase):
             "> - 周复盘幂等入口\n"
             ">\n"
             "> **明天的计划**\n"
-            "> 验证真实页面。",
+            "> 验证真实页面。\n"
+            ">\n"
+            "> **自由记录**\n"
+            "> 记住：简单的界面更容易持续使用。",
         )
         parsed = parse_journal(rendered)
         self.assertEqual(parsed.personal_summary_markdown, "今天完成了安全写回。")
         self.assertEqual(parsed.outputs, ["复盘编辑器", "周复盘幂等入口"])
         self.assertEqual(parsed.next_action_markdown, "验证真实页面。")
+        self.assertEqual(
+            parsed.freeform_markdown,
+            "记住：简单的界面更容易持续使用。",
+        )
 
     def test_review_upsert_migrates_legacy_sections_and_preserves_other_text(self) -> None:
         original = (
@@ -189,6 +197,7 @@ class WorkflowFormattingTests(unittest.TestCase):
             "## 未识别标题\n这段普通正文必须保留。\n\n"
             "## 今日产出\n- 旧产出\n\n"
             "## 明日第一步\n旧行动。\n\n"
+            "## 自由记录\n旧自由记录。\n\n"
             "## Kina 建议\n1. 不要改这里。\n"
         )
 
@@ -203,13 +212,16 @@ class WorkflowFormattingTests(unittest.TestCase):
         self.assertNotIn("## 今日总结", updated)
         self.assertNotIn("## 今日产出", updated)
         self.assertNotIn("## 明日第一步", updated)
+        self.assertNotIn("## 自由记录", updated)
         self.assertIn("> **明天的计划**", updated)
+        self.assertIn("> **自由记录**", updated)
         self.assertIn("## 未识别标题\n这段普通正文必须保留。", updated)
         self.assertIn("## Kina 建议\n1. 不要改这里。", updated)
         parsed = parse_journal(updated)
         self.assertEqual(parsed.personal_summary_markdown, "新的总结。")
         self.assertEqual(parsed.outputs, ["旧产出"])
         self.assertEqual(parsed.next_action_markdown, "旧行动。")
+        self.assertEqual(parsed.freeform_markdown, "旧自由记录。")
 
     def test_unstructured_review_callout_rejects_ambiguous_write(self) -> None:
         content = (
@@ -249,7 +261,8 @@ class WorkflowWriterTests(unittest.TestCase):
 
         self.assertTrue(result["created"])
         self.assertFalse(result["replaced"])
-        self.assertTrue(content.startswith("- [ ] 完成复盘\n"))
+        self.assertTrue(content.startswith("## 一天活动小总结\n"))
+        self.assertNotIn("完成复盘", content)
         self.assertIn("> [!abstract]- 工作流", content)
         self.assertIn("> **08:59–09:18**", content)
         self.assertEqual(content.count("^workflow-0859"), 0)
@@ -348,6 +361,14 @@ class WorkflowWriterTests(unittest.TestCase):
                 "expected_fingerprint": first["journal_fingerprint"],
             }
         )
+        third = self.writer.upsert_review(
+            {
+                "date": self.day.isoformat(),
+                "field": "freeform",
+                "markdown": "一个不属于固定栏目但值得留下的观察。",
+                "expected_fingerprint": second["journal_fingerprint"],
+            }
+        )
         content = self.repository.locate(self.day).note.read_text(encoding="utf-8")
 
         self.assertTrue(first["created"])
@@ -356,6 +377,11 @@ class WorkflowWriterTests(unittest.TestCase):
         parsed = parse_journal(content)
         self.assertEqual(parsed.personal_summary_markdown, "第一版总结。")
         self.assertEqual(parsed.outputs, ["完成网页编辑器"])
+        self.assertEqual(
+            parsed.freeform_markdown,
+            "一个不属于固定栏目但值得留下的观察。",
+        )
+        self.assertEqual(third["review_field"]["field"], "freeform")
         self.assertIn("## 一天活动小总结", content)
         self.assertIn("## Kina 建议", content)
 

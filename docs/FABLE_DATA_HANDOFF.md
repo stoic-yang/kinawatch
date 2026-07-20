@@ -205,7 +205,7 @@ dictate a warning panel or any other presentation.
 - `offline_seconds`;
 - `combined_nonoverlap_seconds`;
 - `classification_coverage`;
-- `review_completed`;
+- `review_has_content` (whether the selected note has user-authored review content);
 - `longest_focus_seconds`;
 - `meaningful_switches`.
 
@@ -228,6 +228,9 @@ Missing sections return empty values rather than errors.
 - Preserves unknown `##` headings and their content.
 - Preserves user text written after the consecutive numbered Kina advice.
 - A note may consist only of this field.
+
+This is the read-only compatibility bucket for unstructured or unknown note
+regions. It is separate from the editable `自由记录` field below.
 
 ### Personal summary
 
@@ -257,6 +260,17 @@ Recognized heading:
 
 - `## 明天的计划`
 - `## 明日第一步`
+
+### Freeform review
+
+`journal.freeform_markdown`
+
+Recognized heading:
+
+- `## 自由记录`
+
+Canonical writes store it as the `自由记录` entry inside the daily `复盘`
+callout.
 
 ### Workflow explanations
 
@@ -299,8 +313,8 @@ bulk migration, or browser-side note database.
 
 ### Editable review fields
 
-`journal.personal_summary_markdown`, `journal.outputs`, and
-`journal.next_action_markdown` are editable through the restricted
+`journal.personal_summary_markdown`, `journal.outputs`,
+`journal.next_action_markdown`, and `journal.freeform_markdown` are editable through the restricted
 `PUT /api/journal/review` endpoint. The request accepts the selected `date`, one
 whitelisted `field`, non-empty `markdown`, and the exact
 `cache.journal_fingerprint` observed by the page. It never accepts a client file
@@ -318,13 +332,16 @@ The canonical Markdown representation is one collapsed daily callout:
 >
 > **明天的计划**
 > 明天想推进的事情、顺序和判断，可以写成多段。
+>
+> **自由记录**
+> 不适合归入固定栏目但仍值得留下的内容。
 ```
 
 Only non-empty fields are rendered. A user-explicit save may consolidate the
-recognized legacy `## 我的总结` / `## 今日总结`, `## 今日产出`, and
-`## 明日第一步` sections in that selected note. New writes use `明天的计划`,
-while the API field remains `next_action`. It does not change the review
-completion task, free journal body, Kina-generated sections, offline activity,
+recognized legacy `## 我的总结` / `## 今日总结`, `## 今日产出`,
+`## 明日第一步`, and `## 自由记录` sections in that selected note. New writes use `明天的计划`,
+while the API field remains `next_action`. It does not change the unstructured
+free journal body, Kina-generated sections, offline activity,
 properties, workflows, or other dates. The same fingerprint, per-note lock,
 atomic replacement, and `409` conflict rules as workflow saves apply. There is
 no autosave, field deletion, or background migration.
@@ -360,17 +377,12 @@ Recognized heading:
 Only consecutive numbered items starting at `1` are returned as advice.
 Trailing unheaded user writing is returned to `body_markdown`.
 
-### Review completion
+### Legacy review checkbox
 
-- `journal.completion_task_exists`
-- `journal.completion_task_checked`
-
-Recognized task:
-
-```markdown
-- [ ] 完成复盘
-- [x] 完成复盘
-```
+Historical `完成复盘` checkbox lines are silently ignored. They are not
+returned as API state, generated in new notes, or used to decide whether a day
+has review content. `overview.review_has_content` is derived from actual
+user-authored review fields or preserved unstructured journal text.
 
 ### Journal storage and optional Obsidian navigation
 

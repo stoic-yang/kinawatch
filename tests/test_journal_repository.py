@@ -47,13 +47,21 @@ class JournalRepositoryTests(unittest.TestCase):
                     "expected_fingerprint": location.fingerprint.to_dict(),
                 }
             )
+            freeform_result = writer.upsert_review(
+                {
+                    "date": selected_day.isoformat(),
+                    "field": "freeform",
+                    "markdown": "本地模式也能保存自由记录。",
+                    "expected_fingerprint": review_result["journal_fingerprint"],
+                }
+            )
             workflow_result = writer.upsert(
                 {
                     "date": selected_day.isoformat(),
                     "start_time": "09:00",
                     "end_time": "10:00",
                     "note": "记录这一小时真正推进的工作。",
-                    "expected_fingerprint": review_result["journal_fingerprint"],
+                    "expected_fingerprint": freeform_result["journal_fingerprint"],
                 }
             )
 
@@ -64,6 +72,10 @@ class JournalRepositoryTests(unittest.TestCase):
             self.assertEqual(
                 parsed.personal_summary_markdown,
                 "不使用 Obsidian 也能保存复盘。",
+            )
+            self.assertEqual(
+                parsed.freeform_markdown,
+                "本地模式也能保存自由记录。",
             )
             self.assertEqual(parsed.workflow_notes[0].start_time, "09:00")
             self.assertEqual(

@@ -35,8 +35,10 @@ needed.
 - Treat ActivityWatch, its database, and all local configuration as read-only.
 - Journal writes are disabled by default and must remain configuration-gated.
 - A daily-note write may update only one selected workflow description or one
-  of `我的总结`, `今日产出`, and `明天的计划`. Preserve legacy
+  of `我的总结`, `今日产出`, `明天的计划`, and `自由记录`. Preserve legacy
   `明日第一步` read compatibility.
+- Legacy `完成复盘` checkbox lines may be ignored on read but must never be
+  generated, treated as product state, or bulk-removed from historical notes.
 - Keep optimistic file fingerprints, per-note locks, same-directory temporary
   files, atomic replacement, and conflict rejection on every write path.
 - Never autosave, background-write, bulk-migrate, or delete structured fields.

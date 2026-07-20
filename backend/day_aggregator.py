@@ -405,7 +405,15 @@ class DayAggregator:
                 "longest_focus_seconds": longest_focus_seconds,
                 "meaningful_switches": meaningful_switches,
                 "classification_coverage": float(activity.get("coverage", 0.0)),
-                "review_completed": bool(document.completion_task_checked),
+                "review_has_content": any(
+                    (
+                        document.personal_summary_markdown.strip(),
+                        document.outputs,
+                        document.next_action_markdown.strip(),
+                        document.freeform_markdown.strip(),
+                        document.body_markdown.strip(),
+                    )
+                ),
             },
             "quality": {
                 "complete": bool(activity.get("complete", False)),

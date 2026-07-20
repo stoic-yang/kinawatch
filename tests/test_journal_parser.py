@@ -14,8 +14,7 @@ class JournalParserTests(unittest.TestCase):
         content = (FIXTURES / "daily_full.md").read_text(encoding="utf-8")
         document = parse_journal(content)
 
-        self.assertTrue(document.completion_task_exists)
-        self.assertTrue(document.completion_task_checked)
+        self.assertNotIn("完成复盘", document.body_markdown)
         self.assertEqual(document.personal_summary_markdown, "真正推进了数据契约。")
         self.assertEqual(len(document.outputs), 2)
         self.assertIn("[[Kina]]", document.outputs[0])
@@ -55,7 +54,6 @@ class JournalParserTests(unittest.TestCase):
         document = parse_journal(content)
 
         self.assertIn("今天只有自由正文", document.body_markdown)
-        self.assertFalse(document.completion_task_exists)
         self.assertEqual(document.projects, ["Kina"])
         self.assertEqual(document.kina_advice, [])
 
@@ -155,7 +153,10 @@ class JournalParserTests(unittest.TestCase):
             "> **明天的计划**\n"
             "> 先验证一次真实保存。\n"
             ">\n"
-            "> 再整理后续任务。\n\n"
+            "> 再整理后续任务。\n"
+            ">\n"
+            "> **自由记录**\n"
+            "> 今天还想记住一个意外发现。\n\n"
             "结尾文字。\n"
         )
 
@@ -170,6 +171,10 @@ class JournalParserTests(unittest.TestCase):
         self.assertEqual(
             document.next_action_markdown,
             "先验证一次真实保存。\n\n再整理后续任务。",
+        )
+        self.assertEqual(
+            document.freeform_markdown,
+            "今天还想记住一个意外发现。",
         )
         self.assertIn("开场文字。", document.body_markdown)
         self.assertIn("结尾文字。", document.body_markdown)
@@ -187,6 +192,18 @@ class JournalParserTests(unittest.TestCase):
             "旧日记仍然可以读取。",
         )
 
+    def test_legacy_freeform_heading_becomes_the_editable_field(self) -> None:
+        document = parse_journal(
+            "## 自由记录\n"
+            "这段旧格式内容可以继续编辑。\n"
+        )
+
+        self.assertEqual(
+            document.freeform_markdown,
+            "这段旧格式内容可以继续编辑。",
+        )
+        self.assertEqual(document.body_markdown, "")
+
     def test_unstructured_callout_titled_review_remains_user_body(self) -> None:
         content = (
             "> [!abstract]- 复盘\n"
@@ -198,6 +215,7 @@ class JournalParserTests(unittest.TestCase):
         self.assertEqual(document.personal_summary_markdown, "")
         self.assertEqual(document.outputs, [])
         self.assertEqual(document.next_action_markdown, "")
+        self.assertEqual(document.freeform_markdown, "")
         self.assertIn("[!abstract]- 复盘", document.body_markdown)
 
     def test_legacy_plus_encoded_workflow_note_is_recovered(self) -> None:

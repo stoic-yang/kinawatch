@@ -13,6 +13,7 @@ const FIELD_PLACEHOLDERS: Record<ReviewField, string> = {
   outputs: "每行写一项今天留下的可验证产出。",
   next_action:
     "把明天想推进的事情、顺序和判断写完整。可以分段，也可以使用 Markdown 列表。",
+  freeform: "随手写下不适合归入总结、产出或计划的内容。支持 Markdown。",
 };
 
 function reviewValue(journal: JournalData, field: ReviewField): string {
@@ -20,7 +21,8 @@ function reviewValue(journal: JournalData, field: ReviewField): string {
   if (field === "outputs") {
     return journal.outputs.map((output) => `- ${output}`).join("\n");
   }
-  return journal.next_action_markdown;
+  if (field === "next_action") return journal.next_action_markdown;
+  return journal.freeform_markdown;
 }
 
 function Section({
@@ -72,7 +74,13 @@ function Section({
         <div className="review-editor">
           <textarea
             autoFocus
-            rows={field === "next_action" ? 8 : field === "outputs" ? 5 : 4}
+            rows={
+              field === "next_action" || field === "freeform"
+                ? 8
+                : field === "outputs"
+                  ? 5
+                  : 4
+            }
             maxLength={8000}
             value={draft}
             disabled={saving}
@@ -175,18 +183,10 @@ export function ReviewPanel({
   const personalSummary = reviewValue(journal, "personal_summary");
   const outputs = reviewValue(journal, "outputs");
   const nextAction = reviewValue(journal, "next_action");
+  const freeform = reviewValue(journal, "freeform");
 
   return (
     <div className="review">
-      {!journal.exists && (
-        <div className="review-empty-state">
-          <p className="review-empty-title">今天还没有留下复盘</p>
-          <p className="review-empty-copy">
-            可以直接从下面任意一项开始，首次保存时会创建当天记录。
-          </p>
-        </div>
-      )}
-
       <Section
         field="personal_summary"
         title="我的总结"
@@ -244,9 +244,26 @@ export function ReviewPanel({
         <MarkdownLite text={journal.next_action_markdown} />
       </Section>
 
+      <Section
+        field="freeform"
+        title="自由记录"
+        value={freeform}
+        hint="还没有自由记录。"
+        editing={editingField === "freeform"}
+        draft={draft}
+        saving={savingField === "freeform"}
+        error={editingField === "freeform" ? saveError : null}
+        onEdit={() => edit("freeform")}
+        onDraft={setDraft}
+        onCancel={cancel}
+        onSave={() => void save("freeform")}
+      >
+        <MarkdownLite text={journal.freeform_markdown} />
+      </Section>
+
       {journal.body_markdown.trim() !== "" && (
         <section className="review-section">
-          <h3>自由记录</h3>
+          <h3>其他日记正文（只读）</h3>
           <MarkdownLite text={journal.body_markdown} />
         </section>
       )}

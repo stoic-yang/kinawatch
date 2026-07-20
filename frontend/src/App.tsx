@@ -104,7 +104,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [monthCursor, setMonthCursor] = useState(() => monthOf(date));
-  const [monthReviews, setMonthReviews] = useState<Record<string, boolean>>({});
+  const [monthRecords, setMonthRecords] = useState<Record<string, boolean>>({});
   const [hiddenCats, setHiddenCats] = useState<Set<string>>(storedHiddenCats);
   const [sidebarOpen, setSidebarOpen] = useState(storedSidebarOpen);
   // On first mount, re-read today's data from the sources so a page reload
@@ -293,13 +293,13 @@ export default function App() {
   useEffect(() => {
     const cached = monthCache.current.get(monthCursor);
     if (cached) {
-      setMonthReviews(cached);
+      setMonthRecords(cached);
       return;
     }
     const today = currentDayStr(DAY_MODE);
     const start = `${monthCursor}-01`;
     if (start > today) {
-      setMonthReviews({});
+      setMonthRecords({});
       return;
     }
     const end = monthEnd(monthCursor) < today ? monthEnd(monthCursor) : today;
@@ -309,13 +309,13 @@ export default function App() {
         if (cancelled) return;
         const map: Record<string, boolean> = {};
         for (const d of r.days) {
-          map[d.date] = d.overview.review_completed;
+          map[d.date] = d.overview.review_has_content;
         }
         monthCache.current.set(monthCursor, map);
-        setMonthReviews(map);
+        setMonthRecords(map);
       })
       .catch(() => {
-        if (!cancelled) setMonthReviews({});
+        if (!cancelled) setMonthRecords({});
       });
     return () => {
       cancelled = true;
@@ -421,7 +421,7 @@ export default function App() {
           date={date}
           today={currentDate}
           monthCursor={monthCursor}
-          monthReviews={monthReviews}
+          monthRecords={monthRecords}
           categories={categoryOptions}
           apps={topApps}
           hidden={hiddenCats}

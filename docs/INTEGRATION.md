@@ -89,7 +89,7 @@ ActivityWatch and configuration files are always read-only. With
 `journal_write_enabled: true`, the API can update only:
 
 - one workflow description keyed by its selected start time;
-- one of `我的总结`, `今日产出`, or `明天的计划` for one selected day;
+- one of `我的总结`, `今日产出`, `明天的计划`, or `自由记录` for one selected day;
 - one missing canonical weekly-review file.
 
 Every daily-note write remains fingerprint-checked, per-note locked, atomic,

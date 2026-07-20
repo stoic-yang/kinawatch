@@ -13,6 +13,10 @@ from .models import FileFingerprint
 from .paths import default_config_path, default_data_dir, expanded_path
 
 
+CURRENT_JOURNAL_SCHEMA_VERSION = 2
+CURRENT_DAY_SCHEMA_VERSION = 6
+
+
 def load_json(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -78,7 +82,10 @@ class DashboardSettings:
 
     @property
     def journal_schema_version(self) -> int:
-        return int(self.raw.get("journal_schema_version", 1))
+        return max(
+            CURRENT_JOURNAL_SCHEMA_VERSION,
+            int(self.raw.get("journal_schema_version", 1)),
+        )
 
     @property
     def activity_schema_version(self) -> int:
@@ -86,7 +93,10 @@ class DashboardSettings:
 
     @property
     def day_schema_version(self) -> int:
-        return int(self.raw.get("day_schema_version", 1))
+        return max(
+            CURRENT_DAY_SCHEMA_VERSION,
+            int(self.raw.get("day_schema_version", 1)),
+        )
 
     @property
     def timeline_merge_gap_seconds(self) -> float:

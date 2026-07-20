@@ -58,7 +58,7 @@ export function Sidebar({
   date,
   today,
   monthCursor,
-  monthReviews,
+  monthRecords,
   categories,
   apps,
   hidden,
@@ -71,7 +71,7 @@ export function Sidebar({
   date: string;
   today: string;
   monthCursor: string;
-  monthReviews: Record<string, boolean>;
+  monthRecords: Record<string, boolean>;
   categories: CategoryOption[];
   apps: AppOption[];
   hidden: Set<string>;
@@ -115,7 +115,7 @@ export function Sidebar({
         {cells.map((c) => {
           const selected = c.date === date;
           const isToday = c.date === today;
-          const reviewed = monthReviews[c.date] ?? false;
+          const hasRecord = monthRecords[c.date] ?? false;
           return (
             <button
               key={c.date}
@@ -128,15 +128,15 @@ export function Sidebar({
               ]
                 .filter(Boolean)
                 .join(" ")}
-              aria-label={`${c.date}，${reviewed ? "已复盘" : "未复盘"}`}
+              aria-label={hasRecord ? `${c.date}，有记录` : c.date}
               aria-current={selected ? "date" : undefined}
-              title={reviewed ? `${c.date} · 已复盘` : c.date}
+              title={hasRecord ? `${c.date} · 有记录` : c.date}
               disabled={c.future}
               onClick={() => onSelectDate(c.date)}
             >
               <span>{c.day}</span>
               <span
-                className={`cal-dot ${reviewed ? "cal-dot-reviewed" : ""}`}
+                className={`cal-dot ${hasRecord ? "cal-dot-recorded" : ""}`}
                 aria-hidden
               />
             </button>
