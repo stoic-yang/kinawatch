@@ -1,56 +1,63 @@
-# Kina Activity Dashboard
+# KinaWatch
 
-一个低能耗、本地优先的个人活动复盘面板：把 ActivityWatch 的客观活动记录与
-Obsidian 日记中的总结、产出、计划和离线活动放在同一天里查看。
+KinaWatch 是一个低能耗、本地优先的个人活动复盘面板：把 ActivityWatch 的
+客观活动记录与 Obsidian 日记中的总结、产出、计划和离线活动放在同一天里查看。
 
 > Early open-source release. The interface and documentation are currently
 > Chinese-first.
 
+KinaWatch 是独立项目，不是 ActivityWatch 的 fork，也不打包或修改
+ActivityWatch。它通过本机只读 REST API 获取事件，并保持自己的 MIT 许可证。
+
 ## Highlights
 
 - 一天一页：统一浏览屏幕活动、离线活动、工作流说明和日复盘。
-- 保留 ActivityWatch 的 AFK 过滤、来源归因、分类覆盖率和数据质量信息。
+- 通过 ActivityWatch REST API 自动发现本机窗口与 AFK buckets。
+- 保留 AFK 过滤、分类覆盖率、缺失来源和时间核算等质量信息。
+- 分类规则是普通 JSON，可按应用、标题、URL、项目和文件等字段定制。
 - Python 标准库后端同源托管静态 React 前端，不需要常驻 Node 服务。
 - 按日期缓存；当天短 TTL，历史日期在输入指纹未变化时长期复用。
 - 只监听 `127.0.0.1` / `localhost`，无宽泛 CORS、WebSocket 或后台扫描。
 - 默认只读。显式启用后，仅允许受保护地更新一个工作流描述或一个复盘字段。
 
-## Current integration boundary
+## Architecture
 
-Dashboard 目前不是一个独立的 ActivityWatch 统计实现。它复用本地
-Kina-compatible workspace 中的 ActivityWatch 查询、AFK 过滤、分类和来源归因
-函数，以避免形成第二套统计口径。
+```text
+ActivityWatch local REST API ─┐
+                              ├─ KinaWatch Python service ─ React UI
+Obsidian Markdown vault ──────┘          │
+                                   local day cache
+```
 
-因此，首次运行需要准备：
-
-- 正在本机运行的 ActivityWatch；
-- 一个 Obsidian vault；
-- 一个提供 `activitywatch_report.py` 与对应 JSON 配置的兼容上游目录。
-
-具体接口见 [Integration contract](docs/INTEGRATION.md)。未来可以在不改变 API
-语义的前提下增加独立适配器。
+ActivityWatch 继续负责采集窗口和 AFK 状态；Obsidian 继续作为文字与反思的唯一
+事实源。KinaWatch 只做按需读取、AFK 时段相交、分类、聚合、缓存和展示。详细契约
+见 [Integration contract](docs/INTEGRATION.md)。
 
 ## Requirements
 
 - Python 3.11+
 - Node.js 20+（仅前端开发或重新构建时需要）
-- ActivityWatch 本地服务
-- Obsidian vault
-- 上述 Kina-compatible integration
+- 已安装并正在运行的 [ActivityWatch](https://activitywatch.net/)
+- 一个 Obsidian vault
 
-后端运行时仅使用 Python 标准库。
+后端运行时仅使用 Python 标准库。当前真实环境验证使用 ActivityWatch `v0.13.2`；
+ActivityWatch REST API 尚未冻结，因此升级后请先运行测试与 Gate 1。
 
 ## Quick start
 
 ```sh
-git clone https://github.com/stoic-yang/kina-activity-dashboard.git
-cd kina-activity-dashboard
-cp config/dashboard.example.json config/dashboard.local.json
+git clone https://github.com/stoic-yang/kinawatch.git
+cd kinawatch
+cp config/kinawatch.example.json config/kinawatch.local.json
 ```
 
-编辑 `config/dashboard.local.json`，把 `upstream` 中的路径改为当前机器的真实
-路径。公开模板把 `journal_write_enabled` 设为 `false`；建议先保持只读，完成
-健康检查和 fixture 测试后再决定是否开启写入。
+编辑 `config/kinawatch.local.json`：
+
+1. 将 `journal.vault` 改为你的 Obsidian vault。
+2. 按需调整 `journal.daily_notes_dir` 和 `journal.vault_name`。
+3. 确认 `activitywatch.timezone`；`local` 会尝试读取系统时区。
+4. 一般无需填写 bucket ID；存在多个设备 bucket 时再显式设置。
+5. 先保持 `journal_write_enabled: false`。
 
 构建前端并启动服务：
 
@@ -68,11 +75,27 @@ python3 -m backend.server
 配置按以下顺序解析：
 
 1. `python3 -m backend.server --config /absolute/path/config.json`
-2. `KINA_DASHBOARD_CONFIG=/absolute/path/config.json`
-3. Git 忽略的 `config/dashboard.local.json`
-4. 只读、安全的 `config/dashboard.example.json`
+2. `KINAWATCH_CONFIG=/absolute/path/config.json`
+3. Git 忽略的 `config/kinawatch.local.json`
+4. 兼容旧版的 `KINA_DASHBOARD_CONFIG` 或 `config/dashboard.local.json`
+5. 只读、安全的 `config/kinawatch.example.json`
 
-不要提交包含个人 vault 路径、数据库路径或已开启写入的本机配置。
+旧版 Kina Activity Dashboard 的 `upstream` 配置仍可作为迁移输入：KinaWatch 会
+读取其中的 ActivityWatch、分类和 Obsidian JSON，但不会再导入 Kina Python
+脚本，也不会直接读取 ActivityWatch SQLite。迁移方式见
+[Integration contract](docs/INTEGRATION.md#migrating-from-v1-kina-integration)。
+
+### Categories
+
+公开默认规则位于 `config/categories.example.json`。推荐复制为一个 Git 忽略或
+仓库外的个人文件，再修改 `activitywatch.categories_file`。规则按顺序匹配，支持：
+
+- `<field>_equals`
+- `<field>_contains`
+- `<field>_regex`
+
+其中 `<field>` 可以是 `app`、`title`、`url`、`project`、`file`、`language`
+或 `status`。
 
 ## Development
 
@@ -88,7 +111,7 @@ npm run dev --prefix frontend
 
 ## Verify
 
-无需真实 ActivityWatch 或 Obsidian 数据的单元测试：
+无需真实 ActivityWatch 或 Obsidian 数据的隔离测试：
 
 ```sh
 python3 -m unittest discover -s tests -p 'test_*.py' -v
@@ -101,8 +124,8 @@ npm run build --prefix frontend
 python3 -m scripts.gate1
 ```
 
-Gate 1 会读取配置中的历史日记与 ActivityWatch 数据，不应拿真实日记执行写入
-测试。历史验证说明见 [Gate 1](docs/GATE1.md)。
+Gate 1 只读取历史日记与 ActivityWatch 数据，不应拿真实日记执行写入测试。
+历史验证说明见 [Gate 1](docs/GATE1.md)。
 
 ## API
 
@@ -119,9 +142,8 @@ Gate 1 会读取配置中的历史日记与 ActivityWatch 数据，不应拿真�
 
 ## Safety boundaries
 
-- 服务强制只绑定 loopback 地址。
-- 不修改 ActivityWatch.app，不复制或迁移其 SQLite 数据库。
-- 不复制上游统计函数形成分叉。
+- 服务和 ActivityWatch 连接都限制在 loopback 地址。
+- 不修改 ActivityWatch，不复制或迁移其 SQLite 数据库。
 - 不持续扫描 vault，不自动保存，不批量迁移日记。
 - 写入白名单仅包含所选日期的一条工作流描述，或 `我的总结`、`今日产出`、
   `明天的计划` 中的一项。
@@ -133,7 +155,7 @@ Gate 1 会读取配置中的历史日记与 ActivityWatch 数据，不应拿真�
 ## Project layout
 
 ```text
-backend/      Python API、缓存、解析与受限写入
+backend/      Python API、ActivityWatch REST 适配、缓存、解析与受限写入
 frontend/     React + TypeScript + Vite 前端
 dist/         已构建的静态前端
 config/       安全公开模板；本机配置由 Git 忽略
@@ -142,11 +164,8 @@ scripts/      真实环境的只读 Gate 1
 docs/         API、数据契约、设计与能耗说明
 ```
 
-## Contributing
+## Contributing and license
 
-请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。涉及统计口径、日记写入范围或网络
-绑定的改动必须带回归测试，并明确说明安全边界是否变化。
-
-## License
-
-[MIT](LICENSE)
+请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。KinaWatch 使用
+[MIT License](LICENSE)。ActivityWatch 不随本项目分发；项目关系和第三方声明见
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

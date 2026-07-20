@@ -20,7 +20,9 @@ database locations, or exploit details in that issue.
 - When enabled locally, writes are limited to a narrow field whitelist and use
   optimistic fingerprints, per-note locking, atomic replacement, and conflict
   rejection.
-- ActivityWatch data and upstream configuration are read-only inputs.
+- ActivityWatch data and local configuration are read-only inputs.
+- KinaWatch accepts only loopback ActivityWatch server URLs in v1 and never
+  writes ActivityWatch buckets or events.
 - A user who changes the bind restriction, exposes the port through a proxy,
   or runs with an untrusted local configuration leaves the supported threat
   model.

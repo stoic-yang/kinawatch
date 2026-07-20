@@ -1,1 +1,1 @@
-"""Kina Activity Dashboard tests."""
+"""KinaWatch tests."""

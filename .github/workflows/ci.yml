@@ -19,7 +19,7 @@ jobs:
 
       - name: Run Python tests
         env:
-          KINA_DASHBOARD_CONFIG: config/dashboard.example.json
+          KINAWATCH_CONFIG: config/kinawatch.example.json
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v
 
       - uses: actions/setup-node@v6

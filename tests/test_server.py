@@ -109,19 +109,25 @@ class RangeAggregator:
 
 
 class ServerTests(unittest.TestCase):
-    def test_public_example_reports_missing_integration_without_crashing(self) -> None:
-        application = DashboardApplication(load_settings(EXAMPLE_CONFIG_PATH))
+    def test_unavailable_local_sources_are_reported_without_crashing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            raw = json.loads(EXAMPLE_CONFIG_PATH.read_text(encoding="utf-8"))
+            raw["activitywatch"]["server_url"] = "http://127.0.0.1:9"
+            raw["activitywatch"]["categories_file"] = str(
+                EXAMPLE_CONFIG_PATH.parent / "categories.example.json"
+            )
+            raw["journal"]["vault"] = str(Path(temporary) / "missing-vault")
+            config_path = Path(temporary) / "kinawatch.json"
+            config_path.write_text(json.dumps(raw), encoding="utf-8")
+            application = DashboardApplication(load_settings(config_path))
 
-        health = application.health()
+            health = application.health()
 
         self.assertFalse(health["ok"])
         self.assertFalse(health["activitywatch_available"])
         self.assertFalse(health["journal_root_available"])
-        self.assertIn(
-            "configuration unavailable",
-            health["activitywatch"]["api_error"],
-        )
-        self.assertIn("configuration unavailable", health["journal"]["error"])
+        self.assertIn("ActivityWatch", health["activitywatch"]["api_error"])
+        self.assertIn("unavailable", health["journal"]["error"])
 
     def test_local_server_returns_json_without_cors_and_exits_when_idle(self) -> None:
         server = IdleHTTPServer(

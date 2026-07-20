@@ -1,94 +1,62 @@
 from __future__ import annotations
 
 import unittest
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
-from backend.activitywatch_adapter import ActivityWatchAdapter
+from backend.activitywatch_adapter import ActivityWatchAdapter, ActivityWatchRESTClient
 from backend.config import load_settings
+from backend.paths import EXAMPLE_CONFIG_PATH
 
 
-class FakeReport:
+class FakeActivityWatchClient:
     def __init__(self) -> None:
-        self.calls: list[tuple[Any, ...]] = []
+        self.calls: list[tuple[str, Any, Any]] = []
 
-    def query_configured_events_between(
-        self,
-        config: dict[str, Any],
-        bucket: str,
-        start: Any,
-        end: Any,
-    ) -> dict[str, Any]:
-        self.calls.append((bucket, start, end))
-        event = {
-            "timestamp": start.isoformat(),
-            "duration_seconds": 120.0,
-            "app": "Editor",
-            "title": "Dashboard",
-            "project": "Kina",
-            "source": "mac",
-        }
+    def info(self) -> dict[str, Any]:
+        return {"hostname": "test-host", "version": "v0.test"}
+
+    def buckets(self) -> dict[str, dict[str, Any]]:
         return {
-            "bucket_id": "window",
-            "sources": [{"name": "mac", "ok": True}],
-            "events": [event],
-            "attributed_events": [event],
-            "time_accounting": {
-                "policy": "split_parallel_sources_prefer_foreground",
-                "wall_duration_seconds": 120.0,
-                "afk_removed_seconds": 30.0,
-                "background_window_removed_seconds": 0.0,
+            "window-test": {
+                "type": "currentwindow",
+                "client": "aw-watcher-window",
+                "hostname": "test-host",
             },
-            "complete": True,
-            "issues": [],
+            "afk-test": {
+                "type": "afkstatus",
+                "client": "aw-watcher-afk",
+                "hostname": "test-host",
+            },
         }
 
-    def aggregate_categorized_events(
-        self,
-        events: list[dict[str, Any]],
-        classification: dict[str, Any],
-        limit: int,
-    ) -> dict[str, Any]:
-        return {
-            "total_duration_seconds": 120.0,
-            "classified_duration_seconds": 120.0,
-            "coverage": 1.0,
-            "categories": [
+    def events(self, bucket_id: str, start: Any, end: Any) -> list[dict[str, Any]]:
+        self.calls.append((bucket_id, start, end))
+        event_start = start + timedelta(hours=1)
+        if bucket_id == "window-test":
+            return [
                 {
-                    "category": "coding",
-                    "label": "编码",
-                    "duration_seconds": 120.0,
-                    "event_count": 1,
-                    "share": 1.0,
+                    "timestamp": event_start.isoformat(),
+                    "duration": 120.0,
+                    "data": {"app": "Code", "title": "KinaWatch"},
                 }
-            ],
-            "uncategorized": {"duration_seconds": 0.0, "event_count": 0},
-        }
-
-    def classify_event(
-        self,
-        event: dict[str, Any],
-        classification: dict[str, Any],
-    ) -> dict[str, str]:
-        return {"category": "coding", "rule": "editor", "rule_label": "编辑器"}
-
-
-class TestAdapter(ActivityWatchAdapter):
-    def _activity_config(self) -> dict[str, Any]:
-        return {
-            "timezone": "Asia/Shanghai",
-            "default_bucket": "window",
-        }
-
-    def _classification_config(self) -> dict[str, Any]:
-        return {"categories": {"coding": {"label": "编码"}}, "rules": []}
+            ]
+        if bucket_id == "afk-test":
+            return [
+                {
+                    "timestamp": event_start.isoformat(),
+                    "duration": 90.0,
+                    "data": {"status": "not-afk"},
+                }
+            ]
+        raise AssertionError(f"unexpected bucket: {bucket_id}")
 
 
 class ActivityWatchAdapterTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.settings = load_settings()
-        self.report = FakeReport()
-        self.adapter = TestAdapter(self.settings, report_module=self.report)
+        self.settings = load_settings(EXAMPLE_CONFIG_PATH)
+        self.client = FakeActivityWatchClient()
+        self.adapter = ActivityWatchAdapter(self.settings, client=self.client)
 
     def test_calendar_range_is_converted_to_utc(self) -> None:
         start, end = self.adapter.date_range(
@@ -108,12 +76,31 @@ class ActivityWatchAdapterTests(unittest.TestCase):
         self.assertEqual(start.isoformat(), "2026-07-14T22:00:00+00:00")
         self.assertEqual(end.isoformat(), "2026-07-15T22:00:00+00:00")
 
-    def test_load_day_reuses_upstream_query_and_classification(self) -> None:
+    def test_load_day_discovers_buckets_and_filters_afk_via_rest(self) -> None:
         payload = self.adapter.load_day(date(2026, 7, 15), "calendar")
-        self.assertEqual(len(self.report.calls), 1)
+
+        self.assertEqual([call[0] for call in self.client.calls], ["window-test", "afk-test"])
+        self.assertEqual(payload["bucket_id"], "window-test")
         self.assertEqual(payload["coverage"], 1.0)
         self.assertEqual(payload["events"][0]["category"], "coding")
-        self.assertEqual(payload["time_accounting"]["wall_duration_seconds"], 120)
+        self.assertEqual(payload["time_accounting"]["wall_duration_seconds"], 90.0)
+        self.assertEqual(payload["time_accounting"]["afk_removed_seconds"], 30.0)
+        self.assertEqual(
+            payload["time_accounting"]["policy"],
+            "activitywatch_rest_afk_intersection",
+        )
+
+    def test_health_reports_rest_integration_without_database_access(self) -> None:
+        health = self.adapter.health()
+
+        self.assertTrue(health["available"])
+        self.assertEqual(health["api_version"], "v0.test")
+        self.assertEqual(health["integration"], "activitywatch-rest")
+        self.assertEqual(health["window_bucket_id"], "window-test")
+
+    def test_remote_activitywatch_server_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "loopback"):
+            ActivityWatchRESTClient("https://example.com")
 
 
 if __name__ == "__main__":

@@ -1,71 +1,104 @@
 # Integration contract
 
-Kina Activity Dashboard currently consumes a local, Kina-compatible
-ActivityWatch and Obsidian integration. This document describes the boundary
-without requiring any particular absolute directory layout.
+KinaWatch integrates with ActivityWatch through its loopback REST API and with
+Obsidian through ordinary Markdown files. It does not import ActivityWatch
+source code, read its SQLite database, or require a Kina workspace.
 
-## Configuration files
+## ActivityWatch boundary
 
-`config/dashboard.local.json` points to four upstream JSON files and one Python
-module directory:
+The adapter uses these read-only endpoints:
 
-- `kina_scripts_dir`: contains an importable `activitywatch_report.py`.
-- `activitywatch_config`: ActivityWatch source, timezone, database, and bucket
-  configuration.
-- `activitywatch_categories`: category labels and classification rules.
-- `obsidian_config`: contains `default_vault`.
-- `daily_review_config`: contains daily-note routing and template semantics.
+- `GET /api/0/info`
+- `GET /api/0/buckets/`
+- `GET /api/0/buckets/<bucket_id>/events?start=...&end=...`
 
-The public example assumes those files live below `~/Kina`; change every path
-to an existing path on the current machine. Do not commit that local file.
+`activitywatch.server_url` must resolve to `localhost`, `127.0.0.1`, or `::1`.
+KinaWatch never creates, updates, or deletes buckets or events.
 
-## Python adapter surface
+The adapter first uses an explicit `window_bucket_id` or `afk_bucket_id`. When
+either value is empty, it discovers the standard `currentwindow` and
+`afkstatus` buckets and prefers the ActivityWatch server hostname. If multiple
+buckets remain ambiguous, health checks fail with an instruction to configure
+the IDs explicitly.
 
-`activitywatch_report.py` must expose:
+For each requested day, KinaWatch clips window events to the day boundary,
+intersects them with `not-afk` intervals, removes configured lock-screen or
+background apps, and prevents overlapping events from inflating wall time.
+The response preserves observed duration, AFK removal, background removal,
+overlap adjustment, bucket identity, and source completeness.
 
-```python
-query_configured_events_between(config, bucket, start_utc, end_utc)
-aggregate_categorized_events(events, classification, limit)
-classify_event(event, classification)
+## Category rules
+
+`activitywatch.categories_file` points to a JSON object with `categories` and
+ordered `rules`. Rules can match the following event fields:
+
+```text
+app title url project file language status
 ```
 
-The query result must include `events`, `attributed_events`, `sources`, and
-`time_accounting`. The latter preserves the upstream wall-duration, AFK
-removal, background-window removal, completeness, and issue semantics.
+Each field supports `_equals`, `_contains`, and `_regex`. All predicates present
+in one rule must match, and the first matching rule wins. The public starter is
+`config/categories.example.json`; personal titles and project names should stay
+in an ignored or external file.
 
-Dashboard annotates the attributed events for presentation but does not
-reimplement the upstream query or time-accounting policy.
+## Obsidian boundary
 
-## Obsidian routing surface
-
-The configured Obsidian and daily-review JSON files must provide at least:
+The direct v2 configuration is self-contained:
 
 ```json
 {
-  "default_vault": "/absolute/path/to/your/vault"
+  "journal": {
+    "vault": "~/Documents/Obsidian",
+    "vault_name": "Obsidian",
+    "daily_notes_dir": "Daily",
+    "daily_note_date_format": "%Y-%m-%d",
+    "daily_note_template": []
+  }
 }
 ```
 
-```json
-{
-  "daily_notes_dir": "Review/Daily",
-  "daily_note_date_format": "%Y-%m-%d",
-  "vault_name": "YourVault",
-  "daily_note_template": []
-}
-```
+The note for a selected day is resolved below `daily_notes_dir`. If the exact
+date filename does not exist, KinaWatch accepts the first date-prefixed Markdown
+file for read compatibility. The vault remains the only journal source of truth.
 
-`daily_note_template` is used only when an explicitly enabled journal write
-creates a missing daily note. Weekly review creation is limited to the
-configured `weekly_reviews_dir` and is create-if-absent.
-
-## Read and write boundary
-
-ActivityWatch and all upstream JSON files are read-only. Obsidian notes are
-read-mostly. With `journal_write_enabled: true`, the API can update only:
+ActivityWatch and configuration files are always read-only. With
+`journal_write_enabled: true`, the API can update only:
 
 - one workflow description keyed by its selected start time;
 - one of `我的总结`, `今日产出`, or `明天的计划` for one selected day;
 - one missing canonical weekly-review file.
 
-All other note regions and dates remain outside the write contract.
+Every daily-note write remains fingerprint-checked, per-note locked, atomic,
+and conflict-rejecting. All other note regions and dates remain outside the
+write contract.
+
+## Migrating from v1 Kina integration
+
+Existing ignored v1 configurations continue to work during migration. When no
+top-level `activitywatch` or `journal` object exists, KinaWatch reads the old
+`upstream` JSON paths to derive:
+
+- ActivityWatch server timezone and bucket IDs;
+- category rules and background applications;
+- Obsidian vault and daily-note routing.
+
+It deliberately ignores `kina_scripts_dir` and no longer imports
+`activitywatch_report.py`. This keeps an existing installation working while
+removing the private Python runtime dependency.
+
+To finish migration:
+
+1. Copy `config/kinawatch.example.json` to `config/kinawatch.local.json`.
+2. Move the relevant values from the old ActivityWatch, categories, Obsidian,
+   and daily-review JSON files into the new direct sections.
+3. Point `activitywatch.categories_file` at a private categories file.
+4. Run `python3 -m backend.server --check` and `python3 -m scripts.gate1`.
+5. Remove the old `upstream` object only after parity is confirmed.
+
+## Fork boundary
+
+KinaWatch should consume an unmodified ActivityWatch release by default. If a
+future feature genuinely requires an upstream server or watcher change, fork
+only that ActivityWatch component in a separate repository, retain its
+MPL-2.0 obligations there, and let KinaWatch consume the released component.
+Do not merge the KinaWatch product repository into an ActivityWatch fork.

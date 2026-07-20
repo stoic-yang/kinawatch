@@ -26,8 +26,10 @@ import {
 } from "./lib/format";
 
 const DAY_MODE = "routine" as const;
-const HIDDEN_CATS_KEY = "kina-dashboard-hidden-categories";
-const SIDEBAR_KEY = "kina-dashboard-sidebar";
+const HIDDEN_CATS_KEY = "kinawatch-hidden-categories";
+const SIDEBAR_KEY = "kinawatch-sidebar";
+const LEGACY_HIDDEN_CATS_KEY = "kina-dashboard-hidden-categories";
+const LEGACY_SIDEBAR_KEY = "kina-dashboard-sidebar";
 const ACTIVITY_FIRST_YEAR = 2026;
 type WeekMode = "rolling" | "calendar" | "year" | "calendarYear";
 
@@ -64,7 +66,9 @@ function dateFromURL(): string | null {
 
 function storedHiddenCats(): Set<string> {
   try {
-    const raw = localStorage.getItem(HIDDEN_CATS_KEY);
+    const raw =
+      localStorage.getItem(HIDDEN_CATS_KEY) ??
+      localStorage.getItem(LEGACY_HIDDEN_CATS_KEY);
     if (raw) return new Set(JSON.parse(raw) as string[]);
   } catch {
     // Ignore malformed storage.
@@ -74,7 +78,10 @@ function storedHiddenCats(): Set<string> {
 
 function storedSidebarOpen(): boolean {
   try {
-    return localStorage.getItem(SIDEBAR_KEY) !== "closed";
+    const value =
+      localStorage.getItem(SIDEBAR_KEY) ??
+      localStorage.getItem(LEGACY_SIDEBAR_KEY);
+    return value !== "closed";
   } catch {
     return true;
   }

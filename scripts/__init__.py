@@ -1,1 +1,1 @@
-"""Operational scripts for Kina Activity Dashboard."""
+"""Operational scripts for KinaWatch."""

@@ -1,10 +1,10 @@
 {
-  "name": "kina-activity-dashboard-frontend",
+  "name": "kinawatch-frontend",
   "private": true,
   "version": "0.1.0",
   "description": "Local-first ActivityWatch and Obsidian review dashboard",
   "license": "MIT",
-  "repository": "https://github.com/stoic-yang/kina-activity-dashboard",
+  "repository": "https://github.com/stoic-yang/kinawatch",
   "type": "module",
   "engines": {
     "node": ">=20"

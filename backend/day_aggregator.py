@@ -438,14 +438,14 @@ class DayAggregator:
     ) -> dict[str, Any]:
         selected_mode = mode or self.settings.default_mode
         journal_location = self.journals.locate(day)
-        upstream_fingerprint = self.settings.upstream_fingerprint()
+        input_fingerprint = self.settings.input_fingerprint()
         timezone_name = self.activitywatch.timezone_name()
         today = datetime.now(ZoneInfo(timezone_name)).date()
         cached = self.cache.get(
             day,
             selected_mode,
             journal_location.fingerprint,
-            upstream_fingerprint,
+            input_fingerprint,
             is_today=day == today,
             refresh=refresh,
         )
@@ -492,7 +492,7 @@ class DayAggregator:
             day,
             selected_mode,
             journal_location.fingerprint,
-            upstream_fingerprint,
+            input_fingerprint,
             response,
         )
         return response

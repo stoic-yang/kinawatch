@@ -58,7 +58,7 @@ class CountingActivityWatch:
             "timestamp": "2026-07-15T20:45:00+08:00",
             "duration_seconds": 600.0,
             "app": "Editor",
-            "title": "Kina Activity Dashboard",
+            "title": "KinaWatch",
             "project": "Dashboard",
             "source": "mac",
             "category": "coding",

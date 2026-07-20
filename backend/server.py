@@ -319,7 +319,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if not target.is_file():
             self._write_text(
                 (
-                    "Kina Activity Dashboard frontend is not built.\n"
+                    "KinaWatch frontend is not built.\n"
                     "Run: npm run build --prefix frontend\n"
                 ),
                 status=503,
@@ -355,7 +355,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run Kina Activity Dashboard API.")
+    parser = argparse.ArgumentParser(description="Run the KinaWatch local API.")
     parser.add_argument("--config")
     parser.add_argument("--host")
     parser.add_argument("--port", type=int)

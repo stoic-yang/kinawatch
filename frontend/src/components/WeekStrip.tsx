@@ -27,11 +27,15 @@ function dottedDate(date: string): string {
   return date.split("-").join(".");
 }
 
-const RHYTHM_COLLAPSED_KEY = "kina-dashboard-rhythm-collapsed";
+const RHYTHM_COLLAPSED_KEY = "kinawatch-rhythm-collapsed";
+const LEGACY_RHYTHM_COLLAPSED_KEY = "kina-dashboard-rhythm-collapsed";
 
 function storedRhythmCollapsed(): boolean {
   try {
-    return localStorage.getItem(RHYTHM_COLLAPSED_KEY) === "1";
+    return (
+      localStorage.getItem(RHYTHM_COLLAPSED_KEY) ??
+      localStorage.getItem(LEGACY_RHYTHM_COLLAPSED_KEY)
+    ) === "1";
   } catch {
     return false;
   }

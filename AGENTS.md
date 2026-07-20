@@ -7,9 +7,10 @@ Scope: this repository and all descendants.
 1. Read `README.md`, `docs/INTEGRATION.md`, and the nearest relevant API or
    design document.
 2. Inspect `git status` before editing and preserve unrelated changes.
-3. Use `config/dashboard.example.json` for public examples. Never commit
-   `config/dashboard.local.json`, personal paths, real note content, database
-   locations, credentials, or generated local caches.
+3. Use `config/kinawatch.example.json` for public examples. Never commit
+   `config/kinawatch.local.json`, the legacy `config/dashboard.local.json`,
+   personal paths, real note content, database locations, credentials, or
+   generated local caches.
 4. Run the smallest relevant tests while iterating, then the full Python suite
    and frontend build before publishing.
 
@@ -19,15 +20,17 @@ This repository owns the local HTTP service, parsers, ActivityWatch adapter,
 day aggregation, cache, frontend, restricted journal writers, tests, static
 build, and public documentation.
 
-The configured upstream remains authoritative for ActivityWatch querying, AFK
-filtering, source attribution, categories, vault routing, and daily-note
-semantics. Do not copy those implementations into this repository merely to
-make a test pass. Add or extend an explicit adapter contract instead.
+ActivityWatch remains authoritative for captured events and AFK status;
+Obsidian remains authoritative for journal content. KinaWatch owns its
+read-only REST adapter, user-configurable category rules, source attribution,
+vault routing, and daily-note parsing contract. Do not copy ActivityWatch
+server, watcher, database, or UI implementations into this repository. Extend
+the explicit adapter contract when another provider is needed.
 
 ## Safety boundaries
 
 - Bind only to `127.0.0.1` or `localhost`; do not add broad CORS.
-- Treat ActivityWatch, its database, and upstream configuration as read-only.
+- Treat ActivityWatch, its database, and all local configuration as read-only.
 - Journal writes are disabled by default and must remain configuration-gated.
 - A daily-note write may update only one selected workflow description or one
   of `我的总结`, `今日产出`, and `明天的计划`. Preserve legacy

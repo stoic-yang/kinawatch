@@ -22,7 +22,7 @@ Repository:
 Start the backend:
 
 ```sh
-cd kina-activity-dashboard
+cd kinawatch
 python3 -m backend.server
 ```
 

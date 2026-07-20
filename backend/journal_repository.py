@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-from .config import DashboardSettings, fingerprint_file, load_json
+from .config import DashboardSettings, fingerprint_file
 from .models import FileFingerprint
 
 
@@ -23,25 +23,21 @@ class JournalRepository:
     def __init__(self, settings: DashboardSettings):
         self.settings = settings
 
-    def _runtime_config(self) -> tuple[dict[str, Any], dict[str, Any]]:
-        upstream = self.settings.upstream
-        return (
-            load_json(upstream["obsidian_config"]),
-            load_json(upstream["daily_review_config"]),
-        )
+    def _runtime_config(self) -> dict[str, Any]:
+        return self.settings.journal
 
     def locate(self, day: date) -> JournalLocation:
-        obsidian_config, review_config = self._runtime_config()
-        vault = Path(obsidian_config["default_vault"]).expanduser().resolve()
-        daily_directory = vault / str(review_config["daily_notes_dir"])
-        note_name = day.strftime(str(review_config["daily_note_date_format"]))
+        config = self._runtime_config()
+        vault = Path(config["vault"])
+        daily_directory = vault / str(config["daily_notes_dir"])
+        note_name = day.strftime(str(config["daily_note_date_format"]))
         note = daily_directory / f"{note_name}.md"
         if not note.exists():
             matches = sorted(daily_directory.glob(f"{note_name}*.md"))
             if matches:
                 note = matches[0]
         relative_path = str(note.relative_to(vault))
-        vault_name = str(review_config.get("vault_name", vault.name))
+        vault_name = str(config.get("vault_name", vault.name))
         url = (
             f"obsidian://open?vault={quote(vault_name, safe='')}"
             f"&file={quote(relative_path.removesuffix('.md'), safe='/')}"
@@ -60,11 +56,11 @@ class JournalRepository:
         return location.note.read_text(encoding="utf-8")
 
     def locate_weekly(self, week_id: str) -> JournalLocation:
-        obsidian_config, review_config = self._runtime_config()
-        vault = Path(obsidian_config["default_vault"]).expanduser().resolve()
+        config = self._runtime_config()
+        vault = Path(config["vault"])
         note = vault / self.settings.weekly_reviews_dir / f"{week_id}.md"
         relative_path = str(note.relative_to(vault))
-        vault_name = str(review_config.get("vault_name", vault.name))
+        vault_name = str(config.get("vault_name", vault.name))
         url = (
             f"obsidian://open?vault={quote(vault_name, safe='')}"
             f"&file={quote(relative_path.removesuffix('.md'), safe='/')}"
@@ -79,8 +75,8 @@ class JournalRepository:
 
     def initial_content(self) -> str:
         """Return the configured daily-note skeleton for a newly created note."""
-        _, review_config = self._runtime_config()
-        raw_template = review_config.get("daily_note_template") or []
+        config = self._runtime_config()
+        raw_template = config.get("daily_note_template") or []
         if not isinstance(raw_template, list) or not all(
             isinstance(line, str) for line in raw_template
         ):
@@ -111,7 +107,7 @@ class JournalRepository:
 
     def health(self) -> dict[str, Any]:
         try:
-            obsidian_config, review_config = self._runtime_config()
+            config = self._runtime_config()
         except Exception as exc:
             return {
                 "vault": "",
@@ -119,8 +115,8 @@ class JournalRepository:
                 "available": False,
                 "error": f"Journal configuration unavailable: {exc}",
             }
-        vault = Path(obsidian_config["default_vault"]).expanduser().resolve()
-        daily_directory = vault / str(review_config["daily_notes_dir"])
+        vault = Path(config["vault"])
+        daily_directory = vault / str(config["daily_notes_dir"])
         return {
             "vault": str(vault),
             "daily_directory": str(daily_directory),

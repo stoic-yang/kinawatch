@@ -1,3 +1,3 @@
-"""Kina Activity Dashboard backend."""
+"""KinaWatch backend."""
 
 __version__ = "0.1.0"

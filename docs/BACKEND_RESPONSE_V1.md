@@ -63,7 +63,7 @@ uncategorized_apps?: Array<{
 
 ## 明确未实现
 
-- 浏览器域名数据没有实现；它仍需要 Kina/ActivityWatch 数据源层面的
+- 浏览器域名数据没有实现；它仍需要 ActivityWatch 数据源层面的
   `aw-watcher-web` 产品决策。
 - 后端没有规定 Fable 必须把 rhythm 做成周节律图，也没有新增分类规则
   编辑、月视图或搜索功能。

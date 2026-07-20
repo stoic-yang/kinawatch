@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .models import FileFingerprint
 from .paths import default_config_path, expanded_path
@@ -99,20 +102,148 @@ class DashboardSettings:
 
     @property
     def upstream(self) -> dict[str, Path]:
+        """Return the v1 Kina workspace paths for migration compatibility."""
         values = self.raw.get("upstream") or {}
         return {
             key: expanded_path(str(value))
             for key, value in values.items()
         }
 
-    def upstream_fingerprint(self) -> str:
-        paths = [
-            self.config_path,
-            self.upstream["activitywatch_config"],
-            self.upstream["activitywatch_categories"],
-            self.upstream["obsidian_config"],
-            self.upstream["daily_review_config"],
-        ]
+    def configured_path(self, raw_value: str | Path) -> Path:
+        path = Path(raw_value).expanduser()
+        if not path.is_absolute():
+            path = self.config_path.parent / path
+        return path.resolve(strict=False)
+
+    @cached_property
+    def activitywatch(self) -> dict[str, Any]:
+        direct = self.raw.get("activitywatch")
+        if isinstance(direct, dict):
+            normalized = dict(direct)
+            categories_file = normalized.get("categories_file")
+            if not categories_file:
+                raise ValueError("activitywatch.categories_file is required")
+            normalized["categories_file"] = self.configured_path(
+                str(categories_file)
+            )
+            normalized.setdefault("server_url", "http://127.0.0.1:5600")
+            normalized.setdefault("timezone", "local")
+            normalized.setdefault("timeout_seconds", 10)
+            normalized.setdefault("filter_afk", True)
+            normalized.setdefault("background_app_equals", [])
+            return normalized
+
+        upstream = self.upstream
+        activity_path = upstream.get("activitywatch_config")
+        categories_path = upstream.get("activitywatch_categories")
+        if activity_path is None or categories_path is None:
+            raise ValueError(
+                "activitywatch configuration is missing; copy "
+                "config/kinawatch.example.json to config/kinawatch.local.json"
+            )
+        legacy = load_json(activity_path)
+        aliases = legacy.get("bucket_aliases") or {}
+        default_bucket = str(legacy.get("default_bucket", "window"))
+        return {
+            "server_url": str(
+                legacy.get("base_url", "http://127.0.0.1:5600")
+            ),
+            "timezone": str(legacy.get("timezone", "local")),
+            "timeout_seconds": float(legacy.get("timeout_seconds", 10)),
+            "filter_afk": bool(legacy.get("filter_afk", True)),
+            "window_bucket_id": aliases.get(default_bucket, default_bucket),
+            "afk_bucket_id": aliases.get("afk", "afk"),
+            "background_app_equals": list(
+                legacy.get("background_app_equals") or []
+            ),
+            "categories_file": categories_path,
+            "legacy_config_file": activity_path,
+        }
+
+    @cached_property
+    def journal(self) -> dict[str, Any]:
+        direct = self.raw.get("journal")
+        if isinstance(direct, dict):
+            normalized = dict(direct)
+            vault = normalized.get("vault")
+            if not vault:
+                raise ValueError("journal.vault is required")
+            normalized["vault"] = self.configured_path(str(vault))
+            normalized.setdefault("vault_name", normalized["vault"].name)
+            normalized.setdefault("daily_notes_dir", "Daily")
+            normalized.setdefault("daily_note_date_format", "%Y-%m-%d")
+            normalized.setdefault("daily_note_template", [])
+            return normalized
+
+        upstream = self.upstream
+        obsidian_path = upstream.get("obsidian_config")
+        review_path = upstream.get("daily_review_config")
+        if obsidian_path is None or review_path is None:
+            raise ValueError(
+                "journal configuration is missing; copy "
+                "config/kinawatch.example.json to config/kinawatch.local.json"
+            )
+        obsidian = load_json(obsidian_path)
+        review = load_json(review_path)
+        vault = expanded_path(str(obsidian["default_vault"]))
+        return {
+            "vault": vault,
+            "vault_name": str(review.get("vault_name", vault.name)),
+            "daily_notes_dir": str(review.get("daily_notes_dir", "Daily")),
+            "daily_note_date_format": str(
+                review.get("daily_note_date_format", "%Y-%m-%d")
+            ),
+            "daily_note_template": list(review.get("daily_note_template") or []),
+            "legacy_obsidian_config_file": obsidian_path,
+            "legacy_review_config_file": review_path,
+        }
+
+    def timezone_name(self) -> str:
+        configured = str(self.activitywatch.get("timezone", "local")).strip()
+        if configured and configured.casefold() != "local":
+            try:
+                ZoneInfo(configured)
+            except ZoneInfoNotFoundError as exc:
+                raise ValueError(
+                    f"Unknown ActivityWatch timezone: {configured}"
+                ) from exc
+            return configured
+
+        environment_timezone = os.environ.get("TZ", "").strip()
+        if environment_timezone:
+            try:
+                ZoneInfo(environment_timezone)
+                return environment_timezone
+            except ZoneInfoNotFoundError:
+                pass
+        for candidate in (Path("/etc/localtime"), Path("/var/db/timezone/localtime")):
+            try:
+                resolved = str(candidate.resolve(strict=True))
+            except OSError:
+                continue
+            marker = "/zoneinfo/"
+            if marker in resolved:
+                timezone_name = resolved.split(marker, 1)[1]
+                try:
+                    ZoneInfo(timezone_name)
+                    return timezone_name
+                except ZoneInfoNotFoundError:
+                    continue
+        return "UTC"
+
+    def input_fingerprint(self) -> str:
+        paths = [self.config_path]
+        activitywatch = self.activitywatch
+        journal = self.journal
+        for key in (
+            "categories_file",
+            "legacy_config_file",
+            "legacy_obsidian_config_file",
+            "legacy_review_config_file",
+        ):
+            value = activitywatch.get(key) or journal.get(key)
+            if isinstance(value, Path):
+                paths.append(value)
         payload = {
             "files": [fingerprint_file(path).to_dict() for path in paths],
             "journal_schema_version": self.journal_schema_version,
@@ -121,7 +252,6 @@ class DashboardSettings:
         }
         encoded = json.dumps(payload, sort_keys=True).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
-
 
 def load_settings(
     config_path: str | Path | None = None,
