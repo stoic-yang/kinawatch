@@ -115,8 +115,10 @@ export interface WorkflowNote {
 
 export interface JournalData {
   exists: boolean;
+  provider: "local" | "obsidian";
   path: string;
   absolute_path: string;
+  open_url: string;
   obsidian_url: string;
   body_markdown: string;
   personal_summary_markdown: string;
@@ -233,5 +235,7 @@ export interface WeeklyReviewResponse {
   week_id: string;
   created: boolean;
   path: string;
+  provider: "local" | "obsidian";
+  open_url: string;
   obsidian_url: string;
 }

@@ -364,8 +364,10 @@ class DayAggregator:
 
         journal.update(
             {
+                "provider": getattr(journal_location, "provider", "obsidian"),
                 "path": journal_location.relative_path,
                 "absolute_path": str(journal_location.note),
+                "open_url": journal_location.obsidian_url,
                 "obsidian_url": journal_location.obsidian_url,
                 "exists": journal_location.note.is_file(),
                 "offline_activities": offline_items,

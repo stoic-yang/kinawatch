@@ -116,7 +116,11 @@ class ServerTests(unittest.TestCase):
             raw["activitywatch"]["categories_file"] = str(
                 EXAMPLE_CONFIG_PATH.parent / "categories.example.json"
             )
-            raw["journal"]["vault"] = str(Path(temporary) / "missing-vault")
+            raw["journal"] = {
+                "provider": "obsidian",
+                "vault": str(Path(temporary) / "missing-vault"),
+                "daily_notes_dir": "Daily",
+            }
             config_path = Path(temporary) / "kinawatch.json"
             config_path.write_text(json.dumps(raw), encoding="utf-8")
             application = DashboardApplication(load_settings(config_path))
@@ -126,6 +130,7 @@ class ServerTests(unittest.TestCase):
         self.assertFalse(health["ok"])
         self.assertFalse(health["activitywatch_available"])
         self.assertFalse(health["journal_root_available"])
+        self.assertEqual(health["journal_provider"], "obsidian")
         self.assertIn("ActivityWatch", health["activitywatch"]["api_error"])
         self.assertIn("unavailable", health["journal"]["error"])
 

@@ -44,17 +44,19 @@ This is a transport detail, not a frontend architecture requirement.
 GET /api/health
 ```
 
-Reports whether the local ActivityWatch source and the Obsidian daily-note
-directory are available.
+Reports whether the local ActivityWatch source and the selected journal storage
+provider are available.
 
 Important fields:
 
 - `ok`
 - `activitywatch_available`
 - `journal_root_available`
+- `journal_provider`
 - `activitywatch.api_version`
 - `activitywatch.api_error`
-- `journal.vault`
+- `journal.provider`
+- `journal.storage_root`
 - `journal.daily_directory`
 
 ### One Day
@@ -261,8 +263,8 @@ Recognized heading:
 `journal.workflow_notes`
 
 Workflow sessions are still derived in the frontend. A user-authored explanation
-can be attached to a session by its stable start clock using this native,
-collapsed-by-default daily Obsidian callout:
+can be attached to a session by its stable start clock using this portable
+Markdown callout (rendered as a collapsed native callout in Obsidian):
 
 ```markdown
 > [!abstract]- 工作流
@@ -304,7 +306,7 @@ whitelisted `field`, non-empty `markdown`, and the exact
 `cache.journal_fingerprint` observed by the page. It never accepts a client file
 path.
 
-The canonical Obsidian representation is one collapsed daily callout:
+The canonical Markdown representation is one collapsed daily callout:
 
 ```markdown
 > [!abstract]- 复盘
@@ -331,10 +333,11 @@ no autosave, field deletion, or background migration.
 
 `PUT /api/journal/weekly` accepts one validated ISO `week_id` such as
 `2026-W29`. It maps that value to the single canonical
-`Review/Weekly/2026-W29.md` path, creates the template only when the file is
-absent, and returns a stable `obsidian://open` URI. Existing weekly notes are
-never rewritten by this endpoint. Repeated calls therefore open the same file
-instead of asking Obsidian to create name-suffixed copies.
+`Review/Weekly/2026-W29.md` path and creates the template only when the file is
+absent. Existing weekly notes are never rewritten by this endpoint. The response
+includes `provider`; `open_url` and the compatibility field `obsidian_url` are
+empty for local storage and contain the stable `obsidian://open` URI for the
+Obsidian provider.
 
 ### Generated activity summary
 
@@ -369,14 +372,18 @@ Recognized task:
 - [x] 完成复盘
 ```
 
-### Obsidian navigation
+### Journal storage and optional Obsidian navigation
 
 - `journal.exists`
+- `journal.provider`
 - `journal.path`
 - `journal.absolute_path`
+- `journal.open_url`
 - `journal.obsidian_url`
 
-`obsidian_url` can open the selected note in the local Studio vault.
+`provider` is `local` or `obsidian`. `open_url` is the provider-neutral field;
+it is empty for KinaWatch-managed storage and can open the selected note when
+the Obsidian provider is active. `obsidian_url` remains as a compatibility alias.
 
 ### Wikilinks
 

@@ -31,8 +31,7 @@
     ]
   },
   "journal": {
-    "vault": "~/Documents/Obsidian",
-    "vault_name": "Obsidian",
+    "provider": "local",
     "daily_notes_dir": "Daily",
     "daily_note_date_format": "%Y-%m-%d",
     "daily_note_template": []

@@ -53,6 +53,7 @@ class DashboardApplication:
             "version": 1,
             "activitywatch_available": activity_health["available"],
             "journal_root_available": journal_health["available"],
+            "journal_provider": journal_health.get("provider", ""),
             "journal_write_enabled": self.settings.journal_write_enabled,
             "activitywatch": activity_health,
             "journal": journal_health,

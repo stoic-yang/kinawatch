@@ -469,10 +469,15 @@ class WorkflowWriter:
 
     @staticmethod
     def _assert_safe_location(location: JournalLocation) -> None:
-        vault = location.vault.resolve()
+        storage_root = location.vault.resolve()
         note = location.note.resolve(strict=False)
-        if note != vault and vault not in note.parents:
-            raise WorkflowWriteValidation("目标日记不在已配置的 Obsidian vault 中。")
+        if note != storage_root and storage_root not in note.parents:
+            raise WorkflowWriteValidation("目标日记不在已配置的存储目录中。")
+        if getattr(location, "provider", "obsidian") == "local":
+            try:
+                note.parent.mkdir(parents=True, exist_ok=True)
+            except OSError as exc:
+                raise WorkflowWriteValidation("无法创建 KinaWatch 本地日记目录。") from exc
         if not note.parent.is_dir():
             raise WorkflowWriteValidation("已配置的日记目录不存在。")
         if location.note.is_symlink():
@@ -500,11 +505,15 @@ class WorkflowWriter:
                     "日记在保存过程中发生了变化，请刷新页面后再试。"
                 )
             os.replace(temporary, path)
-            directory_fd = os.open(path.parent, os.O_RDONLY)
-            try:
-                os.fsync(directory_fd)
-            finally:
-                os.close(directory_fd)
+            # Windows does not support opening a directory with os.open. The
+            # same-directory os.replace remains atomic there; POSIX systems
+            # additionally fsync the directory entry for crash durability.
+            if os.name != "nt":
+                directory_fd = os.open(path.parent, os.O_RDONLY)
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
         finally:
             if descriptor >= 0:
                 os.close(descriptor)
@@ -555,8 +564,9 @@ class WorkflowWriter:
                 "end_time": end_time,
                 "note": normalized_note,
                 # Canonical callouts are keyed by their start clock.  A native
-                # Obsidian block id must sit outside a quote/callout and would
-                # render as a visually separate block, so new writes omit it.
+                # A legacy Obsidian block id must sit outside a quote/callout
+                # and would render as a visually separate block, so new writes
+                # omit it for both storage providers.
                 "block_id": "",
             },
             "journal_fingerprint": written.to_dict(),
@@ -637,5 +647,7 @@ class WorkflowWriter:
             "week_id": week_id,
             "created": created,
             "path": location.relative_path,
+            "provider": getattr(location, "provider", "obsidian"),
+            "open_url": location.obsidian_url,
             "obsidian_url": location.obsidian_url,
         }

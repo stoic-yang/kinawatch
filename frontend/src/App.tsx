@@ -546,14 +546,19 @@ export default function App() {
               <section className="col">
                 <h2 className="section-title section-title-row">
                   <span>复盘</span>
-                  {day.journal.exists && (
-                    <a
-                      className="obsidian-link"
-                      href={day.journal.obsidian_url}
-                    >
-                      在 Obsidian 打开 ↗
-                    </a>
+                  {day.journal.provider === "local" && (
+                    <span className="journal-provider">KinaWatch 本地存储</span>
                   )}
+                  {day.journal.provider === "obsidian" &&
+                    day.journal.exists &&
+                    day.journal.open_url && (
+                      <a
+                        className="obsidian-link"
+                        href={day.journal.open_url}
+                      >
+                        在 Obsidian 打开 ↗
+                      </a>
+                    )}
                 </h2>
                 <ReviewPanel
                   date={date}

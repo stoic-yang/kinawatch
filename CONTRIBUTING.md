@@ -6,8 +6,9 @@ Thanks for helping improve KinaWatch.
 
 - Keep the service local-only and the public configuration read-only by
   default.
-- Do not include real Obsidian notes, ActivityWatch databases, personal paths,
-  credentials, or local cache files in issues, fixtures, commits, or logs.
+- Do not include real local/Obsidian journal files, ActivityWatch databases,
+  personal paths, credentials, or local cache files in issues, fixtures,
+  commits, or logs.
 - Discuss changes that alter time-accounting semantics, the journal write
   whitelist, or the ActivityWatch REST integration contract before
   implementation.

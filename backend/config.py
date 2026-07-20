@@ -10,7 +10,7 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .models import FileFingerprint
-from .paths import default_config_path, expanded_path
+from .paths import default_config_path, default_data_dir, expanded_path
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -165,14 +165,40 @@ class DashboardSettings:
         direct = self.raw.get("journal")
         if isinstance(direct, dict):
             normalized = dict(direct)
-            vault = normalized.get("vault")
-            if not vault:
-                raise ValueError("journal.vault is required")
-            normalized["vault"] = self.configured_path(str(vault))
-            normalized.setdefault("vault_name", normalized["vault"].name)
+            inferred_provider = "obsidian" if normalized.get("vault") else "local"
+            provider = str(
+                normalized.get("provider", inferred_provider)
+            ).strip().casefold()
+            if provider not in {"local", "obsidian"}:
+                raise ValueError("journal.provider must be 'local' or 'obsidian'")
+            normalized["provider"] = provider
             normalized.setdefault("daily_notes_dir", "Daily")
             normalized.setdefault("daily_note_date_format", "%Y-%m-%d")
             normalized.setdefault("daily_note_template", [])
+
+            if provider == "local":
+                storage_dir = normalized.get("storage_dir")
+                storage_root = (
+                    self.configured_path(str(storage_dir))
+                    if storage_dir
+                    else default_data_dir() / "journal"
+                )
+                normalized["storage_dir"] = storage_root
+                # JournalRepository historically calls the storage boundary a
+                # vault. Keep the internal alias while exposing provider and
+                # storage_dir as the public contract.
+                normalized["vault"] = storage_root
+                normalized["vault_name"] = ""
+                return normalized
+
+            vault = normalized.get("vault")
+            if not vault:
+                raise ValueError(
+                    "journal.vault is required when journal.provider is 'obsidian'"
+                )
+            normalized["vault"] = self.configured_path(str(vault))
+            normalized["storage_dir"] = normalized["vault"]
+            normalized.setdefault("vault_name", normalized["vault"].name)
             return normalized
 
         upstream = self.upstream
@@ -187,7 +213,9 @@ class DashboardSettings:
         review = load_json(review_path)
         vault = expanded_path(str(obsidian["default_vault"]))
         return {
+            "provider": "obsidian",
             "vault": vault,
+            "storage_dir": vault,
             "vault_name": str(review.get("vault_name", vault.name)),
             "daily_notes_dir": str(review.get("daily_notes_dir", "Daily")),
             "daily_note_date_format": str(
@@ -246,6 +274,8 @@ class DashboardSettings:
                 paths.append(value)
         payload = {
             "files": [fingerprint_file(path).to_dict() for path in paths],
+            "journal_provider": str(journal["provider"]),
+            "journal_storage_dir": str(journal["storage_dir"]),
             "journal_schema_version": self.journal_schema_version,
             "activity_schema_version": self.activity_schema_version,
             "day_schema_version": self.day_schema_version,

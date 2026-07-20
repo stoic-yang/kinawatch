@@ -1,8 +1,9 @@
 # Integration contract
 
-KinaWatch integrates with ActivityWatch through its loopback REST API and with
-Obsidian through ordinary Markdown files. It does not import ActivityWatch
-source code, read its SQLite database, or require a Kina workspace.
+KinaWatch integrates with ActivityWatch through its loopback REST API. Journal
+content can live in KinaWatch-managed Markdown files or, optionally, an
+Obsidian vault. It does not import ActivityWatch source code, read its SQLite
+database, or require a Kina workspace.
 
 ## ActivityWatch boundary
 
@@ -41,13 +42,32 @@ in one rule must match, and the first matching rule wins. The public starter is
 `config/categories.example.json`; personal titles and project names should stay
 in an ignored or external file.
 
-## Obsidian boundary
+## Journal providers
 
-The direct v2 configuration is self-contained:
+The public configuration defaults to KinaWatch-managed local Markdown:
 
 ```json
 {
   "journal": {
+    "provider": "local",
+    "daily_notes_dir": "Daily",
+    "daily_note_date_format": "%Y-%m-%d",
+    "daily_note_template": []
+  }
+}
+```
+
+The storage root is selected from the platform user-data directory. It can be
+overridden with `journal.storage_dir` or `KINAWATCH_DATA_DIR`. Merely starting
+the service or viewing a day does not create a file; the daily directory and
+Markdown record are created only after an explicit, enabled save.
+
+To use an Obsidian vault instead:
+
+```json
+{
+  "journal": {
+    "provider": "obsidian",
     "vault": "~/Documents/Obsidian",
     "vault_name": "Obsidian",
     "daily_notes_dir": "Daily",
@@ -57,9 +77,13 @@ The direct v2 configuration is self-contained:
 }
 ```
 
-The note for a selected day is resolved below `daily_notes_dir`. If the exact
-date filename does not exist, KinaWatch accepts the first date-prefixed Markdown
-file for read compatibility. The vault remains the only journal source of truth.
+The note for a selected day is resolved below `daily_notes_dir`. In Obsidian
+mode, if the exact date filename does not exist, KinaWatch accepts the first
+date-prefixed Markdown file for read compatibility. In local mode, KinaWatch
+owns the exact date-named file. A direct v2 configuration that has `vault` but
+no `provider` is treated as Obsidian for backward compatibility. Provider
+changes take effect after restart and never copy, synchronize, or delete files
+between the two storage roots.
 
 ActivityWatch and configuration files are always read-only. With
 `journal_write_enabled: true`, the API can update only:
@@ -69,8 +93,8 @@ ActivityWatch and configuration files are always read-only. With
 - one missing canonical weekly-review file.
 
 Every daily-note write remains fingerprint-checked, per-note locked, atomic,
-and conflict-rejecting. All other note regions and dates remain outside the
-write contract.
+confined to the selected provider's storage root, and conflict-rejecting. All
+other note regions and dates remain outside the write contract.
 
 ## Migrating from v1 Kina integration
 

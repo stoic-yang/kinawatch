@@ -124,6 +124,11 @@ class DayAggregatorTests(unittest.TestCase):
             str,
         )
         self.assertEqual(payload["journal"]["path"], "Review/Daily/2026-07-15.md")
+        self.assertEqual(payload["journal"]["provider"], "obsidian")
+        self.assertEqual(
+            payload["journal"]["open_url"],
+            "obsidian://open?vault=Studio&file=Review/Daily/2026-07-15",
+        )
         self.assertEqual(payload["journal"]["activity_summary_markdown"], "编码/刷题 2.0h。")
         self.assertEqual(len(payload["journal"]["kina_advice"]), 2)
         self.assertIn("用户在建议后的自由正文", payload["journal"]["body_markdown"])

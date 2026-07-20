@@ -20,12 +20,14 @@ This repository owns the local HTTP service, parsers, ActivityWatch adapter,
 day aggregation, cache, frontend, restricted journal writers, tests, static
 build, and public documentation.
 
-ActivityWatch remains authoritative for captured events and AFK status;
-Obsidian remains authoritative for journal content. KinaWatch owns its
-read-only REST adapter, user-configurable category rules, source attribution,
-vault routing, and daily-note parsing contract. Do not copy ActivityWatch
-server, watcher, database, or UI implementations into this repository. Extend
-the explicit adapter contract when another provider is needed.
+ActivityWatch remains authoritative for captured events and AFK status.
+KinaWatch owns its managed local journal; when the Obsidian provider is
+selected, the configured vault remains authoritative for journal content.
+KinaWatch also owns its read-only REST adapter, user-configurable category
+rules, source attribution, storage routing, and daily-note parsing contract. Do
+not copy ActivityWatch server, watcher, database, or UI implementations into
+this repository. Extend the explicit adapter contract when another provider is
+needed.
 
 ## Safety boundaries
 

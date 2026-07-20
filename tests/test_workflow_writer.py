@@ -374,6 +374,8 @@ class WorkflowWriterTests(unittest.TestCase):
         self.assertTrue(first["created"])
         self.assertFalse(second["created"])
         self.assertEqual(first["path"], "Review/Weekly/2026-W29.md")
+        self.assertEqual(first["provider"], "obsidian")
+        self.assertEqual(first["open_url"], first["obsidian_url"])
         self.assertEqual(first["obsidian_url"], second["obsidian_url"])
         self.assertIn("用户已经填写的周复盘。", preserved)
 

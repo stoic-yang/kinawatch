@@ -86,7 +86,7 @@ function Section({
             </p>
           )}
           <div className="review-editor-foot">
-            <span>保存后同步到当日日记的「复盘」总块</span>
+            <span>保存后写入当前日记存储的「复盘」总块</span>
             <div>
               <button type="button" disabled={saving} onClick={onCancel}>
                 取消
@@ -182,7 +182,7 @@ export function ReviewPanel({
         <div className="review-empty-state">
           <p className="review-empty-title">今天还没有留下复盘</p>
           <p className="review-empty-copy">
-            可以直接从下面任意一项开始，首次保存时会创建当日日记。
+            可以直接从下面任意一项开始，首次保存时会创建当天记录。
           </p>
         </div>
       )}

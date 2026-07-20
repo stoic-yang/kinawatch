@@ -1,7 +1,8 @@
 # KinaWatch
 
 KinaWatch 是一个低能耗、本地优先的个人活动复盘面板：把 ActivityWatch 的
-客观活动记录与 Obsidian 日记中的总结、产出、计划和离线活动放在同一天里查看。
+客观活动记录与工作流说明、总结、产出和计划放在同一天里查看。复盘记录既可
+保存在 KinaWatch 自带的本地 Markdown 存储中，也可选择接入 Obsidian。
 
 > Early open-source release. The interface and documentation are currently
 > Chinese-first.
@@ -15,6 +16,7 @@ ActivityWatch。它通过本机只读 REST API 获取事件，并保持自己的
 - 通过 ActivityWatch REST API 自动发现本机窗口与 AFK buckets。
 - 保留 AFK 过滤、分类覆盖率、缺失来源和时间核算等质量信息。
 - 分类规则是普通 JSON，可按应用、标题、URL、项目和文件等字段定制。
+- 默认使用 KinaWatch 管理的本地 Markdown；Obsidian 是可选集成，不是依赖。
 - Python 标准库后端同源托管静态 React 前端，不需要常驻 Node 服务。
 - 按日期缓存；当天短 TTL，历史日期在输入指纹未变化时长期复用。
 - 只监听 `127.0.0.1` / `localhost`，无宽泛 CORS、WebSocket 或后台扫描。
@@ -25,20 +27,21 @@ ActivityWatch。它通过本机只读 REST API 获取事件，并保持自己的
 ```text
 ActivityWatch local REST API ─┐
                               ├─ KinaWatch Python service ─ React UI
-Obsidian Markdown vault ──────┘          │
-                                   local day cache
+KinaWatch local Markdown ─────┤          │
+optional Obsidian vault ──────┘     local day cache
 ```
 
-ActivityWatch 继续负责采集窗口和 AFK 状态；Obsidian 继续作为文字与反思的唯一
-事实源。KinaWatch 只做按需读取、AFK 时段相交、分类、聚合、缓存和展示。详细契约
-见 [Integration contract](docs/INTEGRATION.md)。
+ActivityWatch 继续负责采集窗口和 AFK 状态。KinaWatch 默认管理自己的复盘文件；
+选择 Obsidian 后，指定 vault 中的 Markdown 日记改为文字记录的事实源。详细契约见
+[Integration contract](docs/INTEGRATION.md)。
 
 ## Requirements
 
 - Python 3.11+
 - Node.js 20+（仅前端开发或重新构建时需要）
 - 已安装并正在运行的 [ActivityWatch](https://activitywatch.net/)
-- 一个 Obsidian vault
+
+Obsidian 完全可选。仓库已经包含前端构建产物，普通使用不需要安装 Node.js。
 
 后端运行时仅使用 Python 标准库。当前真实环境验证使用 ActivityWatch `v0.13.2`；
 ActivityWatch REST API 尚未冻结，因此升级后请先运行测试与 Gate 1。
@@ -51,24 +54,52 @@ cd kinawatch
 cp config/kinawatch.example.json config/kinawatch.local.json
 ```
 
-编辑 `config/kinawatch.local.json`：
+公开模板默认使用 KinaWatch 本地存储，不需要填写 Obsidian 路径。编辑
+`config/kinawatch.local.json`：
 
-1. 将 `journal.vault` 改为你的 Obsidian vault。
-2. 按需调整 `journal.daily_notes_dir` 和 `journal.vault_name`。
-3. 确认 `activitywatch.timezone`；`local` 会尝试读取系统时区。
-4. 一般无需填写 bucket ID；存在多个设备 bucket 时再显式设置。
-5. 先保持 `journal_write_enabled: false`。
+1. 确认 `activitywatch.timezone`；`local` 会尝试读取系统时区。
+2. 一般无需填写 bucket ID；存在多个设备 bucket 时再显式设置。
+3. 完成只读健康检查后，把 `journal_write_enabled` 改为 `true`，即可在页面中
+   显式保存工作流和复盘。公开模板仍保持安全的只读默认值。
 
-构建前端并启动服务：
+启动服务：
 
 ```sh
-npm ci --prefix frontend
-npm run build --prefix frontend
 python3 -m backend.server --check
 python3 -m backend.server
 ```
 
 打开 <http://127.0.0.1:8765/>。服务默认在 15 分钟没有 HTTP 请求后退出。
+
+### Journal storage
+
+默认配置 `journal.provider: "local"`。KinaWatch 在第一次显式保存时创建逐日
+Markdown 文件；不会在启动或浏览日期时创建记录。默认位置为：
+
+- macOS：`~/Library/Application Support/KinaWatch/journal`
+- Linux：`$XDG_DATA_HOME/kinawatch/journal`，未设置时为
+  `~/.local/share/kinawatch/journal`
+- Windows：`%LOCALAPPDATA%\KinaWatch\journal`
+
+可用 `journal.storage_dir` 或环境变量 `KINAWATCH_DATA_DIR` 自定义位置。若要改用
+Obsidian，将配置改为：
+
+```json
+{
+  "journal": {
+    "provider": "obsidian",
+    "vault": "~/Documents/Obsidian",
+    "vault_name": "Obsidian",
+    "daily_notes_dir": "Daily",
+    "daily_note_date_format": "%Y-%m-%d",
+    "daily_note_template": []
+  }
+}
+```
+
+旧配置只有 `journal.vault` 而没有 `provider` 时，会继续按 Obsidian 模式读取，
+无需迁移后才能启动。切换 provider 后需要重启服务；KinaWatch 不会在两个存储
+之间自动复制、同步或删除记录。
 
 ### Configuration precedence
 
@@ -81,8 +112,8 @@ python3 -m backend.server
 5. 只读、安全的 `config/kinawatch.example.json`
 
 旧版 Kina Activity Dashboard 的 `upstream` 配置仍可作为迁移输入：KinaWatch 会
-读取其中的 ActivityWatch、分类和 Obsidian JSON，但不会再导入 Kina Python
-脚本，也不会直接读取 ActivityWatch SQLite。迁移方式见
+读取其中的 ActivityWatch、分类和 Obsidian JSON，并自动选择 Obsidian 后端；但
+不会再导入 Kina Python 脚本，也不会直接读取 ActivityWatch SQLite。迁移方式见
 [Integration contract](docs/INTEGRATION.md#migrating-from-v1-kina-integration)。
 
 ### Categories
@@ -144,7 +175,7 @@ Gate 1 只读取历史日记与 ActivityWatch 数据，不应拿真实日记执�
 
 - 服务和 ActivityWatch 连接都限制在 loopback 地址。
 - 不修改 ActivityWatch，不复制或迁移其 SQLite 数据库。
-- 不持续扫描 vault，不自动保存，不批量迁移日记。
+- 不持续扫描本地存储或 vault，不自动保存，不批量迁移日记。
 - 写入白名单仅包含所选日期的一条工作流描述，或 `我的总结`、`今日产出`、
   `明天的计划` 中的一项。
 - 完成任务、自由正文、Kina 生成内容、离线活动、properties 和其他日期均只读。
@@ -155,7 +186,7 @@ Gate 1 只读取历史日记与 ActivityWatch 数据，不应拿真实日记执�
 ## Project layout
 
 ```text
-backend/      Python API、ActivityWatch REST 适配、缓存、解析与受限写入
+backend/      Python API、ActivityWatch REST 适配、本地/Obsidian 存储与受限写入
 frontend/     React + TypeScript + Vite 前端
 dist/         已构建的静态前端
 config/       安全公开模板；本机配置由 Git 忽略

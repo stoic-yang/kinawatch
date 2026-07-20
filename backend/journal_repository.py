@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -17,6 +18,7 @@ class JournalLocation:
     relative_path: str
     obsidian_url: str
     fingerprint: FileFingerprint
+    provider: str = "obsidian"
 
 
 class JournalRepository:
@@ -28,26 +30,30 @@ class JournalRepository:
 
     def locate(self, day: date) -> JournalLocation:
         config = self._runtime_config()
-        vault = Path(config["vault"])
-        daily_directory = vault / str(config["daily_notes_dir"])
+        provider = str(config["provider"])
+        storage_root = Path(config["storage_dir"])
+        daily_directory = storage_root / str(config["daily_notes_dir"])
         note_name = day.strftime(str(config["daily_note_date_format"]))
         note = daily_directory / f"{note_name}.md"
-        if not note.exists():
+        if provider == "obsidian" and not note.exists():
             matches = sorted(daily_directory.glob(f"{note_name}*.md"))
             if matches:
                 note = matches[0]
-        relative_path = str(note.relative_to(vault))
-        vault_name = str(config.get("vault_name", vault.name))
-        url = (
-            f"obsidian://open?vault={quote(vault_name, safe='')}"
-            f"&file={quote(relative_path.removesuffix('.md'), safe='/')}"
-        )
+        relative_path = note.relative_to(storage_root).as_posix()
+        url = ""
+        if provider == "obsidian":
+            vault_name = str(config.get("vault_name", storage_root.name))
+            url = (
+                f"obsidian://open?vault={quote(vault_name, safe='')}"
+                f"&file={quote(relative_path.removesuffix('.md'), safe='/')}"
+            )
         return JournalLocation(
-            vault=vault,
+            vault=storage_root,
             note=note,
             relative_path=relative_path,
             obsidian_url=url,
             fingerprint=fingerprint_file(note),
+            provider=provider,
         )
 
     def read(self, location: JournalLocation) -> str:
@@ -57,20 +63,24 @@ class JournalRepository:
 
     def locate_weekly(self, week_id: str) -> JournalLocation:
         config = self._runtime_config()
-        vault = Path(config["vault"])
-        note = vault / self.settings.weekly_reviews_dir / f"{week_id}.md"
-        relative_path = str(note.relative_to(vault))
-        vault_name = str(config.get("vault_name", vault.name))
-        url = (
-            f"obsidian://open?vault={quote(vault_name, safe='')}"
-            f"&file={quote(relative_path.removesuffix('.md'), safe='/')}"
-        )
+        provider = str(config["provider"])
+        storage_root = Path(config["storage_dir"])
+        note = storage_root / self.settings.weekly_reviews_dir / f"{week_id}.md"
+        relative_path = note.relative_to(storage_root).as_posix()
+        url = ""
+        if provider == "obsidian":
+            vault_name = str(config.get("vault_name", storage_root.name))
+            url = (
+                f"obsidian://open?vault={quote(vault_name, safe='')}"
+                f"&file={quote(relative_path.removesuffix('.md'), safe='/')}"
+            )
         return JournalLocation(
-            vault=vault,
+            vault=storage_root,
             note=note,
             relative_path=relative_path,
             obsidian_url=url,
             fingerprint=fingerprint_file(note),
+            provider=provider,
         )
 
     def initial_content(self) -> str:
@@ -110,16 +120,36 @@ class JournalRepository:
             config = self._runtime_config()
         except Exception as exc:
             return {
+                "provider": "",
+                "managed_storage": False,
                 "vault": "",
+                "storage_root": "",
                 "daily_directory": "",
                 "available": False,
                 "error": f"Journal configuration unavailable: {exc}",
             }
-        vault = Path(config["vault"])
-        daily_directory = vault / str(config["daily_notes_dir"])
+        provider = str(config["provider"])
+        storage_root = Path(config["storage_dir"])
+        daily_directory = storage_root / str(config["daily_notes_dir"])
+        if provider == "local":
+            available = self._directory_can_be_created(daily_directory)
+            error = "" if available else "Local journal storage is not writable."
+        else:
+            available = daily_directory.is_dir()
+            error = "" if available else "Obsidian daily-note directory is unavailable."
         return {
-            "vault": str(vault),
+            "provider": provider,
+            "managed_storage": provider == "local",
+            "vault": str(storage_root) if provider == "obsidian" else "",
+            "storage_root": str(storage_root),
             "daily_directory": str(daily_directory),
-            "available": daily_directory.is_dir(),
-            "error": "" if daily_directory.is_dir() else "Daily-note directory is unavailable.",
+            "available": available,
+            "error": error,
         }
+
+    @staticmethod
+    def _directory_can_be_created(path: Path) -> bool:
+        candidate = path
+        while not candidate.exists() and candidate != candidate.parent:
+            candidate = candidate.parent
+        return candidate.is_dir() and os.access(candidate, os.W_OK | os.X_OK)

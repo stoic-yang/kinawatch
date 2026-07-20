@@ -88,9 +88,9 @@ JavaScript `number`；纳秒时间戳超过安全整数范围，转换为数字�
 正确地视为版本冲突。该契约从 `day_schema_version = 4` 起生效，旧缓存会失效重建。
 
 写入使用文件指纹冲突检查、单笔记锁、同目录临时文件与原子替换。目标歧义、
-空内容、旧指纹、符号链接或越过 vault 的路径均会被拒绝。保存成功后只失效
-所选日期缓存，前端随即重读当日数据。完整请求类型与响应类型见
-`docs/fable-api-types.ts`。
+空内容、旧指纹、符号链接或越过当前 journal provider 存储根目录的路径均会
+被拒绝。保存成功后只失效所选日期缓存，前端随即重读当日数据。完整请求类型与
+响应类型见 `docs/fable-api-types.ts`。
 
 日复盘的三个用户字段使用：
 
@@ -116,8 +116,9 @@ Content-Type: application/json
 
 请求只包含 `week_id`。一个有效 ISO 周始终映射到固定的
 `Review/Weekly/YYYY-Www.md`：缺失时原子创建模板，存在时不改写任何字节，
-两种情况都返回同一个 `obsidian://open` URI。前端不得再使用
-`obsidian://new` 重复创建同名文件。
+两种情况都返回 provider 与稳定路径。Obsidian provider 还会返回同一个
+`obsidian://open` URI；local provider 的 `open_url` / `obsidian_url` 为空。
+前端不得使用 `obsidian://new` 重复创建同名文件。
 
 ## 验证入口
 

@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from backend.config import load_json, load_settings
-from backend.paths import CONFIG_ENV_VAR, EXAMPLE_CONFIG_PATH
+from backend.paths import CONFIG_ENV_VAR, DATA_DIR_ENV_VAR, EXAMPLE_CONFIG_PATH
 
 
 class DashboardConfigTests(unittest.TestCase):
@@ -20,6 +20,8 @@ class DashboardConfigTests(unittest.TestCase):
         self.assertFalse(raw["journal_write_enabled"])
         self.assertNotIn("upstream", raw)
         self.assertNotIn("/Users/", json.dumps(raw))
+        self.assertEqual(raw["journal"]["provider"], "local")
+        self.assertNotIn("vault", raw["journal"])
 
         settings = load_settings(EXAMPLE_CONFIG_PATH)
         self.assertEqual(
@@ -27,6 +29,67 @@ class DashboardConfigTests(unittest.TestCase):
             EXAMPLE_CONFIG_PATH.parent / "categories.example.json",
         )
         self.assertEqual(settings.activitywatch["server_url"], "http://127.0.0.1:5600")
+
+    def test_local_journal_uses_managed_data_dir_without_obsidian(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            managed_root = Path(temporary) / "managed-data"
+            with patch.dict(
+                os.environ,
+                {DATA_DIR_ENV_VAR: str(managed_root)},
+            ):
+                settings = load_settings(EXAMPLE_CONFIG_PATH)
+                journal = settings.journal
+
+        self.assertEqual(journal["provider"], "local")
+        self.assertEqual(
+            journal["storage_dir"],
+            (managed_root / "journal").resolve(),
+        )
+        self.assertEqual(journal["vault"], (managed_root / "journal").resolve())
+        self.assertEqual(journal["vault_name"], "")
+
+    def test_direct_obsidian_config_without_provider_remains_compatible(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config_path = root / "kinawatch.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "host": "127.0.0.1",
+                        "cache_dir": str(root / "cache"),
+                        "journal": {
+                            "vault": str(root / "vault"),
+                            "vault_name": "Notes",
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            journal = load_settings(config_path).journal
+
+        self.assertEqual(journal["provider"], "obsidian")
+        self.assertEqual(journal["storage_dir"], (root / "vault").resolve())
+        self.assertEqual(journal["vault_name"], "Notes")
+
+    def test_unknown_journal_provider_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config_path = root / "kinawatch.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "host": "127.0.0.1",
+                        "cache_dir": str(root / "cache"),
+                        "journal": {"provider": "cloud"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            settings = load_settings(config_path)
+            with self.assertRaisesRegex(ValueError, "journal.provider"):
+                _ = settings.journal
 
     def test_environment_variable_selects_an_external_config(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -128,7 +128,7 @@ export function SessionList({
                   </p>
                 )}
                 <div className="session-note-editor-foot">
-                  <span>保存后同步到当日日记</span>
+                  <span>保存后写入当前日记存储</span>
                   <div>
                     <button
                       type="button"
