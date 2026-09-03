@@ -71,6 +71,9 @@ python3 -m backend.server
 
 打开 <http://127.0.0.1:8765/>。服务默认在 15 分钟没有 HTTP 请求后退出。
 
+需要持续运行时，把本机配置的 `idle_timeout_seconds` 设为 `0`，或使用
+`python3 -m backend.server --idle-timeout 0`；这会关闭空闲自动退出。
+
 ### Journal storage
 
 默认配置 `journal.provider: "local"`。KinaWatch 在第一次显式保存时创建逐日

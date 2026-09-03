@@ -203,6 +203,9 @@ class IdleHTTPServer(ThreadingHTTPServer):
         self.last_request_monotonic = time.monotonic()
 
     def serve_until_idle(self) -> None:
+        if self.idle_timeout_seconds == 0:
+            self.serve_forever(poll_interval=1.0)
+            return
         while True:
             remaining = self.idle_timeout_seconds - (
                 time.monotonic() - self.last_request_monotonic
@@ -360,7 +363,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config")
     parser.add_argument("--host")
     parser.add_argument("--port", type=int)
-    parser.add_argument("--idle-timeout", type=float)
+    parser.add_argument(
+        "--idle-timeout",
+        type=float,
+        help="Exit after this many idle seconds; 0 disables idle exit.",
+    )
     parser.add_argument("--check", action="store_true")
     return parser
 
