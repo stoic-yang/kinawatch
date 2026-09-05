@@ -19,7 +19,7 @@ jobs:
 
       - name: Run Python tests
         env:
-          KINA_DASHBOARD_CONFIG: config/dashboard.example.json
+          KINAWATCH_CONFIG: config/kinawatch.example.json
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v
 
       - uses: actions/setup-node@v6
@@ -34,5 +34,10 @@ jobs:
       - name: Build frontend
         run: npm run build --prefix frontend
 
+      - name: Verify journal editing and timeline behavior
+        run: npm run test:journal --prefix frontend
+
       - name: Verify checked-in build
-        run: git diff --exit-code -- dist
+        run: |
+          git diff --exit-code -- dist
+          test -z "$(git ls-files --others --exclude-standard dist)"

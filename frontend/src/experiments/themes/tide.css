@@ -1,0 +1,104 @@
+:root[data-preview-theme="tide"] {
+  --canvas: #eef4f8; --bg: #fff; --surface: #fff; --ink: #203c51; --text-2: #60798b; --text-3: #738b9b;
+  --hairline: #e2eaee; --track: #eef4f7; --accent: #2379a8; --accent-soft: #e4f2fb; --done: #2f997c;
+  --shadow-soft: 0 4px 28px #62809b0a; --tooltip-shadow: 0 16px 48px #28466221;
+}
+.theme-tide { background: radial-gradient(ellipse at 80% 0, #e1eff9 0, transparent 46%), #eef4f8; padding: 25px 30px 0; }
+.tide-nav-wrap { max-width: 1340px; margin: 0 auto; }
+.tide-nav { display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 15px 24px; border: 1px solid #ffffffc9; border-radius: 24px; background: #ffffffa3; box-shadow: 0 4px 22px #55799207; }
+.theme-tide .theme-brand { color: #254c65; }
+.theme-tide .theme-brand svg { color: #51a6cf; }
+.theme-tide .theme-section-links { gap: 32px; }
+.theme-tide .theme-section-links a { font-size: 12px; letter-spacing: .04em; }
+.theme-tide .theme-switcher > summary { background: #ffffff9e; border-color: #dce8f0; }
+.tide-canvas { max-width: 1292px; margin: 0 auto; }
+.tide-intro { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: center; padding: 51px 12px 40px; }
+.tide-eyebrow { color: #527b97; font-size: 10px; letter-spacing: .17em; font-weight: 650; margin: 0 0 16px; display: flex; align-items: center; gap: 8px; }
+.tide-eyebrow > span { width: 6px; height: 6px; border-radius: 50%; background: #55a2c6; }
+.tide-day-title h1 { font-size: clamp(35px, 3.3vw, 52px); line-height: 1.2; font-weight: 570; letter-spacing: -.05em; margin: 0 0 21px; }
+.tide-day-title h1 > span { display: inline-block; font-size: 14px; font-weight: 400; margin-left: 18px; color: #668196; letter-spacing: .06em; }
+.tide-date-line { display: flex; align-items: center; gap: 19px; flex-wrap: wrap; }
+.tide-date-line > span { font-size: 11px; color: #6b8394; }
+.theme-tide .theme-date-controls { background: #ffffff91; border-radius: 12px; padding: 3px; }
+.theme-tide .theme-date-controls button { border-color: transparent; }
+.tide-overview { display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; gap: 24px; padding: 21px 0 17px 30px; border-left: 1px solid #cddfe9; }
+.tide-total { display: flex; flex-direction: column; gap: 8px; }
+.tide-stat-label { color: #54758b; font-size: 12px; }
+.tide-total .theme-hours { font-size: clamp(35px, 3.3vw, 51px); font-weight: 500; letter-spacing: -.055em; line-height: 1.2; }
+.tide-window { font-size: 10px; letter-spacing: .04em; font-variant-numeric: tabular-nums; color: #6c8798; }
+.tide-wave-caption { font-size: 11px; color: #476b85; }
+.tide-wave-caption small { display: block; margin-top: 3px; color: #7a96a8; font-size: 9px; }
+.tide-waterline { width: 100%; height: 74px; display: block; color: #78b5d0; margin-top: 10px; }
+.tide-empty-wave { height: 82px; }
+.tide-body { display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(290px, 1fr); gap: 22px; align-items: start; }
+.tide-activity, .tide-companion { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.tide-island { background: #fff; border: 1px solid #e7edf1; border-radius: 27px; padding: 27px 30px; box-shadow: 0 4px 20px #58749205; }
+.tide-island-eyebrow { font-size: 9px; letter-spacing: .1em; color: #8ca1ad; display: flex; align-items: center; gap: 8px; margin-bottom: 19px; }
+.tide-island-eyebrow > span { color: #5a8ea8; border: 1px solid #dce8ee; font-size: 9px; letter-spacing: 0; border-radius: 50%; width: 23px; height: 23px; display: grid; place-items: center; }
+.tide-island-eyebrow > small { font-size: 10px; letter-spacing: 0; margin-left: auto; color: #6d8a9b; }
+.theme-tide .rhythm-heading { justify-content: space-between; }
+.theme-tide .rhythm-title, .theme-tide .section-title { font-size: 16px; font-weight: 600; }
+.theme-tide .section-title { border: 0; padding-top: 0; margin-bottom: 19px; }
+.tide-rhythm { padding-top: 23px; padding-bottom: 23px; }
+.theme-tide .week-context { margin-top: 0; }
+.theme-tide .weekstrip { gap: 6px; grid-template-columns: repeat(var(--week-days), minmax(96px, 1fr)); }
+.theme-tide .weekstrip > li, .theme-tide .weekday { min-width: 96px; }
+.theme-tide .weekday { border-radius: 12px; box-shadow: none; border-color: #e8eff2; padding: 9px 8px; background: #f9fcfd; }
+.theme-tide .weekday-active { background: #eef7fc; border-color: #bdddef; box-shadow: none; }
+.theme-tide .week-mode-switch { background: #f3f7f9; border-radius: 99px; padding: 3px; }
+.theme-tide .week-mode-switch button { border-radius: 99px; }
+.tide-notes { min-height: 400px; padding-bottom: 32px; }
+.theme-tide .review-scope-switch { border-radius: 99px; background: #f0f5f7; }
+.theme-tide .review-scope-switch button { border-radius: 99px; }
+.theme-tide .review-section { margin-bottom: 22px; }
+.theme-tide .review-field-heading { font-weight: 500; }
+.theme-tide .empty-hint { color: #8096a4; }
+.tide-calendar { background: #e5eff4; border-radius: 25px; padding: 23px 28px; border: 1px solid #dce7ed; }
+.theme-tide .cal-day-selected { background: #2a7ea7; }
+.theme-tide .session { border-bottom-color: #eaf0f3; }
+.theme-tide .session-time { color: #4c7790; }
+.theme-tide .session-note-add { border-radius: 9px; background: #f3f8fb; padding: 7px 11px; color: #638295; font-size: 11px; }
+.theme-tide .session-mix { height: 4px; border-radius: 5px; }
+.tide-footer { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 36px 12px 29px; color: #8198a7; font-size: 10px; }
+.tide-footer > span:first-child { font-weight: 650; color: #577a90; }
+.tide-footer > a { text-decoration: none; }
+.tide-warnings { margin-top: 18px; }
+@media (min-width: 1600px) { .tide-intro { padding-top: 64px; padding-bottom: 51px; } .tide-island { padding: 32px 35px; } }
+@media (max-width: 1100px) {
+  .theme-tide { padding: 20px 22px 0; }
+  .tide-nav { padding: 14px 20px; }
+  .tide-intro { gap: 24px; padding-top: 38px; }
+  .tide-overview { gap: 14px; padding-left: 22px; }
+  .tide-body { grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr); gap: 17px; }
+  .tide-island { padding: 23px 22px; border-radius: 22px; }
+  .tide-activity, .tide-companion { gap: 17px; }
+}
+@media (max-width: 800px) {
+  .tide-nav .theme-section-links { display: none; }
+  .tide-intro { grid-template-columns: 1fr; gap: 25px; padding: 32px 8px; }
+  .tide-overview { border-left: 0; padding: 0; max-width: 540px; grid-template-columns: 1fr 1fr; }
+  .tide-body { grid-template-columns: minmax(0, 1fr); }
+  .tide-companion { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  .tide-total .theme-hours { font-size: 44px; }
+}
+@media (max-width: 540px) {
+  .theme-tide { padding: 12px 12px 0; }
+  .tide-nav { padding: 13px 16px; border-radius: 19px; }
+  .theme-tide .theme-brand { font-size: 17px; }
+  .theme-tide .theme-brand svg { width: 24px; }
+  .theme-tide .theme-switcher > summary { padding-left: 9px; padding-right: 9px; }
+  .tide-intro { padding: 30px 10px 27px; gap: 27px; }
+  .tide-day-title h1 { font-size: 42px; }
+  .tide-date-line { gap: 12px; }
+  .tide-date-line > span { width: 100%; }
+  .tide-overview { gap: 22px; }
+  .tide-total .theme-hours { font-size: 36px; }
+  .tide-wave-caption small { font-size: 9px; }
+  .tide-companion { display: flex; }
+  .tide-island { padding: 22px 19px; border-radius: 22px; }
+  .tide-notes { min-height: 0; }
+  .tide-calendar { padding: 24px; }
+  .tide-island-eyebrow { letter-spacing: .055em; font-size: 8px; }
+  .tide-island-eyebrow > small { font-size: 9px; }
+  .tide-footer { flex-wrap: wrap; padding: 29px 9px 24px; }
+}

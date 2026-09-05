@@ -1,0 +1,24 @@
+import {StrictMode} from "react";
+import {createRoot} from "react-dom/client";
+import App from "../../App";
+import "../../styles.css";
+import "../shared.css";
+import "../themes/grove.css";
+import {CONCEPTS} from "./types";
+import {Journal} from "./Journal";
+import {Daymap} from "./Daymap";
+import {Workbench} from "./Workbench";
+import {Atlas} from "./Atlas";
+import {Chapters} from "./Chapters";
+import {GuardedNotebook} from "./shared";
+import {initializePalette} from "./palettes";
+import "./component-system.css";
+
+const concept=CONCEPTS.find(item=>item.port===Number(window.location.port))??CONCEPTS[0];
+const Shell={journal:Journal,daymap:Daymap,workbench:Workbench,atlas:Atlas,chapters:Chapters}[concept.id];
+document.documentElement.dataset.previewTheme="grove";
+document.documentElement.dataset.concept=concept.id;
+document.documentElement.style.colorScheme="light";
+if (concept.id === "journal") initializePalette();
+document.title=`KinaWatch · ${concept.name} ${concept.english}`;
+createRoot(document.getElementById("root")!).render(<StrictMode><App renderShell={props=><Shell {...props} notes={<GuardedNotebook key={props.date} app={props}/>}/>}/></StrictMode>);

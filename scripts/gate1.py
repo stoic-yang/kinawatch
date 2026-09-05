@@ -39,7 +39,7 @@ def main() -> int:
     journals = CountingJournalRepository(settings)
     activitywatch = CountingActivityWatch(settings)
 
-    with tempfile.TemporaryDirectory(prefix="kina-dashboard-gate1-") as directory:
+    with tempfile.TemporaryDirectory(prefix="kinawatch-gate1-") as directory:
         aggregator = DayAggregator(
             settings,
             journal_repository=journals,
@@ -50,7 +50,7 @@ def main() -> int:
         first_read_count = journals.read_count
         first_activity_count = activitywatch.load_count
         second = aggregator.get_day(historical_day, "calendar")
-        direct = activitywatch.load_day(historical_day, "calendar")
+        direct_reload = activitywatch.load_day(historical_day, "calendar")
 
     checks = {
         "journal_path": first["journal"]["path"]
@@ -60,12 +60,17 @@ def main() -> int:
         ),
         "kina_advice_present": bool(first["journal"]["kina_advice"]),
         "free_body_present": bool(first["journal"]["body_markdown"]),
-        "completion_task_recognized": first["journal"][
-            "completion_task_exists"
-        ],
-        "activitywatch_total_matches_upstream": abs(
+        "freeform_field_present": "freeform_markdown" in first["journal"],
+        "legacy_completion_state_absent": not any(
+            "completion" in key for key in first["journal"]
+        ),
+        "review_index_is_content_based": first["overview"][
+            "review_has_content"
+        ]
+        is True,
+        "activitywatch_total_is_stable": abs(
             first["overview"]["active_seconds"]
-            - direct["time_accounting"]["wall_duration_seconds"]
+            - direct_reload["time_accounting"]["wall_duration_seconds"]
         )
         < 1e-6,
         "second_request_cache_hit": second["cache"]["hit"] is True,

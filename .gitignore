@@ -14,3 +14,4 @@ frontend/.vite/
 output/playwright/
 *.log
 config/dashboard.local.json
+config/kinawatch.local.json

@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "host": "127.0.0.1",
+  "port": 8765,
+  "idle_timeout_seconds": 900,
+  "today_ttl_seconds": 300,
+  "max_range_days": 31,
+  "default_mode": "routine",
+  "routine_day_start": "06:00",
+  "journal_write_enabled": false,
+  "activity_edit_enabled": false,
+  "weekly_reviews_dir": "Review/Weekly",
+  "monthly_reviews_dir": "Review/Monthly",
+  "cache_dir": "~/.cache/kinawatch",
+  "journal_schema_version": 3,
+  "activity_schema_version": 2,
+  "day_schema_version": 10,
+  "timeline_merge_gap_seconds": 2,
+  "focus_gap_seconds": 120,
+  "meaningful_block_seconds": 60,
+  "activitywatch": {
+    "server_url": "http://127.0.0.1:5600",
+    "timezone": "local",
+    "timeout_seconds": 10,
+    "filter_afk": true,
+    "media_activity": {
+      "enabled": false,
+      "rules": [
+        {
+          "app_equals": ["Google Chrome"],
+          "title_contains": ["Audio playing"]
+        }
+      ]
+    },
+    "window_bucket_id": "",
+    "afk_bucket_id": "",
+    "categories_file": "categories.example.json",
+    "background_app_equals": [
+      "loginwindow",
+      "LockScreenPlayer.exe",
+      "LockApp.exe"
+    ]
+  },
+  "journal": {
+    "provider": "local",
+    "daily_notes_dir": "Daily",
+    "daily_note_date_format": "%Y-%m-%d",
+    "daily_note_template": [],
+    "permanent_note_path": "incoming.md",
+    "beliefs_note_path": "Review/我的人生信念.md"
+  }
+}

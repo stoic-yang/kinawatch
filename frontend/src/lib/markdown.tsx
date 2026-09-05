@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 // Deliberately tiny renderer: journal text is trusted local Markdown, but we
-// only style what the review panel needs (paragraphs, list lines, wikilinks,
+// only style what the note panels need (headings, lists, tasks, wikilinks,
 // bold, inline code). Everything else stays literal text.
 function renderInline(text: string, keyBase: string): ReactNode[] {
   const nodes: ReactNode[] = [];
@@ -15,7 +15,7 @@ function renderInline(text: string, keyBase: string): ReactNode[] {
       const target = m[1].split("|")[0];
       const label = m[1].split("|")[1] ?? target;
       nodes.push(
-        <span key={`${keyBase}-${i++}`} className="wikilink" title={target}>
+        <span key={`${keyBase}-${i++}`} className="wikilink">
           {label}
         </span>,
       );
@@ -36,13 +36,35 @@ export function MarkdownLite({ text }: { text: string }) {
   lines.forEach((line, idx) => {
     const trimmed = line.trim();
     if (trimmed === "") return;
+    const task = /^[-*]\s+\[([ xX])\](?:\s+(.*))?$/.exec(trimmed);
     const bullet = /^[-*]\s+(.*)$/.exec(trimmed);
     const numbered = /^(\d+)[.、]\s*(.*)$/.exec(trimmed);
-    const heading = /^#{1,6}\s+(.*)$/.exec(trimmed);
+    const heading = /^(#{1,6})\s+(.*)$/.exec(trimmed);
     if (heading) {
       out.push(
-        <p key={idx} className="md-heading">
-          {renderInline(heading[1], `h${idx}`)}
+        <p
+          key={idx}
+          className={`md-heading md-heading-${heading[1].length}`}
+        >
+          {renderInline(heading[2], `h${idx}`)}
+        </p>,
+      );
+    } else if (task) {
+      const checked = task[1].toLowerCase() === "x";
+      out.push(
+        <p
+          key={idx}
+          className={`md-task ${checked ? "md-task-checked" : ""}`}
+        >
+          <input
+            type="checkbox"
+            checked={checked}
+            disabled
+            aria-hidden="true"
+          />
+          <span className="md-task-text">
+            {renderInline(task[2] ?? "", `t${idx}`)}
+          </span>
         </p>,
       );
     } else if (bullet) {

@@ -14,8 +14,7 @@ class JournalParserTests(unittest.TestCase):
         content = (FIXTURES / "daily_full.md").read_text(encoding="utf-8")
         document = parse_journal(content)
 
-        self.assertTrue(document.completion_task_exists)
-        self.assertTrue(document.completion_task_checked)
+        self.assertNotIn("完成复盘", document.body_markdown)
         self.assertEqual(document.personal_summary_markdown, "真正推进了数据契约。")
         self.assertEqual(len(document.outputs), 2)
         self.assertIn("[[Kina]]", document.outputs[0])
@@ -55,7 +54,6 @@ class JournalParserTests(unittest.TestCase):
         document = parse_journal(content)
 
         self.assertIn("今天只有自由正文", document.body_markdown)
-        self.assertFalse(document.completion_task_exists)
         self.assertEqual(document.projects, ["Kina"])
         self.assertEqual(document.kina_advice, [])
 
@@ -69,6 +67,16 @@ class JournalParserTests(unittest.TestCase):
         self.assertEqual(len(document.offline_unparsed), 3)
         self.assertEqual(len(document.parse_warnings), 3)
         self.assertIn("HH:MM-HH:MM", document.parse_warnings[0].message)
+
+    def test_equal_offline_times_are_rejected_instead_of_counting_a_day(self) -> None:
+        document = parse_journal(
+            "## 离线活动\n"
+            "- 09:00-09:00 | 学习\n"
+        )
+
+        self.assertEqual(document.offline_activities, [])
+        self.assertEqual(len(document.parse_warnings), 1)
+        self.assertIn("不能相同", document.parse_warnings[0].message)
 
     def test_latest_workflow_note_for_same_start_wins(self) -> None:
         document = parse_journal(
@@ -155,7 +163,10 @@ class JournalParserTests(unittest.TestCase):
             "> **明天的计划**\n"
             "> 先验证一次真实保存。\n"
             ">\n"
-            "> 再整理后续任务。\n\n"
+            "> 再整理后续任务。\n"
+            ">\n"
+            "> **自由记录**\n"
+            "> 今天还想记住一个意外发现。\n\n"
             "结尾文字。\n"
         )
 
@@ -171,9 +182,35 @@ class JournalParserTests(unittest.TestCase):
             document.next_action_markdown,
             "先验证一次真实保存。\n\n再整理后续任务。",
         )
+        self.assertEqual(
+            document.freeform_markdown,
+            "今天还想记住一个意外发现。",
+        )
         self.assertIn("开场文字。", document.body_markdown)
         self.assertIn("结尾文字。", document.body_markdown)
         self.assertNotIn("[!abstract]- 复盘", document.body_markdown)
+
+    def test_generated_summary_after_review_group_remains_workflow_source(self) -> None:
+        document = parse_journal(
+            "## 一天活动小总结\n\n"
+            "> [!abstract]- 复盘\n"
+            "> <!-- kinawatch:review:freeform -->\n"
+            "> **自由记录**\n"
+            "> 用户自己写的复盘。\n\n"
+            "> [!abstract] 今日轨迹\n"
+            "> - `约09:00–10:00`　完成工作流描述接入。\n"
+            "> - **今日收束：** 完成验证。\n"
+        )
+
+        self.assertEqual(document.freeform_markdown, "用户自己写的复盘。")
+        self.assertIn(
+            "> - `约09:00–10:00`　完成工作流描述接入。",
+            document.activity_summary_markdown,
+        )
+        self.assertNotIn(
+            "用户自己写的复盘",
+            document.activity_summary_markdown,
+        )
 
     def test_legacy_tomorrow_first_step_remains_readable(self) -> None:
         document = parse_journal(
@@ -187,6 +224,18 @@ class JournalParserTests(unittest.TestCase):
             "旧日记仍然可以读取。",
         )
 
+    def test_legacy_freeform_heading_becomes_the_editable_field(self) -> None:
+        document = parse_journal(
+            "## 自由记录\n"
+            "这段旧格式内容可以继续编辑。\n"
+        )
+
+        self.assertEqual(
+            document.freeform_markdown,
+            "这段旧格式内容可以继续编辑。",
+        )
+        self.assertEqual(document.body_markdown, "")
+
     def test_unstructured_callout_titled_review_remains_user_body(self) -> None:
         content = (
             "> [!abstract]- 复盘\n"
@@ -198,6 +247,7 @@ class JournalParserTests(unittest.TestCase):
         self.assertEqual(document.personal_summary_markdown, "")
         self.assertEqual(document.outputs, [])
         self.assertEqual(document.next_action_markdown, "")
+        self.assertEqual(document.freeform_markdown, "")
         self.assertIn("[!abstract]- 复盘", document.body_markdown)
 
     def test_legacy_plus_encoded_workflow_note_is_recovered(self) -> None:

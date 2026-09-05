@@ -141,6 +141,16 @@ class DayCacheTests(unittest.TestCase):
         self.assertEqual(list(self.cache.day_root.glob(f"{self.day.isoformat()}-*.json")), [])
         self.assertTrue(self.cache._path(other_day, "routine").is_file())
 
+    def test_invalid_mode_is_rejected_before_cache_path_lookup(self) -> None:
+        with self.assertRaisesRegex(ValueError, "calendar or routine"):
+            self.cache.get(
+                self.day,
+                "../../outside",
+                self.fingerprint,
+                "upstream-a",
+                is_today=False,
+            )
+
     def test_parallel_writes_use_distinct_atomic_temp_files(self) -> None:
         barrier = threading.Barrier(2)
         temporary_names: list[str] = []

@@ -1,78 +1,171 @@
-# Kina Activity Dashboard
+# KinaWatch
 
-一个低能耗、本地优先的个人活动复盘面板：把 ActivityWatch 的客观活动记录与
-Obsidian 日记中的总结、产出、计划和离线活动放在同一天里查看。
+KinaWatch 是一个低能耗、本地优先的个人活动复盘面板：把 ActivityWatch 的
+客观活动记录与工作流说明、总结、产出、计划和自由记录放在同一天里查看。复盘记录既可
+保存在 KinaWatch 自带的本地 Markdown 存储中，也可选择接入 Obsidian。
 
 > Early open-source release. The interface and documentation are currently
 > Chinese-first.
 
+KinaWatch 是独立项目，不是 ActivityWatch 的 fork，也不打包或修改
+ActivityWatch。它通过本机只读 REST API 获取事件，并保持自己的 MIT 许可证。
+
+## v0.2.0
+
+新版界面已成为默认入口，直接打开服务首页即可使用，无需预览参数。
+
 ## Highlights
 
-- 一天一页：统一浏览屏幕活动、离线活动、工作流说明和日复盘。
-- 保留 ActivityWatch 的 AFK 过滤、来源归因、分类覆盖率和数据质量信息。
+- 日记：Markdown 实时显示与安静的自动保存，工作流竖向时间线和 Kina 总结分栏参考。
+- 时间线：缩放、活动详情与独立工作流描述编辑，长描述不会撑高活动列表。
+- 节律：近七天、本周、近一年和自然年的活动分布与日期跳转。
+- 信念：独立于日期的 Markdown 文稿，支持目录、显式编辑保存和草稿恢复。
+- 可收起侧栏，以及石墨、素白、钴蓝、陶土、曜石五套配色。
+- 通过 ActivityWatch REST API 自动发现本机窗口与 AFK buckets。
+- 保留 AFK 过滤，同时可把明确处于前台播放状态的媒体时间计入屏幕时间；
+  操作活跃与被动观看分别核算。
+- 保留分类覆盖率、缺失来源和时间核算等质量信息。
+- 分类规则是普通 JSON，可按应用、标题、URL、项目和文件等字段定制。
+- 可点击时间线块，手动校正已有事件的时间、应用、标题和分类，也可直接创建
+  仅用于手动校正的自定义分类；ActivityWatch 原始事件保持不变。
+- 默认使用 KinaWatch 管理的本地 Markdown；Obsidian 是可选集成，不是依赖。
 - Python 标准库后端同源托管静态 React 前端，不需要常驻 Node 服务。
 - 按日期缓存；当天短 TTL，历史日期在输入指纹未变化时长期复用。
 - 只监听 `127.0.0.1` / `localhost`，无宽泛 CORS、WebSocket 或后台扫描。
-- 默认只读。显式启用后，仅允许受保护地更新一个工作流描述或一个复盘字段。
+- 默认只读。日记写入与活动校正分别显式启用，并使用彼此独立的受保护存储。
 
-## Current integration boundary
+## Architecture
 
-Dashboard 目前不是一个独立的 ActivityWatch 统计实现。它复用本地
-Kina-compatible workspace 中的 ActivityWatch 查询、AFK 过滤、分类和来源归因
-函数，以避免形成第二套统计口径。
+```text
+ActivityWatch local REST API ─┐
+                              ├─ KinaWatch Python service ─ React UI
+KinaWatch activity overlay ───┤          │
+local / Obsidian Markdown ────┘     local day cache
+```
 
-因此，首次运行需要准备：
-
-- 正在本机运行的 ActivityWatch；
-- 一个 Obsidian vault；
-- 一个提供 `activitywatch_report.py` 与对应 JSON 配置的兼容上游目录。
-
-具体接口见 [Integration contract](docs/INTEGRATION.md)。未来可以在不改变 API
-语义的前提下增加独立适配器。
+ActivityWatch 继续负责采集窗口和 AFK 状态。KinaWatch 默认管理自己的复盘文件；
+选择 Obsidian 后，指定 vault 中的 Markdown 日记改为文字记录的事实源。详细契约见
+[Integration contract](docs/INTEGRATION.md)。
 
 ## Requirements
 
 - Python 3.11+
 - Node.js 20+（仅前端开发或重新构建时需要）
-- ActivityWatch 本地服务
-- Obsidian vault
-- 上述 Kina-compatible integration
+- 已安装并正在运行的 [ActivityWatch](https://activitywatch.net/)
 
-后端运行时仅使用 Python 标准库。
+Obsidian 完全可选。仓库已经包含前端构建产物，普通使用不需要安装 Node.js。
+
+后端运行时仅使用 Python 标准库。当前真实环境验证使用 ActivityWatch `v0.13.2`；
+ActivityWatch REST API 尚未冻结，因此升级后请先运行测试与 Gate 1。
 
 ## Quick start
 
 ```sh
-git clone https://github.com/stoic-yang/kina-activity-dashboard.git
-cd kina-activity-dashboard
-cp config/dashboard.example.json config/dashboard.local.json
+git clone https://github.com/stoic-yang/kinawatch.git
+cd kinawatch
+cp config/kinawatch.example.json config/kinawatch.local.json
 ```
 
-编辑 `config/dashboard.local.json`，把 `upstream` 中的路径改为当前机器的真实
-路径。公开模板把 `journal_write_enabled` 设为 `false`；建议先保持只读，完成
-健康检查和 fixture 测试后再决定是否开启写入。
+公开模板默认使用 KinaWatch 本地存储，不需要填写 Obsidian 路径。编辑
+`config/kinawatch.local.json`：
 
-构建前端并启动服务：
+1. 确认 `activitywatch.timezone`；`local` 会尝试读取系统时区。
+2. 一般无需填写 bucket ID；存在多个设备 bucket 时再显式设置。
+3. 若希望无键鼠操作的视频仍计入屏幕时间，将
+   `activitywatch.media_activity.enabled` 改为 `true`。默认规则只匹配前台
+   Google Chrome 窗口中的 `Audio playing` 标记，不会关闭 AFK 过滤。
+4. 完成只读健康检查后，把 `journal_write_enabled` 改为 `true`，即可在页面中
+   编辑日记正文并自动保存，或显式保存工作流描述与信念。公开模板仍保持只读默认值。
+5. 把 `activity_edit_enabled` 改为 `true`，即可点击时间线块进行手动校正。
+   该开关不会授权写入 ActivityWatch，只会启用 KinaWatch 自己的校正文件。
+
+启动服务：
 
 ```sh
-npm ci --prefix frontend
-npm run build --prefix frontend
 python3 -m backend.server --check
 python3 -m backend.server
 ```
 
 打开 <http://127.0.0.1:8765/>。服务默认在 15 分钟没有 HTTP 请求后退出。
 
+需要持续运行时，把本机配置的 `idle_timeout_seconds` 设为 `0`，或使用
+`python3 -m backend.server --idle-timeout 0`；这会关闭空闲自动退出。
+
+### Journal storage
+
+默认配置 `journal.provider: "local"`。启用写入后，日记正文在输入暂停后保存，
+信念和工作流描述通过保存按钮更新；首次保存才创建对应文件，启动和浏览不会创建记录。
+信念默认位于 `Review/我的人生信念.md`，新安装从空白开始。默认存储位置为：
+
+- macOS：`~/Library/Application Support/KinaWatch/journal`
+- Linux：`$XDG_DATA_HOME/kinawatch/journal`，未设置时为
+  `~/.local/share/kinawatch/journal`
+- Windows：`%LOCALAPPDATA%\KinaWatch\journal`
+
+可用 `journal.storage_dir` 或环境变量 `KINAWATCH_DATA_DIR` 自定义位置。若要改用
+Obsidian，将配置改为：
+
+```json
+{
+  "journal": {
+    "provider": "obsidian",
+    "vault": "~/Documents/Obsidian",
+    "vault_name": "Obsidian",
+    "daily_notes_dir": "Daily",
+    "daily_note_date_format": "%Y-%m-%d",
+    "daily_note_template": [],
+    "permanent_note_path": "incoming.md",
+    "beliefs_note_path": "Review/我的人生信念.md"
+  }
+}
+```
+
+旧配置只有 `journal.vault` 而没有 `provider` 时，会继续按 Obsidian 模式读取，
+无需迁移后才能启动。切换 provider 后需要重启服务；KinaWatch 不会在两个存储
+之间自动复制、同步或删除记录。
+
 ### Configuration precedence
 
 配置按以下顺序解析：
 
 1. `python3 -m backend.server --config /absolute/path/config.json`
-2. `KINA_DASHBOARD_CONFIG=/absolute/path/config.json`
-3. Git 忽略的 `config/dashboard.local.json`
-4. 只读、安全的 `config/dashboard.example.json`
+2. `KINAWATCH_CONFIG=/absolute/path/config.json`
+3. Git 忽略的 `config/kinawatch.local.json`
+4. 兼容旧版的 `KINA_DASHBOARD_CONFIG` 或 `config/dashboard.local.json`
+5. 只读、安全的 `config/kinawatch.example.json`
 
-不要提交包含个人 vault 路径、数据库路径或已开启写入的本机配置。
+旧版 Kina Activity Dashboard 的 `upstream` 配置仍可作为迁移输入：KinaWatch 会
+读取其中的 ActivityWatch、分类和 Obsidian JSON，并自动选择 Obsidian 后端；但
+不会再导入 Kina Python 脚本，也不会直接读取 ActivityWatch SQLite。迁移方式见
+[Integration contract](docs/INTEGRATION.md#migrating-from-v1-kina-integration)。
+
+### Categories
+
+公开默认规则位于 `config/categories.example.json`。推荐复制为一个 Git 忽略或
+仓库外的个人文件，再修改 `activitywatch.categories_file`。规则按顺序匹配，支持：
+
+- `<field>_equals`
+- `<field>_contains`
+- `<field>_regex`
+
+其中 `<field>` 可以是 `app`、`title`、`url`、`project`、`file`、`language`
+或 `status`。
+
+### Manual activity corrections
+
+时间线上的显示块可能合并多条原始事件。点击显示块后，编辑器会按需读取其底层
+ActivityWatch 事件；若有多条，必须先选择具体事件。当前只允许修改已经结束、
+仍位于所选 calendar/routine 日范围内的事件，支持：
+
+- 开始与结束时间；
+- 应用名与窗口标题；
+- 跟随原分类规则、选择已有分类，或新建一个手动分类；
+- 保存后立即撤销本次修改。
+
+校正记录默认保存在平台用户数据目录的 `activity-edits.json`，也可通过
+`activity_edit_store_path` 指定。文件只包含 KinaWatch 覆盖值、源事件指纹和
+有限的撤销历史；ActivityWatch bucket 与数据库始终只读。新增一条完全独立的
+活动目前尚未开放。
 
 ## Development
 
@@ -88,11 +181,12 @@ npm run dev --prefix frontend
 
 ## Verify
 
-无需真实 ActivityWatch 或 Obsidian 数据的单元测试：
+无需真实 ActivityWatch 或 Obsidian 数据的隔离测试：
 
 ```sh
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 npm run build --prefix frontend
+npm run test:journal --prefix frontend
 ```
 
 连接真实本地环境后，可运行只读集成门禁：
@@ -101,31 +195,56 @@ npm run build --prefix frontend
 python3 -m scripts.gate1
 ```
 
-Gate 1 会读取配置中的历史日记与 ActivityWatch 数据，不应拿真实日记执行写入
-测试。历史验证说明见 [Gate 1](docs/GATE1.md)。
+Gate 1 只读取历史日记与 ActivityWatch 数据，不应拿真实日记执行写入测试。
+历史验证说明见 [Gate 1](docs/GATE1.md)。
 
 ## API
 
 - `GET /api/health`
+- `GET /api/settings`
 - `GET /api/day?date=YYYY-MM-DD&mode=routine`
-- `GET /api/range?start=YYYY-MM-DD&end=YYYY-MM-DD`
+- `GET /api/range?start=YYYY-MM-DD&end=YYYY-MM-DD&include=top_apps,timeline`
+- `GET /api/activity/inspect?date=YYYY-MM-DD&mode=routine&bucket_id=...&event_id=...`
+- `GET /api/journal/permanent`
+- `GET /api/journal/document?date=YYYY-MM-DD`
+- `GET /api/journal/beliefs`
+- `GET /api/journal/weekly?week_id=YYYY-Www`
+- `GET /api/journal/monthly?month_id=YYYY-MM`
+- `PUT /api/activity/edit`
+- `PUT /api/activity/undo`
 - `PUT /api/journal/workflow`
 - `PUT /api/journal/review`
+- `PUT /api/journal/permanent`
+- `PUT /api/journal/document`
+- `PUT /api/journal/beliefs`
 - `PUT /api/journal/weekly`
+- `PUT /api/journal/monthly`
 
-三个 `PUT` 端点只有在 `journal_write_enabled: true` 时可用。日记写入使用文件
-指纹、单笔记锁、同目录临时文件和原子替换；发生版本冲突时拒绝覆盖。完整响应
-契约见 [Backend response](docs/BACKEND_RESPONSE_V1.md)。
+前端从 `/api/settings` 读取默认日口径、作息日开始时间、时区与两个写入开关。
+日记与信念的 `PUT` 端点只有在 `journal_write_enabled: true` 时可用；两个活动
+`PUT` 端点只有在 `activity_edit_enabled: true` 时可用。两条写入路径都使用
+乐观版本检查、锁与原子替换，发生版本冲突时拒绝覆盖。完整响应契约见
+[Backend response](docs/BACKEND_RESPONSE_V1.md)。
 
 ## Safety boundaries
 
-- 服务强制只绑定 loopback 地址。
-- 不修改 ActivityWatch.app，不复制或迁移其 SQLite 数据库。
-- 不复制上游统计函数形成分叉。
-- 不持续扫描 vault，不自动保存，不批量迁移日记。
+- 服务和 ActivityWatch 连接都限制在 loopback 地址；HTTP 请求还会校验
+  loopback `Host`，拒绝跨站浏览器 API 请求，并要求所有携带的 `Origin` 与
+  `Host` 匹配。页面响应禁止跨站嵌入和 MIME 嗅探。
+- ActivityWatch 请求不使用环境代理，也不跟随重定向，避免已核验的 loopback
+  URL 被转成外部请求。
+- 不修改 ActivityWatch，不复制或迁移其 SQLite 数据库。
+- 活动修改只写入 KinaWatch 校正层，绑定源事件指纹；源事件变化时拒绝静默套用。
+  当前不允许修改正在采集的事件，也不允许新增 ActivityWatch 事件。
+- 不持续扫描本地存储或 vault，不批量迁移日记。仅日记正文在用户输入后自动保存；
+  工作流描述、信念与活动校正均要求显式保存。
 - 写入白名单仅包含所选日期的一条工作流描述，或 `我的总结`、`今日产出`、
-  `明天的计划` 中的一项。
-- 完成任务、自由正文、Kina 生成内容、离线活动、properties 和其他日期均只读。
+  `明天的计划`、`自由记录` 中的一项；周/月复盘每次只允许更新固定周期文件中的
+  `自由记录`；常驻笔记每次只允许整体替换配置中的单一相对 Markdown 文件，
+  默认是 `incoming.md`。完整正文接口只更新所选日记的正文，信念接口只更新配置指定
+  文件的正文；这两种写入都保留已有 YAML 属性与 BOM。
+- 日记编辑器分栏显示已识别的 Kina 内容，工作流描述只在时间线中编辑；编辑可见正文
+  时保留这些隐藏内容。所有文件写入仍需要配置开关、原始指纹、锁与原子替换。
 - 所有写入测试只使用临时 fixture。
 
 更详细的安全说明见 [SECURITY.md](SECURITY.md)。
@@ -133,7 +252,7 @@ Gate 1 会读取配置中的历史日记与 ActivityWatch 数据，不应拿真�
 ## Project layout
 
 ```text
-backend/      Python API、缓存、解析与受限写入
+backend/      Python API、ActivityWatch REST 适配、活动校正层与受限日记写入
 frontend/     React + TypeScript + Vite 前端
 dist/         已构建的静态前端
 config/       安全公开模板；本机配置由 Git 忽略
@@ -142,11 +261,8 @@ scripts/      真实环境的只读 Gate 1
 docs/         API、数据契约、设计与能耗说明
 ```
 
-## Contributing
+## Contributing and license
 
-请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。涉及统计口径、日记写入范围或网络
-绑定的改动必须带回归测试，并明确说明安全边界是否变化。
-
-## License
-
-[MIT](LICENSE)
+请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。KinaWatch 使用
+[MIT License](LICENSE)。ActivityWatch 不随本项目分发；项目关系和第三方声明见
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

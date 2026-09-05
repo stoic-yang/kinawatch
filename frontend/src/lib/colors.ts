@@ -1,4 +1,4 @@
-// Stable colors per Kina category id, tuned to similar luminance so no
+// Stable colors per KinaWatch category id, tuned to similar luminance so no
 // single category screams. Unknown categories fall back to a hash-picked
 // pool color so new upstream categories stay visible.
 const CATEGORY_COLORS: Record<string, string> = {

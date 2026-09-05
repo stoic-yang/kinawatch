@@ -7,10 +7,9 @@ The v1 backend performs work only in response to an HTTP request.
 - There is no file watcher, vault scan, WebSocket, browser heartbeat, or
   background refresh thread.
 - Today's ActivityWatch result has a five-minute cache TTL.
-- Historical results remain cached until the selected note or upstream
+- Historical results remain cached until the selected note or input
   configuration fingerprint changes, or the user requests `refresh=1`.
-- The ActivityWatch database mtime is intentionally not part of the historical
-  cache key.
+- KinaWatch never inspects the ActivityWatch database or its mtime.
 - The server exits after the configured idle timeout.
 
 Gate 1C is measured on an idle process after one request. Expected CPU usage is

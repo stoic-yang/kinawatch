@@ -16,9 +16,12 @@ Historical date: `2026-07-15`.
 - `一天活动小总结` was present.
 - Five numbered `Kina 建议` items were parsed.
 - Free journal text after the advice section was preserved.
-- The completion task was recognized.
-- Dashboard `active_seconds` exactly matched Kina's
-  `time_accounting.wall_duration_seconds`: `10925.161`.
+- The editable `freeform_markdown` field was present in the response.
+- Legacy completion-checkbox state was absent from the API.
+- The calendar review index was derived from actual user-authored content.
+- KinaWatch's direct ActivityWatch REST adapter returned a stable
+  `time_accounting.wall_duration_seconds` of `10925.161`, exactly matching the
+  pre-migration v1 result for the same date.
 - Classification coverage was `1.0` under the current local classification
   rules.
 - ActivityWatch reported `complete: true` and no issues.
@@ -43,13 +46,13 @@ Historical date: `2026-07-15`.
 ## Test Suite
 
 ```text
-Ran 56 tests in 1.797s
+Ran 65 tests in 1.812s
 OK
 ```
 
 The tests cover parsing, malformed offline activities, arbitrary date ranges,
-upstream function reuse, cache TTL and invalidation, offline overlap accounting,
-local-only HTTP behavior, and idle exit.
+REST bucket discovery, AFK filtering, cache TTL and invalidation, offline
+overlap accounting, local-only HTTP behavior, and idle exit.
 
 ## Gate Verdict
 

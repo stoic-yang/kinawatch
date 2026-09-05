@@ -13,6 +13,9 @@ from .config import DashboardSettings
 from .models import FileFingerprint
 
 
+VALID_DAY_MODES = frozenset({"calendar", "routine"})
+
+
 class DayCache:
     def __init__(self, settings: DashboardSettings, root: Path | None = None):
         self.settings = settings
@@ -20,6 +23,8 @@ class DayCache:
         self.day_root = self.root / "days"
 
     def _path(self, day: date, mode: str) -> Path:
+        if mode not in VALID_DAY_MODES:
+            raise ValueError("mode must be calendar or routine")
         return self.day_root / f"{day.isoformat()}-{mode}.json"
 
     def invalidate(self, day: date) -> None:
@@ -34,7 +39,7 @@ class DayCache:
         day: date,
         mode: str,
         journal_fingerprint: FileFingerprint,
-        upstream_fingerprint: str,
+        input_fingerprint: str,
         *,
         is_today: bool,
         refresh: bool = False,
@@ -56,7 +61,7 @@ class DayCache:
             return None
         if metadata.get("journal_fingerprint") != journal_fingerprint.to_dict():
             return None
-        if metadata.get("upstream_fingerprint") != upstream_fingerprint:
+        if metadata.get("input_fingerprint") != input_fingerprint:
             return None
         if int(metadata.get("day_schema_version", 0)) != self.settings.day_schema_version:
             return None
@@ -75,7 +80,7 @@ class DayCache:
         day: date,
         mode: str,
         journal_fingerprint: FileFingerprint,
-        upstream_fingerprint: str,
+        input_fingerprint: str,
         response: dict[str, Any],
         *,
         now_epoch: float | None = None,
@@ -87,7 +92,7 @@ class DayCache:
             "mode": mode,
             "created_at_epoch": time.time() if now_epoch is None else now_epoch,
             "journal_fingerprint": journal_fingerprint.to_dict(),
-            "upstream_fingerprint": upstream_fingerprint,
+            "input_fingerprint": input_fingerprint,
             "day_schema_version": self.settings.day_schema_version,
         }
         # The threaded HTTP server can aggregate the same date concurrently

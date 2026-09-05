@@ -22,7 +22,7 @@ Repository:
 Start the backend:
 
 ```sh
-cd kina-activity-dashboard
+cd kinawatch
 python3 -m backend.server
 ```
 
@@ -44,17 +44,19 @@ This is a transport detail, not a frontend architecture requirement.
 GET /api/health
 ```
 
-Reports whether the local ActivityWatch source and the Obsidian daily-note
-directory are available.
+Reports whether the local ActivityWatch source and the selected journal storage
+provider are available.
 
 Important fields:
 
 - `ok`
 - `activitywatch_available`
 - `journal_root_available`
+- `journal_provider`
 - `activitywatch.api_version`
 - `activitywatch.api_error`
-- `journal.vault`
+- `journal.provider`
+- `journal.storage_root`
 - `journal.daily_directory`
 
 ### One Day
@@ -101,8 +103,10 @@ GET /api/range?start=YYYY-MM-DD&end=YYYY-MM-DD&mode=calendar
 - It intentionally excludes full journal bodies and detailed timelines.
 - Each range day may include `rhythm`, containing the first/last active
   timestamps and 24 mode-aligned hourly active-second buckets.
-- Add `include=uncategorized_apps` to receive a whole-range Top 5 application
-  summary for uncategorized screen time.
+- Add `include=top_apps` to receive the whole-range Top 6 applications with
+  each application's dominant category; add `include=uncategorized_apps` for
+  the Top 5 applications in uncategorized screen time. Values may be combined
+  with a comma.
 - It is available for any cross-day exploration; it does not imply that the
   frontend must contain a seven-day chart.
 
@@ -136,7 +140,9 @@ A screen block can expose:
 - application name;
 - window title;
 - category id and label;
-- explicit project value when the upstream event contains one.
+- explicit project value when the upstream event contains one;
+- the raw bucket/event references used to derive it;
+- whether a manual correction is active or has a source conflict.
 
 An offline block can expose:
 
@@ -151,8 +157,18 @@ An offline block can expose:
 The current screen timeline merges immediately adjacent events only when
 category, project, application, title, and source all match. It is more
 detailed than category totals but is not the untouched raw ActivityWatch
-event stream. If the design requires raw events, event search, grouping by
-domain, or a different aggregation level, request that backend capability.
+event stream. `event_refs` allow the UI to call `GET /api/activity/inspect`
+only after the user selects a display block; the response returns each
+underlying raw event separately with original/effective values and edit
+versions. Event search, grouping by domain, or a different aggregation level
+still requires a separate backend capability.
+
+When `activity_edit_enabled` is true, `PUT /api/activity/edit` can explicitly
+override one ended event's time, app, title, or category in the KinaWatch-owned
+overlay. `PUT /api/activity/undo` reverses the returned `change_id` if neither
+the raw source fingerprint nor overlay revision has changed. These endpoints
+never write ActivityWatch. New independent activities and global category-rule
+editing are not part of this contract.
 
 ### Category data
 
@@ -189,8 +205,10 @@ that as a new backend/product capability.
 - `parse_warnings`: malformed journal structures that were preserved;
 - `overlap_warnings`: screen/offline time overlaps;
 - `sources`: source-specific counts, duration, bucket and AFK information;
-- `time_accounting`: AFK removal, background removal, overlap adjustment and
-  the upstream accounting policy.
+- `time_accounting`: interactive wall time, foreground/passive media time,
+  AFK removal before and after media recovery, background removal, overlap
+  adjustment and the upstream accounting policy. `overview.active_seconds`
+  is the effective screen-time union, not the sum of these diagnostic fields.
 
 These fields make it possible to communicate uncertainty, but they do not
 dictate a warning panel or any other presentation.
@@ -203,7 +221,7 @@ dictate a warning panel or any other presentation.
 - `offline_seconds`;
 - `combined_nonoverlap_seconds`;
 - `classification_coverage`;
-- `review_completed`;
+- `review_has_content` (whether the selected note has user-authored review content);
 - `longest_focus_seconds`;
 - `meaningful_switches`.
 
@@ -226,6 +244,9 @@ Missing sections return empty values rather than errors.
 - Preserves unknown `##` headings and their content.
 - Preserves user text written after the consecutive numbered Kina advice.
 - A note may consist only of this field.
+
+This is the read-only compatibility bucket for unstructured or unknown note
+regions. It is separate from the editable `自由记录` field below.
 
 ### Personal summary
 
@@ -256,13 +277,24 @@ Recognized heading:
 - `## 明天的计划`
 - `## 明日第一步`
 
+### Freeform review
+
+`journal.freeform_markdown`
+
+Recognized heading:
+
+- `## 自由记录`
+
+Canonical writes store it as the `自由记录` entry inside the daily `复盘`
+callout.
+
 ### Workflow explanations
 
 `journal.workflow_notes`
 
 Workflow sessions are still derived in the frontend. A user-authored explanation
-can be attached to a session by its stable start clock using this native,
-collapsed-by-default daily Obsidian callout:
+can be attached to a session by its stable start clock using this portable
+Markdown callout (rendered as a collapsed native callout in Obsidian):
 
 ```markdown
 > [!abstract]- 工作流
@@ -297,14 +329,14 @@ bulk migration, or browser-side note database.
 
 ### Editable review fields
 
-`journal.personal_summary_markdown`, `journal.outputs`, and
-`journal.next_action_markdown` are editable through the restricted
+`journal.personal_summary_markdown`, `journal.outputs`,
+`journal.next_action_markdown`, and `journal.freeform_markdown` are editable through the restricted
 `PUT /api/journal/review` endpoint. The request accepts the selected `date`, one
 whitelisted `field`, non-empty `markdown`, and the exact
 `cache.journal_fingerprint` observed by the page. It never accepts a client file
 path.
 
-The canonical Obsidian representation is one collapsed daily callout:
+The canonical Markdown representation is one collapsed daily callout:
 
 ```markdown
 > [!abstract]- 复盘
@@ -316,25 +348,32 @@ The canonical Obsidian representation is one collapsed daily callout:
 >
 > **明天的计划**
 > 明天想推进的事情、顺序和判断，可以写成多段。
+>
+> **自由记录**
+> 不适合归入固定栏目但仍值得留下的内容。
 ```
 
 Only non-empty fields are rendered. A user-explicit save may consolidate the
-recognized legacy `## 我的总结` / `## 今日总结`, `## 今日产出`, and
-`## 明日第一步` sections in that selected note. New writes use `明天的计划`,
-while the API field remains `next_action`. It does not change the review
-completion task, free journal body, Kina-generated sections, offline activity,
+recognized legacy `## 我的总结` / `## 今日总结`, `## 今日产出`,
+`## 明日第一步`, and `## 自由记录` sections in that selected note. New writes use `明天的计划`,
+while the API field remains `next_action`. It does not change the unstructured
+free journal body, Kina-generated sections, offline activity,
 properties, workflows, or other dates. The same fingerprint, per-note lock,
 atomic replacement, and `409` conflict rules as workflow saves apply. There is
 no autosave, field deletion, or background migration.
 
-### Weekly review entry
+### Weekly and monthly review entry
 
-`PUT /api/journal/weekly` accepts one validated ISO `week_id` such as
-`2026-W29`. It maps that value to the single canonical
-`Review/Weekly/2026-W29.md` path, creates the template only when the file is
-absent, and returns a stable `obsidian://open` URI. Existing weekly notes are
-never rewritten by this endpoint. Repeated calls therefore open the same file
-instead of asking Obsidian to create name-suffixed copies.
+`GET /api/journal/weekly?week_id=2026-W29` reads the canonical weekly
+`自由记录` field without creating a note. `PUT /api/journal/weekly` saves that
+field as `freeform` using the returned fingerprint. The monthly equivalent is
+`GET /api/journal/monthly?month_id=2026-07` plus
+`PUT /api/journal/monthly`; it uses `Review/Monthly/2026-07.md`.
+A missing period note is created only by an explicit save. Existing
+frontmatter, legacy headings, unknown sections, and all non-target content are
+preserved. The response includes a shared `period_id` and `provider`;
+`open_url` and the compatibility field `obsidian_url` are empty for local
+storage and contain the stable `obsidian://open` URI for the Obsidian provider.
 
 ### Generated activity summary
 
@@ -357,26 +396,25 @@ Recognized heading:
 Only consecutive numbered items starting at `1` are returned as advice.
 Trailing unheaded user writing is returned to `body_markdown`.
 
-### Review completion
+### Legacy review checkbox
 
-- `journal.completion_task_exists`
-- `journal.completion_task_checked`
+Historical `完成复盘` checkbox lines are silently ignored. They are not
+returned as API state, generated in new notes, or used to decide whether a day
+has review content. `overview.review_has_content` is derived from actual
+user-authored review fields or preserved unstructured journal text.
 
-Recognized task:
-
-```markdown
-- [ ] 完成复盘
-- [x] 完成复盘
-```
-
-### Obsidian navigation
+### Journal storage and optional Obsidian navigation
 
 - `journal.exists`
+- `journal.provider`
 - `journal.path`
 - `journal.absolute_path`
+- `journal.open_url`
 - `journal.obsidian_url`
 
-`obsidian_url` can open the selected note in the local Studio vault.
+`provider` is `local` or `obsidian`. `open_url` is the provider-neutral field;
+it is empty for KinaWatch-managed storage and can open the selected note when
+the Obsidian provider is active. `obsidian_url` remains as a compatibility alias.
 
 ### Wikilinks
 
@@ -449,8 +487,9 @@ data. The product remains local-only and read-mostly:
 - do not send this data to external services;
 - do not add analytics or remote fonts that transmit page activity;
 - write daily notes only through the explicit restricted workflow-description
-  and review-field endpoints, and weekly notes only through idempotent
-  create-if-absent; every other note region remains read-only;
+  and review-field endpoints, and weekly/monthly notes only one canonical H2
+  field at a time with the same fingerprint/lock/atomic safeguards; every
+  other note region remains read-only;
 - do not modify ActivityWatch data;
 - keep API access on the local machine.
 

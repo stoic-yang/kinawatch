@@ -10,6 +10,7 @@ from types import SimpleNamespace
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from backend.activitywatch_adapter import ActivityWatchAdapter
 from backend.cache import DayCache
 from backend.config import fingerprint_file, load_settings
 from backend.day_aggregator import DayAggregator
@@ -39,6 +40,7 @@ class CountingJournalRepository:
 class CountingActivityWatch:
     def __init__(self) -> None:
         self.load_count = 0
+        self.batch_count = 0
 
     def timezone_name(self) -> str:
         return "Asia/Shanghai"
@@ -54,11 +56,24 @@ class CountingActivityWatch:
 
     def load_day(self, day: date, mode: str) -> dict[str, Any]:
         self.load_count += 1
+        return self._payload()
+
+    def load_days(
+        self, days: list[date], mode: str
+    ) -> dict[date, dict[str, Any]]:
+        self.batch_count += 1
+        return {day: self._payload() for day in days}
+
+    @staticmethod
+    def _payload() -> dict[str, Any]:
         event = {
             "timestamp": "2026-07-15T20:45:00+08:00",
             "duration_seconds": 600.0,
+            "bucket_id": "window-test",
+            "event_id": "42",
+            "source_fingerprint": "source-42",
             "app": "Editor",
-            "title": "Kina Activity Dashboard",
+            "title": "KinaWatch",
             "project": "Dashboard",
             "source": "mac",
             "category": "coding",
@@ -95,6 +110,49 @@ class CountingActivityWatch:
         }
 
 
+class FlakyActivityWatch(CountingActivityWatch):
+    def __init__(self) -> None:
+        super().__init__()
+        self.fail_day_once = True
+        self.fail_batch_once = True
+
+    def load_day(self, day: date, mode: str) -> dict[str, Any]:
+        self.load_count += 1
+        if self.fail_day_once:
+            self.fail_day_once = False
+            raise RuntimeError("temporary ActivityWatch failure")
+        return self._payload()
+
+    def load_days(
+        self,
+        days: list[date],
+        mode: str,
+    ) -> dict[date, dict[str, Any]]:
+        self.batch_count += 1
+        if self.fail_batch_once:
+            self.fail_batch_once = False
+            raise RuntimeError("temporary ActivityWatch batch failure")
+        return {day: self._payload() for day in days}
+
+
+class CorrectableActivityWatch(CountingActivityWatch):
+    def __init__(self) -> None:
+        super().__init__()
+        self.corrections: dict[date, str] = {}
+        self.batch_days: list[list[date]] = []
+
+    def correction_fingerprint(self, day: date) -> str:
+        return self.corrections.get(day, "none")
+
+    def load_days(
+        self,
+        days: list[date],
+        mode: str,
+    ) -> dict[date, dict[str, Any]]:
+        self.batch_days.append(list(days))
+        return super().load_days(days, mode)
+
+
 class DayAggregatorTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -124,13 +182,18 @@ class DayAggregatorTests(unittest.TestCase):
             str,
         )
         self.assertEqual(payload["journal"]["path"], "Review/Daily/2026-07-15.md")
+        self.assertEqual(payload["journal"]["provider"], "obsidian")
+        self.assertEqual(
+            payload["journal"]["open_url"],
+            "obsidian://open?vault=Studio&file=Review/Daily/2026-07-15",
+        )
         self.assertEqual(payload["journal"]["activity_summary_markdown"], "编码/刷题 2.0h。")
         self.assertEqual(len(payload["journal"]["kina_advice"]), 2)
         self.assertIn("用户在建议后的自由正文", payload["journal"]["body_markdown"])
-        self.assertTrue(payload["overview"]["review_completed"])
+        self.assertTrue(payload["overview"]["review_has_content"])
         self.assertEqual(payload["overview"]["active_seconds"], 600)
-        self.assertEqual(payload["overview"]["offline_seconds"], 4800)
-        self.assertEqual(payload["overview"]["combined_nonoverlap_seconds"], 4800)
+        self.assertEqual(payload["overview"]["offline_seconds"], 4200)
+        self.assertEqual(payload["overview"]["combined_nonoverlap_seconds"], 4200)
         self.assertEqual(len(payload["quality"]["overlap_warnings"]), 1)
         self.assertEqual(
             payload["quality"]["overlap_warnings"][0]["overlap_seconds"],
@@ -139,6 +202,15 @@ class DayAggregatorTests(unittest.TestCase):
         projects = {item["project"]: item for item in payload["projects"]}
         self.assertEqual(projects["Dashboard"]["screen_seconds"], 600)
         self.assertEqual(projects["矩阵代数"]["offline_seconds"], 3000)
+        screen_block = next(
+            block
+            for block in payload["timeline"]
+            if block["kind"] == "screen"
+        )
+        self.assertEqual(
+            screen_block["event_refs"],
+            [{"bucket_id": "window-test", "event_id": "42"}],
+        )
 
     def test_second_request_skips_note_read_and_activitywatch_load(self) -> None:
         first = self.aggregator.get_day(date(2026, 7, 15), "calendar")
@@ -165,6 +237,39 @@ class DayAggregatorTests(unittest.TestCase):
         self.assertFalse(refreshed["cache"]["hit"])
         self.assertEqual(self.journals.read_count, 2)
         self.assertEqual(self.activitywatch.load_count, 2)
+
+    def test_range_batches_uncached_days_and_reuses_the_day_cache(self) -> None:
+        selected = [date(2026, 7, 15), date(2026, 7, 16)]
+
+        first = self.aggregator.get_days(selected, "calendar")
+        second = self.aggregator.get_days(selected, "calendar")
+
+        self.assertEqual(
+            [payload["date"] for payload in first],
+            [day.isoformat() for day in selected],
+        )
+        self.assertEqual(len(second), 2)
+        self.assertEqual(self.activitywatch.batch_count, 1)
+        self.assertEqual(self.activitywatch.load_count, 0)
+        self.assertTrue(all(payload["cache"]["hit"] for payload in second))
+
+    def test_activity_correction_invalidates_only_its_selected_day(self) -> None:
+        selected = [date(2026, 7, 15), date(2026, 7, 16)]
+        activitywatch = CorrectableActivityWatch()
+        aggregator = DayAggregator(
+            self.settings,
+            journal_repository=self.journals,
+            activitywatch=activitywatch,
+            cache=self.cache,
+        )
+        aggregator.get_days(selected, "calendar")
+        activitywatch.corrections[selected[0]] = "edited"
+
+        refreshed = aggregator.get_days(selected, "calendar")
+
+        self.assertFalse(refreshed[0]["cache"]["hit"])
+        self.assertTrue(refreshed[1]["cache"]["hit"])
+        self.assertEqual(activitywatch.batch_days, [selected, [selected[0]]])
 
     def test_routine_rhythm_is_aligned_to_six_am_and_deduplicates_midnight(self) -> None:
         zone = ZoneInfo("Asia/Shanghai")
@@ -205,6 +310,85 @@ class DayAggregatorTests(unittest.TestCase):
         self.assertIsNone(summary["first_active"])
         self.assertIsNone(summary["last_active"])
         self.assertEqual(summary["hourly_active_seconds"], [0] * 24)
+
+    def test_incomplete_day_is_not_cached_and_recovers_on_next_request(self) -> None:
+        flaky = FlakyActivityWatch()
+        aggregator = DayAggregator(
+            self.settings,
+            journal_repository=self.journals,
+            activitywatch=flaky,
+            cache=self.cache,
+        )
+
+        failed = aggregator.get_day(date(2026, 7, 15), "calendar")
+        recovered = aggregator.get_day(date(2026, 7, 15), "calendar")
+
+        self.assertFalse(failed["quality"]["complete"])
+        self.assertTrue(recovered["quality"]["complete"])
+        self.assertFalse(recovered["cache"]["hit"])
+        self.assertEqual(flaky.load_count, 2)
+
+    def test_incomplete_batch_days_are_not_cached(self) -> None:
+        flaky = FlakyActivityWatch()
+        aggregator = DayAggregator(
+            self.settings,
+            journal_repository=self.journals,
+            activitywatch=flaky,
+            cache=self.cache,
+        )
+        selected = [date(2026, 7, 15), date(2026, 7, 16)]
+
+        failed = aggregator.get_days(selected, "calendar")
+        recovered = aggregator.get_days(selected, "calendar")
+
+        self.assertTrue(all(not item["quality"]["complete"] for item in failed))
+        self.assertTrue(all(item["quality"]["complete"] for item in recovered))
+        self.assertEqual(flaky.batch_count, 2)
+
+    def test_calendar_offline_activity_is_clipped_at_the_day_boundary(self) -> None:
+        self.note.write_text(
+            "## 离线活动\n"
+            "- 23:00-01:00 | 学习 | [[夜间项目]]\n",
+            encoding="utf-8",
+        )
+
+        payload = self.aggregator.get_day(
+            date(2026, 7, 15),
+            "calendar",
+        )
+
+        self.assertEqual(payload["overview"]["offline_seconds"], 3600)
+        offline = payload["journal"]["offline_activities"][0]
+        self.assertEqual(offline["duration_seconds"], 3600)
+        self.assertEqual(offline["start"], "2026-07-15T23:00:00+08:00")
+        self.assertEqual(offline["end"], "2026-07-16T00:00:00+08:00")
+        self.assertEqual(sum(payload["rhythm"]["hourly_active_seconds"]), 4200)
+
+    def test_overlap_attribution_preserves_each_blocks_wall_clock_end(self) -> None:
+        raw_events = [
+            {
+                "timestamp": "2026-07-15T09:00:00+08:00",
+                "duration_seconds": 600.0,
+                "app": app,
+                "title": app,
+                "category": "coding",
+                "category_label": "编码",
+                "source": "mac",
+            }
+            for app in ("Editor", "Terminal")
+        ]
+        adjusted, overlap_seconds = ActivityWatchAdapter._partition_overlaps(
+            raw_events
+        )
+
+        blocks = self.aggregator._screen_blocks(adjusted)
+
+        self.assertEqual(overlap_seconds, 600)
+        self.assertEqual([item["duration_seconds"] for item in blocks], [300, 300])
+        self.assertEqual(
+            {item["end"] for item in blocks},
+            {"2026-07-15T01:10:00+00:00"},
+        )
 
 
 if __name__ == "__main__":

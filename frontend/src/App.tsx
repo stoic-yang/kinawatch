@@ -1,23 +1,37 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { fetchDay, fetchRange, type DayResponse, type RangeDay } from "./api";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { ThemeShellProps } from "./experiments/types";
+import {
+  fetchDay,
+  fetchRange,
+  fetchRuntimeSettings,
+  type DayResponse,
+  type FileFingerprint,
+  type RangeDay,
+  type RuntimeSettings,
+  type ScreenTimelineBlock,
+  type WorkflowSaveResponse,
+} from "./api";
+import { ActivityEditor } from "./components/ActivityEditor";
 import { DayRibbon } from "./components/DayRibbon";
-import { WeekStrip } from "./components/WeekStrip";
+import { WeekStrip, type RhythmMode } from "./components/WeekStrip";
 import { SessionList } from "./components/SessionList";
-import { ReviewPanel } from "./components/ReviewPanel";
+import {
+  ReviewWorkspace,
+  type ReviewScope,
+} from "./components/ReviewWorkspace";
 import { QualityWarnings } from "./components/QualityWarnings";
 import {
   Sidebar,
-  monthOf,
-  shiftMonth,
-  monthEnd,
   SidebarToggleIcon,
   type CategoryOption,
 } from "./components/Sidebar";
+import { monthEnd, monthOf, shiftMonth } from "./lib/calendar";
 import { buildSessions, topAppsForDay } from "./lib/sessions";
 import {
   currentDayStr,
   fmtClock,
   fmtDuration,
+  isValidDateString,
   isoWeekNumber,
   parseLocalDate,
   shiftDate,
@@ -25,13 +39,14 @@ import {
   weekdayShort,
 } from "./lib/format";
 
-const DAY_MODE = "routine" as const;
-const HIDDEN_CATS_KEY = "kina-dashboard-hidden-categories";
-const SIDEBAR_KEY = "kina-dashboard-sidebar";
+const HIDDEN_CATS_KEY = "kinawatch-hidden-categories";
+const SIDEBAR_KEY = "kinawatch-sidebar";
+const LEGACY_HIDDEN_CATS_KEY = "kina-dashboard-hidden-categories";
+const LEGACY_SIDEBAR_KEY = "kina-dashboard-sidebar";
 const ACTIVITY_FIRST_YEAR = 2026;
-type WeekMode = "rolling" | "calendar" | "year" | "calendarYear";
+const ANNUAL_CHUNK_DAYS = 14;
 
-function isAnnualMode(mode: WeekMode): boolean {
+function isAnnualMode(mode: RhythmMode): boolean {
   return mode === "year" || mode === "calendarYear";
 }
 
@@ -48,14 +63,28 @@ function inclusiveDateCount(start: string, end: string): number {
   return Math.round((lastUtc - firstUtc) / (24 * 3600 * 1000)) + 1;
 }
 
+function rangeDayFromResponse(day: DayResponse): RangeDay {
+  return {
+    date: day.date,
+    overview: day.overview,
+    quality: {
+      complete: day.quality.complete,
+      issues: day.quality.issues,
+      uncategorized_seconds: day.quality.uncategorized_seconds,
+    },
+    categories: day.categories,
+    rhythm: day.rhythm,
+  };
+}
+
 // The selected day lives in the URL so a browser reload refreshes data while
 // staying on the same day instead of snapping back to today.
-function dateFromURL(): string | null {
+function dateFromURL(currentDate: string): string | null {
   const value = new URLSearchParams(window.location.search).get("date");
   if (
     value &&
-    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-    value <= currentDayStr(DAY_MODE)
+    isValidDateString(value) &&
+    value <= currentDate
   ) {
     return value;
   }
@@ -64,7 +93,9 @@ function dateFromURL(): string | null {
 
 function storedHiddenCats(): Set<string> {
   try {
-    const raw = localStorage.getItem(HIDDEN_CATS_KEY);
+    const raw =
+      localStorage.getItem(HIDDEN_CATS_KEY) ??
+      localStorage.getItem(LEGACY_HIDDEN_CATS_KEY);
     if (raw) return new Set(JSON.parse(raw) as string[]);
   } catch {
     // Ignore malformed storage.
@@ -74,15 +105,23 @@ function storedHiddenCats(): Set<string> {
 
 function storedSidebarOpen(): boolean {
   try {
-    return localStorage.getItem(SIDEBAR_KEY) !== "closed";
+    const value =
+      localStorage.getItem(SIDEBAR_KEY) ??
+      localStorage.getItem(LEGACY_SIDEBAR_KEY);
+    return value !== "closed";
   } catch {
     return true;
   }
 }
 
-export default function App() {
+export default function App({ renderShell }: {
+  renderShell?: (props: ThemeShellProps) => ReactNode;
+} = {}) {
+  const provisionalDate = currentDayStr("calendar");
+  const [runtime, setRuntime] = useState<RuntimeSettings | null>(null);
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   const [date, setDate] = useState(
-    () => dateFromURL() ?? currentDayStr(DAY_MODE),
+    () => dateFromURL(provisionalDate) ?? provisionalDate,
   );
   const [day, setDay] = useState<DayResponse | null>(null);
   const [week, setWeek] = useState<RangeDay[]>([]);
@@ -90,22 +129,78 @@ export default function App() {
   const [yearLoading, setYearLoading] = useState(false);
   const [yearProgress, setYearProgress] = useState(0);
   const [yearError, setYearError] = useState<string | null>(null);
-  const [weekMode, setWeekMode] = useState<WeekMode>("rolling");
+  const [yearRevision, setYearRevision] = useState(0);
+  const [weekMode, setWeekMode] = useState<RhythmMode>("rolling");
   const [calendarYear, setCalendarYear] = useState(() =>
-    parseLocalDate(currentDayStr(DAY_MODE)).getFullYear(),
+    parseLocalDate(provisionalDate).getFullYear(),
   );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [monthCursor, setMonthCursor] = useState(() => monthOf(date));
-  const [monthReviews, setMonthReviews] = useState<Record<string, boolean>>({});
+  const [monthRecords, setMonthRecords] = useState<Record<string, boolean>>({});
+  const [monthRevision, setMonthRevision] = useState(0);
   const [hiddenCats, setHiddenCats] = useState<Set<string>>(storedHiddenCats);
   const [sidebarOpen, setSidebarOpen] = useState(storedSidebarOpen);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [reviewScope, setReviewScope] = useState<ReviewScope>("day");
+  const [activitySelection, setActivitySelection] =
+    useState<ScreenTimelineBlock | null>(null);
   // On first mount, re-read today's data from the sources so a page reload
   // acts as the "refresh" action; later navigation uses the normal cache.
   const initialRefresh = useRef(true);
+  const loadGeneration = useRef(0);
+  const selectedDateRef = useRef(date);
+  const monthLoadGeneration = useRef(0);
   const monthCache = useRef(new Map<string, Record<string, boolean>>());
   const yearCache = useRef(new Map<string, RangeDay[]>());
-  const currentDate = currentDayStr(DAY_MODE);
+  const dayMode = runtime?.default_mode ?? "calendar";
+  const currentDate = runtime
+    ? currentDayStr(
+        runtime.default_mode,
+        runtime.routine_day_start,
+        runtime.timezone,
+      )
+    : provisionalDate;
+  const selectDate = useCallback((nextDate: string) => {
+    if (nextDate === selectedDateRef.current) return;
+    loadGeneration.current += 1;
+    selectedDateRef.current = nextDate;
+    setActivitySelection(null);
+    setDay(null);
+    setDate(nextDate);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchRuntimeSettings()
+      .then((settings) => {
+        if (cancelled) return;
+        const today = currentDayStr(
+          settings.default_mode,
+          settings.routine_day_start,
+          settings.timezone,
+        );
+        const nextDate = dateFromURL(today) ?? today;
+        loadGeneration.current += 1;
+        selectedDateRef.current = nextDate;
+        setDay(null);
+        setDate(nextDate);
+        setMonthCursor(monthOf(nextDate));
+        setCalendarYear(parseLocalDate(today).getFullYear());
+        setRuntime(settings);
+        setBootstrapError(null);
+      })
+      .catch((reason) => {
+        if (!cancelled) {
+          setBootstrapError(
+            reason instanceof Error ? reason.message : String(reason),
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const currentYear = parseLocalDate(currentDate).getFullYear();
   const availableYears = useMemo(
     () =>
@@ -145,41 +240,139 @@ export default function App() {
   }, [currentDate, date, weekMode]);
 
   const load = useCallback(async () => {
-    const refresh = initialRefresh.current && date === currentDate;
+    if (!runtime) return;
+    const targetDate = date;
+    const generation = ++loadGeneration.current;
+    const refresh = initialRefresh.current && targetDate === currentDate;
+    const annualMode = isAnnualMode(weekMode);
     initialRefresh.current = false;
+    setDay(null);
     setLoading(true);
     setError(null);
     try {
       const [d, r] = await Promise.all([
-        fetchDay(date, DAY_MODE, refresh),
-        isAnnualMode(weekMode)
+        fetchDay(targetDate, dayMode, refresh),
+        annualMode
           ? Promise.resolve(null)
-          : fetchRange(weekRange.start, weekRange.end, DAY_MODE),
+          : fetchRange(weekRange.start, weekRange.end, dayMode),
       ]);
+      if (
+        generation !== loadGeneration.current ||
+        selectedDateRef.current !== targetDate
+      ) {
+        return;
+      }
       setDay(d);
       if (r) setWeek(r.days);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (
+        generation === loadGeneration.current &&
+        selectedDateRef.current === targetDate
+      ) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
-      setLoading(false);
+      if (
+        generation === loadGeneration.current &&
+        selectedDateRef.current === targetDate
+      ) {
+        setLoading(false);
+      }
     }
-  }, [currentDate, date, weekMode, weekRange]);
+  }, [currentDate, date, dayMode, runtime, weekMode, weekRange]);
 
-  const refreshSelectedDay = useCallback(async () => {
+  const refreshSelectedDay = useCallback(async (
+    savedWorkflow?: WorkflowSaveResponse,
+    editedFingerprint?: FileFingerprint,
+  ) => {
+    if (!runtime) return;
+    const targetDate = selectedDateRef.current;
+    const generation = ++loadGeneration.current;
     setError(null);
+    if (savedWorkflow?.date === targetDate && editedFingerprint) {
+      // Publish the acknowledged text and version before the slower day reload.
+      // A later edit must never start from the pre-save note or fingerprint.
+      setDay(previous => {
+        if (!previous || previous.date !== savedWorkflow.date) return previous;
+        const current = previous.cache.journal_fingerprint;
+        if (current.path !== editedFingerprint.path ||
+            current.mtime_ns !== editedFingerprint.mtime_ns ||
+            current.size !== editedFingerprint.size) return previous;
+        const notes = previous.journal.workflow_notes.filter(
+          note => note.start_time !== savedWorkflow.workflow_note.start_time,
+        );
+        return {
+          ...previous,
+          cache: {...previous.cache, journal_fingerprint: savedWorkflow.journal_fingerprint},
+          journal: {
+            ...previous.journal,
+            exists: true,
+            workflow_notes: [...notes, {...savedWorkflow.workflow_note, raw: ""}],
+          },
+        };
+      });
+    }
     try {
-      setDay(await fetchDay(date, DAY_MODE, true));
+      const refreshed = await fetchDay(targetDate, dayMode, true);
+      if (
+        generation !== loadGeneration.current ||
+        selectedDateRef.current !== targetDate
+      ) {
+        return;
+      }
+      setDay(refreshed);
+      const targetMonth = monthOf(targetDate);
+      monthLoadGeneration.current += 1;
+      const cachedMonth = monthCache.current.get(targetMonth);
+      if (cachedMonth) {
+        monthCache.current.set(targetMonth, {
+          ...cachedMonth,
+          [targetDate]: refreshed.overview.review_has_content,
+        });
+      }
+      setMonthRecords((previous) =>
+        monthCursor === targetMonth
+          ? {
+              ...previous,
+              [targetDate]: refreshed.overview.review_has_content,
+            }
+          : previous,
+      );
+      setMonthRevision((revision) => revision + 1);
+      yearCache.current.clear();
+      setYear((previous) =>
+        previous.map((item) =>
+          item.date === targetDate ? rangeDayFromResponse(refreshed) : item,
+        ),
+      );
+      if (isAnnualMode(weekMode)) {
+        setYearRevision((revision) => revision + 1);
+      }
       // The refreshed day cache feeds the range endpoint, so the visible
       // rhythm strip stays in sync after a save.
       if (!isAnnualMode(weekMode)) {
-        setWeek(
-          (await fetchRange(weekRange.start, weekRange.end, DAY_MODE)).days,
+        const refreshedRange = await fetchRange(
+          weekRange.start,
+          weekRange.end,
+          dayMode,
         );
+        if (
+          generation !== loadGeneration.current ||
+          selectedDateRef.current !== targetDate
+        ) {
+          return;
+        }
+        setWeek(refreshedRange.days);
       }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      if (
+        generation === loadGeneration.current &&
+        selectedDateRef.current === targetDate
+      ) {
+        setError(reason instanceof Error ? reason.message : String(reason));
+      }
     }
-  }, [date, weekMode, weekRange]);
+  }, [dayMode, monthCursor, runtime, weekMode, weekRange]);
 
   useEffect(() => {
     void load();
@@ -187,12 +380,12 @@ export default function App() {
 
   // Annual views are deliberately lazy: nothing loads until the user enters
   // a year view, and ordinary single-day pages never scan a year. Cold loads
-  // reuse the existing 31-day range endpoint with a small bounded worker
-  // pool (3 in flight) — the backend serves requests on threads, so this
-  // reduces cold-load wall time without an unbounded burst.
+  // reuse the existing range endpoint with a small bounded worker pool (3 in
+  // flight). Fourteen-day slices keep visible progress moving while the
+  // backend batches each slice into one read per ActivityWatch bucket.
   useEffect(() => {
-    if (!isAnnualMode(weekMode)) return;
-    const cacheKey = `${annualRange.start}:${annualRange.end}`;
+    if (!runtime || !isAnnualMode(weekMode)) return;
+    const cacheKey = `${dayMode}:${annualRange.start}:${annualRange.end}`;
     const cached = yearCache.current.get(cacheKey);
     if (cached) {
       setYear(cached);
@@ -204,7 +397,7 @@ export default function App() {
 
     const chunks: { start: string; end: string }[] = [];
     for (let cursor = annualRange.start; cursor <= annualRange.end; ) {
-      const candidateEnd = shiftDate(cursor, 30);
+      const candidateEnd = shiftDate(cursor, ANNUAL_CHUNK_DAYS - 1);
       const chunkEnd =
         candidateEnd < annualRange.end ? candidateEnd : annualRange.end;
       chunks.push({ start: cursor, end: chunkEnd });
@@ -235,7 +428,7 @@ export default function App() {
           const response = await fetchRange(
             chunks[index].start,
             chunks[index].end,
-            DAY_MODE,
+            dayMode,
           );
           if (cancelled || failed) return;
           results[index] = response.days;
@@ -265,17 +458,26 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [annualRange.end, annualRange.start, weekMode]);
+  }, [
+    annualRange.end,
+    annualRange.start,
+    dayMode,
+    runtime,
+    weekMode,
+    yearRevision,
+  ]);
 
   useEffect(() => {
+    if (!runtime) return;
     const url = new URL(window.location.href);
-    if (date === currentDayStr(DAY_MODE)) {
+    if (date === currentDate) {
       url.searchParams.delete("date");
     } else {
       url.searchParams.set("date", date);
     }
+    url.searchParams.delete("view");
     window.history.replaceState(null, "", url);
-  }, [date]);
+  }, [currentDate, date, runtime]);
 
   // Follow the selected day's month in the calendar.
   useEffect(() => {
@@ -284,36 +486,40 @@ export default function App() {
 
   // Activity dots for the visible calendar month.
   useEffect(() => {
+    if (!runtime || !monthCursor) return;
+    const generation = ++monthLoadGeneration.current;
     const cached = monthCache.current.get(monthCursor);
     if (cached) {
-      setMonthReviews(cached);
+      setMonthRecords(cached);
       return;
     }
-    const today = currentDayStr(DAY_MODE);
+    const today = currentDate;
     const start = `${monthCursor}-01`;
     if (start > today) {
-      setMonthReviews({});
+      setMonthRecords({});
       return;
     }
     const end = monthEnd(monthCursor) < today ? monthEnd(monthCursor) : today;
     let cancelled = false;
-    fetchRange(start, end, DAY_MODE)
+    fetchRange(start, end, dayMode)
       .then((r) => {
-        if (cancelled) return;
+        if (cancelled || generation !== monthLoadGeneration.current) return;
         const map: Record<string, boolean> = {};
         for (const d of r.days) {
-          map[d.date] = d.overview.review_completed;
+          map[d.date] = d.overview.review_has_content;
         }
         monthCache.current.set(monthCursor, map);
-        setMonthReviews(map);
+        setMonthRecords(map);
       })
       .catch(() => {
-        if (!cancelled) setMonthReviews({});
+        if (!cancelled && generation === monthLoadGeneration.current) {
+          setMonthRecords({});
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [monthCursor]);
+  }, [currentDate, dayMode, monthCursor, monthRevision, runtime]);
 
   useEffect(() => {
     try {
@@ -330,6 +536,24 @@ export default function App() {
       // Ignore.
     }
   }, [sidebarOpen]);
+
+  useEffect(() => {
+    const narrowViewport = window.matchMedia("(max-width: 900px)");
+    const closeOnDesktop = () => {
+      if (!narrowViewport.matches) setMobileSidebarOpen(false);
+    };
+    narrowViewport.addEventListener("change", closeOnDesktop);
+    return () => narrowViewport.removeEventListener("change", closeOnDesktop);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileSidebarOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileSidebarOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [mobileSidebarOpen]);
 
   // Categories hidden in the sidebar are filtered out of every visual
   // breakdown; backend overview numbers stay untouched.
@@ -392,7 +616,6 @@ export default function App() {
     }
     return options;
   }, [day, week, hiddenCats]);
-
   const bounds = useMemo(() => {
     if (!day) return null;
     const first = day.rhythm?.first_active ?? day.timeline[0]?.start ?? null;
@@ -402,23 +625,133 @@ export default function App() {
       null;
     return first && last ? { first, last } : null;
   }, [day]);
+  const passiveMediaSeconds =
+    day?.quality.time_accounting.passive_media_seconds ?? 0;
 
   const selectedDate = parseLocalDate(date);
   const canMoveToNextWeek =
     startOfISOWeek(date) < startOfISOWeek(currentDate);
+  const canMoveHeaderPrevious = date > `${ACTIVITY_FIRST_YEAR}-01-01`;
+  const canMoveHeaderNext = date < currentDate;
+  const moveHeaderDate = (delta: -1 | 1) =>
+    selectDate(shiftDate(date, delta));
+
+  if (!runtime) {
+    return (
+      <div className="loading" role={bootstrapError ? "alert" : "status"}>
+        {bootstrapError
+          ? `无法读取运行设置：${bootstrapError}`
+          : "正在读取运行设置…"}
+      </div>
+    );
+  }
+
+  // The five design studies share this app's real data, date state, filters,
+  // and guarded editors. The regular entry point retains its existing layout.
+  if (renderShell) {
+    return renderShell({
+      date,
+      currentDate,
+      dateLabel: `${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日`,
+      weekday: `星期${weekdayShort(date)}`,
+      year: selectedDate.getFullYear(),
+      weekNumber: isoWeekNumber(date),
+      day,
+      displayDay: filteredDay,
+      sessions,
+      timezone: runtime.timezone,
+      onInspect: setActivitySelection,
+      dayMode,
+      dayStartClock: dayMode === "routine" ? runtime.routine_day_start : "00:00",
+      journalWriteEnabled: runtime.journal_write_enabled,
+      onDaySaved: refreshSelectedDay,
+      days: week,
+      screenTime: day ? fmtDuration(day.overview.active_seconds) : "—",
+      passiveTime: fmtDuration(passiveMediaSeconds),
+      windowLabel: bounds ? `${fmtClock(bounds.first, runtime.timezone)} — ${fmtClock(bounds.last, runtime.timezone)}` : "暂无活动",
+      sessionCount: sessions.length,
+      topApp: topApps[0]?.app ?? "暂无记录",
+      selectDate,
+      calendar: <Sidebar
+        date={date} today={currentDate} monthCursor={monthCursor}
+        monthRecords={monthRecords} categories={categoryOptions} apps={topApps}
+        hidden={hiddenCats} onSelectDate={selectDate}
+        onMonthChange={(delta) => setMonthCursor((month) => {
+          const next = shiftMonth(month, delta);
+          return next > monthOf(currentDate) ? month : next;
+        })}
+        onToggleCategory={(category) => setHiddenCats((previous) => {
+          const next = new Set(previous);
+          if (next.has(category)) next.delete(category); else next.add(category);
+          return next;
+        })}
+        onShowAll={() => setHiddenCats(new Set())} onCollapse={() => {}}
+      />,
+      timeline: day && filteredDay ? <section className="overview" key={date}>
+        <div className="rhythm-heading"><h2 className="rhythm-title">时间线</h2>
+          <span className="theme-section-caption">{bounds ? `${fmtClock(bounds.first, runtime.timezone)} — ${fmtClock(bounds.last, runtime.timezone)}` : "暂无活动"}</span>
+        </div>
+        <DayRibbon rangeStart={day.range.start} rangeEnd={day.range.end}
+          timezone={runtime.timezone} timeline={filteredDay.timeline} onSelectBlock={setActivitySelection} />
+      </section> : null,
+      rhythm: day ? <WeekStrip
+        days={week} yearDays={year} yearLoading={yearLoading} yearProgress={yearProgress}
+        yearTotal={annualTotal} yearError={yearError}
+        yearRangeStart={annualRange.displayStart} yearRangeEnd={annualRange.displayEnd}
+        yearDataEnd={annualRange.end} calendarYear={calendarYear} availableYears={availableYears}
+        selected={date} timezone={runtime.timezone} mode={weekMode} weekNumber={isoWeekNumber(date)}
+        canMoveNext={canMoveToNextWeek} onModeChange={setWeekMode}
+        onCalendarYearChange={(next) => { setCalendarYear(next); setWeekMode("calendarYear"); }}
+        onShiftWeek={(delta) => {
+          const candidate = shiftDate(date, delta * 7);
+          selectDate(candidate > currentDate ? currentDate : candidate);
+        }} onSelect={selectDate}
+      /> : null,
+      workflow: day ? <div className="theme-workflow-content" key={date}><h2 className="section-title">工作流</h2>
+        <SessionList date={date} sessions={sessions} journal={day.journal}
+          journalFingerprint={day.cache.journal_fingerprint} timezone={runtime.timezone}
+          writeEnabled={runtime.journal_write_enabled} onSaved={refreshSelectedDay} />
+      </div> : null,
+      notes: day ? <ReviewWorkspace key={date} date={date} journal={day.journal}
+        journalFingerprint={day.cache.journal_fingerprint} writeEnabled={runtime.journal_write_enabled}
+        scope={reviewScope} onScopeChange={setReviewScope} onDaySaved={refreshSelectedDay} /> : null,
+      warnings: day ? <QualityWarnings day={day} /> : null,
+      status: error ? <div className="error-card" role="alert">暂时无法加载这一天。<button onClick={() => void load()}>重新加载</button></div>
+        : loading && !day ? <div className="loading" role="status">正在读取这一天…</div> : null,
+      overlay: activitySelection ? <ActivityEditor selection={activitySelection} date={date} mode={dayMode}
+        writeEnabled={runtime.activity_edit_enabled} onClose={() => setActivitySelection(null)}
+        onChanged={refreshSelectedDay} /> : null,
+    });
+  }
 
   return (
-    <div className={`layout ${sidebarOpen ? "" : "layout-collapsed"}`}>
-      {sidebarOpen && (
+    <div
+      className={`layout ${sidebarOpen ? "" : "layout-collapsed"} ${
+        mobileSidebarOpen ? "mobile-sidebar-open" : ""
+      }`}
+    >
+      {mobileSidebarOpen && (
+        <button
+          type="button"
+          className="mobile-sidebar-scrim"
+          aria-label="关闭侧边栏"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      {(sidebarOpen || mobileSidebarOpen) && (
         <Sidebar
           date={date}
           today={currentDate}
           monthCursor={monthCursor}
-          monthReviews={monthReviews}
+          monthRecords={monthRecords}
           categories={categoryOptions}
           apps={topApps}
           hidden={hiddenCats}
-          onSelectDate={setDate}
+          onSelectDate={(nextDate) => {
+            selectDate(nextDate);
+            setMobileSidebarOpen(false);
+          }}
           onMonthChange={(delta) =>
             setMonthCursor((m) => {
               const next = shiftMonth(m, delta);
@@ -434,7 +767,13 @@ export default function App() {
             })
           }
           onShowAll={() => setHiddenCats(new Set())}
-          onCollapse={() => setSidebarOpen(false)}
+          onCollapse={() => {
+            if (window.matchMedia("(max-width: 900px)").matches) {
+              setMobileSidebarOpen(false);
+            } else {
+              setSidebarOpen(false);
+            }
+          }}
         />
       )}
 
@@ -443,7 +782,6 @@ export default function App() {
           <button
             className="nav-btn sidebar-toggle-btn rail-toggle"
             aria-label="展开侧边栏"
-            title="展开侧边栏"
             onClick={() => setSidebarOpen(true)}
           >
             <SidebarToggleIcon />
@@ -453,15 +791,51 @@ export default function App() {
 
       <div className="page">
         <header className="header">
-          <h1 className="date-title">
-            <span>
-              {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日
-            </span>
-            <small>
-              {selectedDate.getFullYear()}年 · 第{isoWeekNumber(date)}周 · 星期
-              {weekdayShort(date)}
-            </small>
-          </h1>
+          <div className="header-title-group">
+            <button
+              type="button"
+              className="nav-btn sidebar-toggle-btn mobile-sidebar-toggle"
+              aria-label="打开侧边栏"
+              aria-controls="activity-sidebar"
+              aria-expanded={mobileSidebarOpen}
+              onClick={() => setMobileSidebarOpen(true)}
+            >
+              <SidebarToggleIcon />
+            </button>
+            <h1 className="date-title">
+              <span>
+                {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日
+              </span>
+              <small>
+                {selectedDate.getFullYear()}年 · 第{isoWeekNumber(date)}周 · 星期
+                {weekdayShort(date)}
+              </small>
+            </h1>
+          </div>
+          <nav className="header-date-nav" aria-label="切换日期">
+            <button
+              type="button"
+              aria-label="上一天"
+              disabled={!canMoveHeaderPrevious}
+              onClick={() => moveHeaderDate(-1)}
+            >
+              <span
+                className="cal-chevron cal-chevron-prev"
+                aria-hidden="true"
+              />
+            </button>
+            <button
+              type="button"
+              aria-label="下一天"
+              disabled={!canMoveHeaderNext}
+              onClick={() => moveHeaderDate(1)}
+            >
+              <span
+                className="cal-chevron cal-chevron-next"
+                aria-hidden="true"
+              />
+            </button>
+          </nav>
         </header>
 
         {error && (
@@ -479,21 +853,30 @@ export default function App() {
                   {bounds && (
                     <span>
                       <b>
-                        {fmtClock(bounds.first)} – {fmtClock(bounds.last)}
+                        {fmtClock(bounds.first, runtime.timezone)} –{" "}
+                        {fmtClock(bounds.last, runtime.timezone)}
                       </b>
                       活动窗口
                     </span>
                   )}
                   <span>
                     <b>{fmtDuration(day.overview.active_seconds)}</b>
-                    屏幕活跃
+                    屏幕时间
                   </span>
+                  {passiveMediaSeconds > 0 && (
+                    <span>
+                      <b>{fmtDuration(passiveMediaSeconds)}</b>
+                      被动观看
+                    </span>
+                  )}
                 </div>
               </div>
               <DayRibbon
-                date={date}
-                mode={DAY_MODE}
+                rangeStart={day.range.start}
+                rangeEnd={day.range.end}
+                timezone={runtime.timezone}
                 timeline={filteredDay.timeline}
+                onSelectBlock={setActivitySelection}
               />
             </section>
 
@@ -510,6 +893,7 @@ export default function App() {
               calendarYear={calendarYear}
               availableYears={availableYears}
               selected={date}
+              timezone={runtime.timezone}
               mode={weekMode}
               weekNumber={isoWeekNumber(date)}
               canMoveNext={canMoveToNextWeek}
@@ -520,9 +904,9 @@ export default function App() {
               }}
               onShiftWeek={(delta) => {
                 const candidate = shiftDate(date, delta * 7);
-                setDate(candidate > currentDate ? currentDate : candidate);
+                selectDate(candidate > currentDate ? currentDate : candidate);
               }}
-              onSelect={setDate}
+              onSelect={selectDate}
             />
 
             <main className="columns">
@@ -533,26 +917,20 @@ export default function App() {
                   sessions={sessions}
                   journal={day.journal}
                   journalFingerprint={day.cache.journal_fingerprint}
+                  timezone={runtime.timezone}
+                  writeEnabled={runtime.journal_write_enabled}
                   onSaved={refreshSelectedDay}
                 />
               </section>
               <section className="col">
-                <h2 className="section-title section-title-row">
-                  <span>复盘</span>
-                  {day.journal.exists && (
-                    <a
-                      className="obsidian-link"
-                      href={day.journal.obsidian_url}
-                    >
-                      在 Obsidian 打开 ↗
-                    </a>
-                  )}
-                </h2>
-                <ReviewPanel
+                <ReviewWorkspace
                   date={date}
                   journal={day.journal}
                   journalFingerprint={day.cache.journal_fingerprint}
-                  onSaved={refreshSelectedDay}
+                  writeEnabled={runtime.journal_write_enabled}
+                  scope={reviewScope}
+                  onScopeChange={setReviewScope}
+                  onDaySaved={refreshSelectedDay}
                 />
               </section>
             </main>
@@ -563,6 +941,16 @@ export default function App() {
 
         {loading && !day && <div className="loading">加载中…</div>}
       </div>
+      {activitySelection && (
+        <ActivityEditor
+          selection={activitySelection}
+          date={date}
+          mode={dayMode}
+          writeEnabled={runtime.activity_edit_enabled}
+          onClose={() => setActivitySelection(null)}
+          onChanged={refreshSelectedDay}
+        />
+      )}
     </div>
   );
 }

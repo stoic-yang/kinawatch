@@ -1,0 +1,28 @@
+.theme-grove.concept-journal .concept-brand-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.theme-grove.concept-journal .concept-brand-row .grove-identity { min-width: 0; padding-inline: 6px 0; }
+.theme-grove.concept-journal .concept-brand-row .theme-brand { font-size: 21px; }
+.kw-appearance-trigger { display: grid; place-items: center; flex: none; width: 32px; height: 32px; padding: 0; border: 1px solid var(--kw-ui-line); border-radius: var(--kw-ui-control-radius); background: var(--kw-ui-control); color: var(--kw-ui-accent); cursor: pointer; }
+.kw-appearance-trigger:is(:hover, [aria-expanded="true"]) { background: var(--kw-ui-control-hover); border-color: var(--kw-ui-line-strong); }
+.kw-appearance { position: fixed; inset: auto; width: min(304px, calc(100vw - 24px)); max-height: calc(100dvh - 90px); overflow-y: auto; margin: 0; padding: 12px; border: 1px solid var(--kw-ui-line-strong); border-radius: var(--kw-ui-card-radius); background: var(--kw-ui-surface); color: var(--kw-ui-ink); box-shadow: var(--kw-ui-popover-shadow); font-family: inherit; }
+.kw-appearance::backdrop { background: transparent; }
+.kw-appearance header { display: flex; align-items: center; justify-content: space-between; padding: 0 2px 10px 6px; }
+.kw-appearance h2 { margin: 0; font-size: 14px; font-weight: 650; }
+.kw-appearance header button { width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--kw-ui-control-radius); color: var(--kw-ui-muted); background: transparent; font-size: 21px; cursor: pointer; }
+.kw-appearance header button:hover { background: var(--kw-ui-control-hover); }
+.kw-palette-list { display: grid; gap: 5px; }
+.kw-palette-option { position: relative; display: flex; align-items: center; gap: 12px; min-height: 62px; padding: 9px; border: 1px solid transparent; border-radius: var(--kw-ui-group-radius); cursor: pointer; }
+.kw-palette-option:hover { background: var(--kw-ui-surface-subtle); }
+.kw-palette-option[data-selected="true"] { background: var(--kw-ui-control); border-color: var(--kw-ui-line-strong); }
+.kw-palette-option:has(input:focus-visible) { outline: 2px solid var(--kw-ui-accent); outline-offset: 1px; }
+.kw-palette-option input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.kw-palette-swatch { display: grid; grid-template-columns: 12px 1fr; grid-template-rows: 1fr 6px; gap: 4px; width: 54px; height: 38px; flex: none; padding: 5px; border: 1px solid; border-radius: 5px; }
+.kw-palette-swatch i { border-radius: 1px; }
+.kw-palette-swatch i:first-child { grid-row: span 2; }
+.kw-palette-copy { display: grid; gap: 5px; }
+.kw-palette-copy strong { font-size: 13px; font-weight: 600; }
+.kw-palette-copy small { font-size: 11px; color: var(--kw-ui-muted); }
+.kw-palette-check { margin-left: auto; width: 16px; color: var(--kw-ui-accent); font-size: 15px; }
+@media (max-width: 820px) {
+  .theme-grove.concept-journal .concept-brand-row { padding: 0; }
+  .theme-grove.concept-journal .concept-navigation { margin-block: 18px; }
+}

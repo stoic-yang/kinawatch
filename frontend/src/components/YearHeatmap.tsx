@@ -1,6 +1,16 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import type { RangeDay } from "../api";
 import { fmtDuration, parseLocalDate, shiftDate } from "../lib/format";
+import {
+  ViewportTooltip,
+  type ViewportTooltipAnchor,
+} from "./ViewportTooltip";
 
 function mondayOffset(date: string): number {
   return (parseLocalDate(date).getDay() + 6) % 7;
@@ -23,8 +33,7 @@ interface HeatmapTooltip {
   date: string;
   dateLabel: string;
   activityLabel: string;
-  left: number;
-  top: number;
+  anchor: ViewportTooltipAnchor;
 }
 
 function LoadingHeatmap({
@@ -86,6 +95,7 @@ export function YearHeatmap({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<HeatmapTooltip | null>(null);
+  const dismissTooltip = useCallback(() => setTooltip(null), []);
 
   function showTooltip(
     target: HTMLElement,
@@ -98,8 +108,7 @@ export function YearHeatmap({
       date,
       dateLabel: longDate(date),
       activityLabel: fmtDuration(seconds),
-      left: Math.max(92, Math.min(window.innerWidth - 92, center)),
-      top: rect.top,
+      anchor: { x: center, top: rect.top, bottom: rect.bottom },
     });
   }
 
@@ -233,11 +242,11 @@ export function YearHeatmap({
                   aria-describedby={tooltip?.date === cellDate ? "year-activity-tooltip" : undefined}
                   aria-current={cellDate === selected ? "date" : undefined}
                   onMouseEnter={(event) => showTooltip(event.currentTarget, cellDate, seconds)}
-                  onMouseLeave={() => setTooltip(null)}
+                  onMouseLeave={dismissTooltip}
                   onFocus={(event) => showTooltip(event.currentTarget, cellDate, seconds)}
-                  onBlur={() => setTooltip(null)}
+                  onBlur={dismissTooltip}
                   onClick={() => {
-                    setTooltip(null);
+                    dismissTooltip();
                     onSelect(cellDate);
                   }}
                 />
@@ -247,15 +256,16 @@ export function YearHeatmap({
         </div>
       </div>
       {tooltip ? (
-        <div
+        <ViewportTooltip
           id="year-activity-tooltip"
           className="year-tooltip"
-          role="tooltip"
-          style={{ left: tooltip.left, top: tooltip.top }}
+          anchor={tooltip.anchor}
+          side="above"
+          onDismiss={dismissTooltip}
         >
           <span className="year-tooltip-date">{tooltip.dateLabel}</span>
           <strong>屏幕活跃 {tooltip.activityLabel}</strong>
-        </div>
+        </ViewportTooltip>
       ) : null}
       {error && days.length > 0 ? (
         <p className="year-error year-partial-error" role="alert">

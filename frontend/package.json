@@ -1,10 +1,10 @@
 {
-  "name": "kina-activity-dashboard-frontend",
+  "name": "kinawatch-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local-first ActivityWatch and Obsidian review dashboard",
   "license": "MIT",
-  "repository": "https://github.com/stoic-yang/kina-activity-dashboard",
+  "repository": "https://github.com/stoic-yang/kinawatch",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -12,9 +12,15 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test:journal": "node --test tests/journal-*.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.11.0",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/state": "^6.7.2",
+    "@codemirror/view": "^6.43.10",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

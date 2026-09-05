@@ -11,9 +11,11 @@ from pathlib import Path
 from typing import Any
 
 from .config import fingerprint_file
+from .journal_document import replace_document_body, split_document
 from .journal_parser import (
     HEADING_RE,
     REVIEW_GROUP_TITLE_RE,
+    SECTION_BOUNDARY_RE,
     SECTION_ALIASES,
     WORKFLOW_CALLOUT_HEADER_RE,
     _parse_workflow_callout,
@@ -26,16 +28,34 @@ from .models import FileFingerprint, WorkflowNote
 
 
 TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+STRUCTURAL_MARKER_RE = re.compile(
+    r"(?im)^\s*<!--\s*kinawatch:"
+)
 MAX_NOTE_CHARACTERS = 4000
 MAX_REVIEW_FIELD_CHARACTERS = 8000
+MAX_PERMANENT_NOTE_CHARACTERS = 50000
 WORKFLOW_DAY_START_MINUTES = 6 * 60
-REVIEW_FIELD_ORDER = ("personal_summary", "outputs", "next_action")
+REVIEW_FIELD_ORDER = (
+    "personal_summary",
+    "outputs",
+    "next_action",
+    "freeform",
+)
 REVIEW_FIELD_LABELS = {
     "personal_summary": "我的总结",
     "outputs": "今日产出",
     "next_action": "明天的计划",
+    "freeform": "自由记录",
 }
 WEEK_ID_RE = re.compile(r"^(?P<year>\d{4})-W(?P<week>\d{2})$")
+MONTH_ID_RE = re.compile(r"^\d{4}-(?:0[1-9]|1[0-2])$")
+PERIOD_REVIEW_FIELD_ORDER = ("freeform",)
+PERIOD_REVIEW_FIELD_LABELS = {
+    "freeform": "自由记录",
+}
+# Compatibility names retained for callers that imported the weekly helpers.
+WEEKLY_REVIEW_FIELD_ORDER = PERIOD_REVIEW_FIELD_ORDER
+WEEKLY_REVIEW_FIELD_LABELS = PERIOD_REVIEW_FIELD_LABELS
 
 
 class WorkflowWriteError(Exception):
@@ -77,10 +97,10 @@ def normalize_note(note: str) -> str:
         raise WorkflowWriteValidation("工作流描述必须是文字。")
     normalized = note.replace("\r\n", "\n").replace("\r", "\n")
     normalized = "\n".join(line.rstrip() for line in normalized.split("\n")).strip()
-    if not normalized:
-        raise WorkflowWriteValidation("工作流描述不能为空。")
     if "\x00" in normalized:
         raise WorkflowWriteValidation("工作流描述包含无效字符。")
+    if STRUCTURAL_MARKER_RE.search(normalized):
+        raise WorkflowWriteValidation("工作流描述包含 KinaWatch 保留标记。")
     if len(normalized) > MAX_NOTE_CHARACTERS:
         raise WorkflowWriteValidation(
             f"工作流描述不能超过 {MAX_NOTE_CHARACTERS} 个字符。"
@@ -99,9 +119,43 @@ def normalize_review_markdown(markdown: str) -> str:
         raise WorkflowWriteValidation("复盘内容不能为空。")
     if "\x00" in normalized:
         raise WorkflowWriteValidation("复盘内容包含无效字符。")
+    if STRUCTURAL_MARKER_RE.search(normalized):
+        raise WorkflowWriteValidation("复盘内容包含 KinaWatch 保留标记。")
     if len(normalized) > MAX_REVIEW_FIELD_CHARACTERS:
         raise WorkflowWriteValidation(
             f"单项复盘不能超过 {MAX_REVIEW_FIELD_CHARACTERS} 个字符。"
+        )
+    return normalized
+
+
+def normalize_period_review_markdown(markdown: str) -> str:
+    normalized = normalize_review_markdown(markdown)
+    if any(
+        SECTION_BOUNDARY_RE.match(line)
+        for line in normalized.splitlines()
+    ):
+        raise WorkflowWriteValidation(
+            "周/月复盘的自由记录不能包含一级或二级标题，请改用 ### 三级标题。"
+        )
+    return normalized
+
+
+def normalize_permanent_note_markdown(markdown: str) -> str:
+    if not isinstance(markdown, str):
+        raise WorkflowWriteValidation("常驻笔记必须是文字。")
+    normalized = markdown.replace("\r\n", "\n").replace("\r", "\n")
+    normalized = "\n".join(
+        line.rstrip() for line in normalized.split("\n")
+    ).strip()
+    if not normalized:
+        raise WorkflowWriteValidation("常驻笔记不能为空。")
+    if "\x00" in normalized:
+        raise WorkflowWriteValidation("常驻笔记包含无效字符。")
+    if STRUCTURAL_MARKER_RE.search(normalized):
+        raise WorkflowWriteValidation("常驻笔记包含 KinaWatch 保留标记。")
+    if len(normalized) > MAX_PERMANENT_NOTE_CHARACTERS:
+        raise WorkflowWriteValidation(
+            f"常驻笔记不能超过 {MAX_PERMANENT_NOTE_CHARACTERS} 个字符。"
         )
     return normalized
 
@@ -125,6 +179,7 @@ def render_workflow_group(notes: list[WorkflowNote]) -> str:
         time_range = item.start_time
         if item.end_time:
             time_range = f"{time_range}–{item.end_time}"
+        lines.append(f"> <!-- kinawatch:workflow:{time_range} -->")
         lines.append(f"> **{time_range}**")
         normalized = normalize_note(item.note)
         lines.extend(
@@ -160,6 +215,7 @@ def render_review_group(fields: dict[str, str]) -> str:
     for index, (name, markdown) in enumerate(rendered_fields):
         if index:
             lines.append(">")
+        lines.append(f"> <!-- kinawatch:review:{name} -->")
         lines.append(f"> **{REVIEW_FIELD_LABELS[name]}**")
         lines.extend(
             f"> {line}" if line else ">" for line in markdown.split("\n")
@@ -282,7 +338,7 @@ def review_spans(content: str) -> list[ReviewSpan]:
 
         next_index = line_index + 1
         while next_index < len(plain_lines):
-            if HEADING_RE.match(plain_lines[next_index]):
+            if SECTION_BOUNDARY_RE.match(plain_lines[next_index]):
                 break
             workflow_group = _parse_workflow_group_callout(
                 plain_lines,
@@ -443,6 +499,154 @@ def upsert_review_group(
     return f"{base}\n\n{block}\n" if base else f"{block}\n", False
 
 
+def validate_week_id(value: Any) -> str:
+    week_id = str(value or "")
+    match = WEEK_ID_RE.fullmatch(week_id)
+    if match is None:
+        raise WorkflowWriteValidation("周复盘编号必须使用 YYYY-Www。")
+    try:
+        date.fromisocalendar(
+            int(match.group("year")),
+            int(match.group("week")),
+            1,
+        )
+    except ValueError as exc:
+        raise WorkflowWriteValidation("周复盘编号不是有效的 ISO 周。") from exc
+    return week_id
+
+
+def validate_month_id(value: Any) -> str:
+    month_id = str(value or "")
+    if MONTH_ID_RE.fullmatch(month_id) is None:
+        raise WorkflowWriteValidation("月复盘编号必须使用 YYYY-MM。")
+    return month_id
+
+
+def period_review_fields(content: str) -> dict[str, str]:
+    """Read only the canonical freeform H2 field from one period note."""
+    lines = content.splitlines()
+    occurrences: dict[str, list[tuple[int, int]]] = {
+        field: [] for field in PERIOD_REVIEW_FIELD_ORDER
+    }
+    label_to_field = {
+        label: field for field, label in PERIOD_REVIEW_FIELD_LABELS.items()
+    }
+    headings: list[tuple[int, str, str]] = []
+    for index, line in enumerate(lines):
+        heading = SECTION_BOUNDARY_RE.match(line)
+        if heading is not None:
+            headings.append(
+                (
+                    index,
+                    heading.group("marks"),
+                    heading.group("title").strip(),
+                )
+            )
+
+    for heading_index, (line_index, marks, label) in enumerate(headings):
+        if marks != "##":
+            continue
+        field = label_to_field.get(label)
+        if field is None:
+            continue
+        end_index = (
+            headings[heading_index + 1][0]
+            if heading_index + 1 < len(headings)
+            else len(lines)
+        )
+        occurrences[field].append((line_index + 1, end_index))
+
+    fields: dict[str, str] = {}
+    for field in PERIOD_REVIEW_FIELD_ORDER:
+        spans = occurrences[field]
+        if len(spans) > 1:
+            raise WorkflowWriteConflict(
+                f"周期复盘中存在重复的“{PERIOD_REVIEW_FIELD_LABELS[field]}”，"
+                "请先人工整理。"
+            )
+        if not spans:
+            fields[field] = ""
+            continue
+        start, end = spans[0]
+        fields[field] = "\n".join(
+            line.rstrip() for line in lines[start:end]
+        ).strip()
+    return fields
+
+
+def upsert_period_review_field(
+    content: str,
+    field: str,
+    markdown: str,
+) -> tuple[str, bool]:
+    """Replace one canonical period H2 field while preserving all other text."""
+    if field not in PERIOD_REVIEW_FIELD_ORDER:
+        raise WorkflowWriteValidation("周期复盘字段无效。")
+    normalized = normalize_period_review_markdown(markdown)
+    # This also rejects duplicate recognized sections before any rewrite.
+    period_review_fields(content)
+
+    kept_lines = content.splitlines(keepends=True)
+    offsets: list[int] = []
+    cursor = 0
+    for line in kept_lines:
+        offsets.append(cursor)
+        cursor += len(line)
+
+    target_label = PERIOD_REVIEW_FIELD_LABELS[field]
+    target_line: int | None = None
+    next_heading_line: int | None = None
+    for line_index, line in enumerate(kept_lines):
+        heading = SECTION_BOUNDARY_RE.match(line.rstrip("\r\n"))
+        if heading is None:
+            continue
+        if target_line is None:
+            if (
+                heading.group("marks") == "##"
+                and heading.group("title").strip() == target_label
+            ):
+                target_line = line_index
+        else:
+            next_heading_line = line_index
+            break
+
+    if target_line is None:
+        base = content.rstrip("\r\n")
+        section = f"## {target_label}\n\n{normalized}\n"
+        return f"{base}\n\n{section}" if base else section, False
+
+    heading_end = (
+        offsets[target_line + 1]
+        if target_line + 1 < len(offsets)
+        else len(content)
+    )
+    suffix_start = (
+        offsets[next_heading_line]
+        if next_heading_line is not None
+        else len(content)
+    )
+    prefix = content[:heading_end]
+    if not prefix.endswith(("\n", "\r")):
+        prefix += "\n"
+    suffix = content[suffix_start:]
+    separator = "\n\n" if suffix else "\n"
+    return f"{prefix}{normalized}{separator}{suffix}", True
+
+
+def weekly_review_fields(content: str) -> dict[str, str]:
+    """Compatibility wrapper for the shared weekly/monthly freeform schema."""
+    return period_review_fields(content)
+
+
+def upsert_weekly_review_field(
+    content: str,
+    field: str,
+    markdown: str,
+) -> tuple[str, bool]:
+    """Compatibility wrapper for the shared weekly/monthly freeform schema."""
+    return upsert_period_review_field(content, field, markdown)
+
+
 def _parse_expected_fingerprint(value: Any) -> FileFingerprint:
     if not isinstance(value, dict):
         raise WorkflowWriteValidation("缺少页面读取时的日记版本。")
@@ -468,18 +672,32 @@ class WorkflowWriter:
             return self._locks.setdefault(note, threading.Lock())
 
     @staticmethod
-    def _assert_safe_location(location: JournalLocation) -> None:
-        vault = location.vault.resolve()
+    def _assert_confined_location(location: JournalLocation) -> None:
+        storage_root = location.vault.resolve()
         note = location.note.resolve(strict=False)
-        if note != vault and vault not in note.parents:
-            raise WorkflowWriteValidation("目标日记不在已配置的 Obsidian vault 中。")
-        if not note.parent.is_dir():
-            raise WorkflowWriteValidation("已配置的日记目录不存在。")
+        if note != storage_root and storage_root not in note.parents:
+            raise WorkflowWriteValidation("目标日记不在已配置的存储目录中。")
         if location.note.is_symlink():
             raise WorkflowWriteValidation("不允许通过符号链接写入日记。")
 
+    @classmethod
+    def _assert_safe_location(cls, location: JournalLocation) -> None:
+        cls._assert_confined_location(location)
+        note = location.note.resolve(strict=False)
+        if getattr(location, "provider", "obsidian") == "local":
+            try:
+                note.parent.mkdir(parents=True, exist_ok=True)
+            except OSError as exc:
+                raise WorkflowWriteValidation("无法创建 KinaWatch 本地日记目录。") from exc
+        if not note.parent.is_dir():
+            raise WorkflowWriteValidation("已配置的日记目录不存在。")
+
     @staticmethod
-    def _atomic_write(path: Path, content: str, expected: FileFingerprint) -> None:
+    def _atomic_write(
+        path: Path,
+        content: str | bytes,
+        expected: FileFingerprint,
+    ) -> None:
         descriptor, temporary_name = tempfile.mkstemp(
             prefix=f".{path.name}.",
             suffix=".tmp",
@@ -489,9 +707,9 @@ class WorkflowWriter:
         try:
             mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
             os.fchmod(descriptor, mode)
-            with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
+            with os.fdopen(descriptor, "wb") as stream:
                 descriptor = -1
-                stream.write(content)
+                stream.write(content.encode("utf-8") if isinstance(content, str) else content)
                 stream.flush()
                 os.fsync(stream.fileno())
 
@@ -500,15 +718,134 @@ class WorkflowWriter:
                     "日记在保存过程中发生了变化，请刷新页面后再试。"
                 )
             os.replace(temporary, path)
-            directory_fd = os.open(path.parent, os.O_RDONLY)
-            try:
-                os.fsync(directory_fd)
-            finally:
-                os.close(directory_fd)
+            # Windows does not support opening a directory with os.open. The
+            # same-directory os.replace remains atomic there; POSIX systems
+            # additionally fsync the directory entry for crash durability.
+            if os.name != "nt":
+                directory_fd = os.open(path.parent, os.O_RDONLY)
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
         finally:
             if descriptor >= 0:
                 os.close(descriptor)
             temporary.unlink(missing_ok=True)
+
+    @staticmethod
+    def _document_date(value: Any) -> date:
+        if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            raise WorkflowWriteValidation("日期必须使用 YYYY-MM-DD。")
+        try:
+            return date.fromisoformat(value)
+        except ValueError as exc:
+            raise WorkflowWriteValidation("日期必须使用有效的 YYYY-MM-DD。") from exc
+
+    @classmethod
+    def _document_snapshot(
+        cls,
+        location: JournalLocation,
+    ) -> tuple[bytes, FileFingerprint, bool]:
+        # An external editor does not acquire our lock. Pair the response body
+        # with the same on-disk version, rather than reading its fingerprint
+        # only after a potentially stale body read.
+        for _ in range(3):
+            cls._assert_confined_location(location)
+            if location.note.exists() and not location.note.is_file():
+                raise WorkflowWriteValidation("目标日记必须是 Markdown 文件。")
+            before = fingerprint_file(location.note)
+            existed = location.note.is_file()
+            try:
+                original = location.note.read_bytes() if existed else b""
+            except FileNotFoundError:
+                continue
+            after = fingerprint_file(location.note)
+            if before == after and existed == location.note.is_file():
+                return original, after, existed
+        raise WorkflowWriteConflict("日记在读取过程中发生了变化，请重新读取。")
+
+    @staticmethod
+    def _document_response(
+        selected_day: date | None,
+        location: JournalLocation,
+        content: bytes,
+        fingerprint: FileFingerprint,
+        exists: bool,
+    ) -> dict[str, Any]:
+        try:
+            _, markdown, has_frontmatter = split_document(content)
+        except UnicodeDecodeError as exc:
+            raise WorkflowWriteValidation("日记必须使用 UTF-8 编码。") from exc
+        return {
+            "ok": True,
+            **({"date": selected_day.isoformat()} if selected_day else {}),
+            "markdown": markdown,
+            "journal_fingerprint": fingerprint.to_dict(),
+            "path": location.relative_path,
+            "provider": getattr(location, "provider", "obsidian"),
+            "open_url": location.obsidian_url,
+            "obsidian_url": location.obsidian_url,
+            "exists": exists,
+            "has_frontmatter": has_frontmatter,
+        }
+
+    def read_document(self, raw_date: Any) -> dict[str, Any]:
+        selected_day = self._document_date(raw_date)
+        location = self.repository.locate(selected_day)
+        with self._lock_for(location.note):
+            original, current, existed = self._document_snapshot(location)
+            return self._document_response(
+                selected_day, location, original, current, existed,
+            )
+
+    def upsert_document(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            raise WorkflowWriteValidation("请求必须是 JSON 对象。")
+        if set(payload) - {"date", "markdown", "expected_fingerprint"}:
+            raise WorkflowWriteValidation("正文写入仅接受日期、Markdown 和日记版本。")
+        selected_day = self._document_date(payload.get("date"))
+        return self._upsert_document_body(payload, self.repository.locate(selected_day), selected_day)
+
+    def read_beliefs(self) -> dict[str, Any]:
+        location = self.repository.locate_beliefs()
+        with self._lock_for(location.note):
+            original, current, existed = self._document_snapshot(location)
+            return self._document_response(None, location, original, current, existed)
+
+    def upsert_beliefs(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(payload, dict) or set(payload) - {"markdown", "expected_fingerprint"}:
+            raise WorkflowWriteValidation("信念写入仅接受 Markdown 和文件版本。")
+        return self._upsert_document_body(payload, self.repository.locate_beliefs(), None)
+
+    def _upsert_document_body(
+        self, payload: dict[str, Any], location: JournalLocation, selected_day: date | None,
+    ) -> dict[str, Any]:
+        markdown = payload.get("markdown")
+        if not isinstance(markdown, str):
+            raise WorkflowWriteValidation("markdown 必须是字符串；空字符串可用于清空正文。")
+        expected = _parse_expected_fingerprint(payload.get("expected_fingerprint"))
+        with self._lock_for(location.note):
+            original, current, existed = self._document_snapshot(location)
+            if current != expected:
+                raise WorkflowWriteConflict("日记已在页面加载后发生变化，请重新读取后继续编辑。")
+            try:
+                updated = replace_document_body(original, markdown)
+            except UnicodeError as exc:
+                raise WorkflowWriteValidation("日记正文必须是有效的 UTF-8 文本。") from exc
+            changed = not existed or updated != original
+            if changed:
+                self._assert_safe_location(location)
+                self._atomic_write(location.note, updated, current)
+                written_content, written, written_exists = self._document_snapshot(location)
+                if not written_exists or written_content != updated:
+                    raise WorkflowWriteConflict("日记在保存后被其他编辑器更改，请重新读取。")
+            else:
+                written = current
+            result = self._document_response(
+                selected_day, location, updated, written, True,
+            )
+            result.update(created=not existed, changed=changed)
+            return result
 
     def upsert(self, payload: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(payload, dict):
@@ -521,7 +858,7 @@ class WorkflowWriter:
         end_time = str(payload.get("end_time", ""))
         if not TIME_RE.fullmatch(start_time) or not TIME_RE.fullmatch(end_time):
             raise WorkflowWriteValidation("工作流时间必须使用 HH:MM。")
-        normalized_note = normalize_note(payload.get("note", ""))
+        normalized_note = normalize_note(payload.get("note"))
         expected = _parse_expected_fingerprint(payload.get("expected_fingerprint"))
 
         location = self.repository.locate(selected_day)
@@ -555,8 +892,9 @@ class WorkflowWriter:
                 "end_time": end_time,
                 "note": normalized_note,
                 # Canonical callouts are keyed by their start clock.  A native
-                # Obsidian block id must sit outside a quote/callout and would
-                # render as a visually separate block, so new writes omit it.
+                # A legacy Obsidian block id must sit outside a quote/callout
+                # and would render as a visually separate block, so new writes
+                # omit it for both storage providers.
                 "block_id": "",
             },
             "journal_fingerprint": written.to_dict(),
@@ -607,21 +945,60 @@ class WorkflowWriter:
             "journal_fingerprint": written.to_dict(),
         }
 
+    def read_permanent_note(self) -> dict[str, Any]:
+        location = self.repository.locate_permanent()
+        self._assert_confined_location(location)
+        exists = location.note.is_file()
+        return {
+            "ok": True,
+            "exists": exists,
+            "path": location.relative_path,
+            "provider": getattr(location, "provider", "obsidian"),
+            "open_url": location.obsidian_url,
+            "obsidian_url": location.obsidian_url,
+            "markdown": self.repository.read(location),
+            "journal_fingerprint": fingerprint_file(location.note).to_dict(),
+        }
+
+    def upsert_permanent_note(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            raise WorkflowWriteValidation("请求必须是 JSON 对象。")
+        markdown = normalize_permanent_note_markdown(
+            payload.get("markdown", "")
+        )
+        expected = _parse_expected_fingerprint(
+            payload.get("expected_fingerprint")
+        )
+
+        location = self.repository.locate_permanent()
+        self._assert_safe_location(location)
+        with self._lock_for(location.note):
+            existed = location.note.is_file()
+            current = fingerprint_file(location.note)
+            if current != expected:
+                raise WorkflowWriteConflict(
+                    "常驻笔记已在页面加载后发生变化，请刷新后重新编辑。"
+                )
+            self._atomic_write(location.note, f"{markdown}\n", current)
+            written = fingerprint_file(location.note)
+
+        return {
+            "ok": True,
+            "exists": True,
+            "created": not existed,
+            "replaced": existed,
+            "path": location.relative_path,
+            "provider": getattr(location, "provider", "obsidian"),
+            "open_url": location.obsidian_url,
+            "obsidian_url": location.obsidian_url,
+            "markdown": markdown,
+            "journal_fingerprint": written.to_dict(),
+        }
+
     def ensure_weekly_review(self, payload: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(payload, dict):
             raise WorkflowWriteValidation("请求必须是 JSON 对象。")
-        week_id = str(payload.get("week_id", ""))
-        match = WEEK_ID_RE.fullmatch(week_id)
-        if match is None:
-            raise WorkflowWriteValidation("周复盘编号必须使用 YYYY-Www。")
-        try:
-            date.fromisocalendar(
-                int(match.group("year")),
-                int(match.group("week")),
-                1,
-            )
-        except ValueError as exc:
-            raise WorkflowWriteValidation("周复盘编号不是有效的 ISO 周。") from exc
+        week_id = validate_week_id(payload.get("week_id"))
 
         location = self.repository.locate_weekly(week_id)
         self._assert_safe_location(location)
@@ -634,8 +1011,116 @@ class WorkflowWriter:
 
         return {
             "ok": True,
+            "period_id": week_id,
             "week_id": week_id,
             "created": created,
             "path": location.relative_path,
+            "provider": getattr(location, "provider", "obsidian"),
+            "open_url": location.obsidian_url,
             "obsidian_url": location.obsidian_url,
         }
+
+    def _read_period_review(
+        self,
+        period: str,
+        period_id: str,
+    ) -> dict[str, Any]:
+        if period == "week":
+            location = self.repository.locate_weekly(period_id)
+            id_field = "week_id"
+        else:
+            location = self.repository.locate_monthly(period_id)
+            id_field = "month_id"
+        self._assert_confined_location(location)
+        content = self.repository.read(location)
+        return {
+            "ok": True,
+            "period_id": period_id,
+            id_field: period_id,
+            "exists": location.note.is_file(),
+            "path": location.relative_path,
+            "provider": getattr(location, "provider", "obsidian"),
+            "open_url": location.obsidian_url,
+            "obsidian_url": location.obsidian_url,
+            "fields": period_review_fields(content),
+            "journal_fingerprint": fingerprint_file(location.note).to_dict(),
+        }
+
+    def read_weekly_review(self, week_id_value: Any) -> dict[str, Any]:
+        week_id = validate_week_id(week_id_value)
+        return self._read_period_review("week", week_id)
+
+    def read_monthly_review(self, month_id_value: Any) -> dict[str, Any]:
+        month_id = validate_month_id(month_id_value)
+        return self._read_period_review("month", month_id)
+
+    def _upsert_period_review(
+        self,
+        payload: dict[str, Any],
+        period: str,
+    ) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            raise WorkflowWriteValidation("请求必须是 JSON 对象。")
+        if period == "week":
+            id_field = "week_id"
+            period_id = validate_week_id(payload.get(id_field))
+            location = self.repository.locate_weekly(period_id)
+            initial_content = self.repository.weekly_review_initial_content
+            conflict_label = "周复盘"
+        else:
+            id_field = "month_id"
+            period_id = validate_month_id(payload.get(id_field))
+            location = self.repository.locate_monthly(period_id)
+            initial_content = self.repository.monthly_review_initial_content
+            conflict_label = "月复盘"
+        field = str(payload.get("field", ""))
+        if field not in PERIOD_REVIEW_FIELD_ORDER:
+            raise WorkflowWriteValidation(f"{conflict_label}字段无效。")
+        markdown = normalize_period_review_markdown(
+            payload.get("markdown", "")
+        )
+        expected = _parse_expected_fingerprint(payload.get("expected_fingerprint"))
+
+        self._assert_safe_location(location)
+        with self._lock_for(location.note):
+            existed = location.note.is_file()
+            current = fingerprint_file(location.note)
+            if current != expected:
+                raise WorkflowWriteConflict(
+                    f"{conflict_label}已在页面加载后发生变化，请刷新后重新编辑。"
+                )
+            original = self.repository.read(location)
+            if not original:
+                original = initial_content(period_id)
+            updated, replaced = upsert_period_review_field(
+                original,
+                field,
+                markdown,
+            )
+            self._atomic_write(location.note, updated, current)
+            written = fingerprint_file(location.note)
+
+        return {
+            "ok": True,
+            "period_id": period_id,
+            id_field: period_id,
+            "exists": True,
+            "created": not existed,
+            "replaced": replaced,
+            "path": location.relative_path,
+            "provider": getattr(location, "provider", "obsidian"),
+            "open_url": location.obsidian_url,
+            "obsidian_url": location.obsidian_url,
+            "fields": period_review_fields(updated),
+            "review_field": {
+                "field": field,
+                "markdown": markdown,
+            },
+            "journal_fingerprint": written.to_dict(),
+        }
+
+    def upsert_weekly_review(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._upsert_period_review(payload, "week")
+
+    def upsert_monthly_review(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._upsert_period_review(payload, "month")

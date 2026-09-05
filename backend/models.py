@@ -63,13 +63,12 @@ class JournalDocument:
     personal_summary_markdown: str = ""
     outputs: list[str] = field(default_factory=list)
     next_action_markdown: str = ""
+    freeform_markdown: str = ""
     workflow_notes: list[WorkflowNote] = field(default_factory=list)
     offline_activities: list[OfflineActivity] = field(default_factory=list)
     offline_unparsed: list[str] = field(default_factory=list)
     activity_summary_markdown: str = ""
     kina_advice: list[str] = field(default_factory=list)
-    completion_task_exists: bool = False
-    completion_task_checked: bool = False
     projects: list[str] = field(default_factory=list)
     parse_warnings: list[ParseWarning] = field(default_factory=list)
 
@@ -79,6 +78,7 @@ class JournalDocument:
             "personal_summary_markdown": self.personal_summary_markdown,
             "outputs": list(self.outputs),
             "next_action_markdown": self.next_action_markdown,
+            "freeform_markdown": self.freeform_markdown,
             "workflow_notes": [note.to_dict() for note in self.workflow_notes],
             "offline_activities": [
                 activity.to_dict() for activity in self.offline_activities
@@ -86,8 +86,6 @@ class JournalDocument:
             "offline_unparsed": list(self.offline_unparsed),
             "activity_summary_markdown": self.activity_summary_markdown,
             "kina_advice": list(self.kina_advice),
-            "completion_task_exists": self.completion_task_exists,
-            "completion_task_checked": self.completion_task_checked,
             "projects": list(self.projects),
             "parse_warnings": [
                 warning.to_dict() for warning in self.parse_warnings

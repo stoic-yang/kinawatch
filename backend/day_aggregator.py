@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 from typing import Any, Iterable
@@ -18,7 +19,12 @@ def _timestamp(raw_value: str) -> datetime:
 
 def _event_interval(event: dict[str, Any]) -> tuple[datetime, datetime]:
     start = _timestamp(str(event["timestamp"]))
-    end = start + timedelta(seconds=float(event["duration_seconds"]))
+    wall_end = event.get("wall_end_timestamp")
+    end = (
+        _timestamp(str(wall_end))
+        if wall_end
+        else start + timedelta(seconds=float(event["duration_seconds"]))
+    )
     return start, end
 
 
@@ -71,14 +77,11 @@ def _interval_duration(
 def _screen_wall_intervals(
     events: Iterable[dict[str, Any]],
 ) -> list[tuple[datetime, datetime]]:
-    durations_by_start: dict[datetime, float] = defaultdict(float)
-    for event in events:
-        start = _timestamp(str(event["timestamp"]))
-        durations_by_start[start] += float(event["duration_seconds"])
     return [
-        (start, start + timedelta(seconds=duration_seconds))
-        for start, duration_seconds in durations_by_start.items()
-        if duration_seconds > 0
+        (start, end)
+        for event in events
+        for start, end in [_event_interval(event)]
+        if end > start
     ]
 
 
@@ -114,6 +117,18 @@ class DayAggregator:
         self.journals = journal_repository or JournalRepository(settings)
         self.activitywatch = activitywatch or ActivityWatchAdapter(settings)
         self.cache = cache or DayCache(settings)
+
+    def _input_fingerprint(self, day: date) -> str:
+        base = self.settings.input_fingerprint()
+        correction_fingerprint = getattr(
+            self.activitywatch,
+            "correction_fingerprint",
+            None,
+        )
+        if not callable(correction_fingerprint):
+            return base
+        overlay = str(correction_fingerprint(day))
+        return hashlib.sha256(f"{base}\0{overlay}".encode("utf-8")).hexdigest()
 
     def _day_bounds(
         self,
@@ -217,6 +232,19 @@ class DayAggregator:
                 ):
                     previous["end"] = max(previous_end, end).isoformat()
                     previous["duration_seconds"] += float(event["duration_seconds"])
+                    reference = self._event_reference(event)
+                    if (
+                        reference is not None
+                        and reference not in previous["event_refs"]
+                    ):
+                        previous["event_refs"].append(reference)
+                    previous["manual_edit"] = bool(
+                        previous["manual_edit"] or event.get("manual_edit")
+                    )
+                    previous["manual_edit_conflict"] = bool(
+                        previous["manual_edit_conflict"]
+                        or event.get("manual_edit_conflict")
+                    )
                     continue
             blocks.append(
                 {
@@ -230,12 +258,31 @@ class DayAggregator:
                     "app": event.get("app") or "",
                     "title": event.get("title") or "",
                     "source": event.get("source") or "",
+                    "event_refs": [
+                        reference
+                        for reference in [self._event_reference(event)]
+                        if reference is not None
+                    ],
+                    "manual_edit": bool(event.get("manual_edit")),
+                    "manual_edit_conflict": bool(
+                        event.get("manual_edit_conflict")
+                    ),
                     "_signature": list(signature),
                 }
             )
         for block in blocks:
             block.pop("_signature", None)
         return blocks
+
+    @staticmethod
+    def _event_reference(
+        event: dict[str, Any],
+    ) -> dict[str, str] | None:
+        bucket_id = str(event.get("bucket_id") or "")
+        event_id = event.get("event_id")
+        if not bucket_id or event_id is None:
+            return None
+        return {"bucket_id": bucket_id, "event_id": str(event_id)}
 
     def _focus_metrics(
         self,
@@ -316,6 +363,11 @@ class DayAggregator:
         events = list(activity.get("events", []))
         screen_blocks = self._screen_blocks(events)
         screen_intervals = _screen_wall_intervals(events)
+        range_start, range_end = self._day_bounds(
+            day,
+            mode,
+            timezone_name,
+        )
 
         offline_items: list[dict[str, Any]] = []
         offline_intervals: list[tuple[datetime, datetime]] = []
@@ -327,11 +379,16 @@ class DayAggregator:
                 timezone_name,
                 raw_item,
             )
+            start = max(start, range_start)
+            end = min(end, range_end)
+            if end <= start:
+                continue
             item = {
                 **raw_item,
                 "kind": "offline",
                 "start": start.isoformat(),
                 "end": end.isoformat(),
+                "duration_seconds": (end - start).total_seconds(),
             }
             offline_items.append(item)
             offline_intervals.append((start, end))
@@ -364,8 +421,10 @@ class DayAggregator:
 
         journal.update(
             {
+                "provider": getattr(journal_location, "provider", "obsidian"),
                 "path": journal_location.relative_path,
                 "absolute_path": str(journal_location.note),
+                "open_url": journal_location.obsidian_url,
                 "obsidian_url": journal_location.obsidian_url,
                 "exists": journal_location.note.is_file(),
                 "offline_activities": offline_items,
@@ -388,6 +447,10 @@ class DayAggregator:
             "date": day.isoformat(),
             "mode": mode,
             "timezone": timezone_name,
+            "range": {
+                "start": str(activity["range"]["start_utc"]),
+                "end": str(activity["range"]["end_utc"]),
+            },
             "generated_at": datetime.now(ZoneInfo(timezone_name)).isoformat(),
             "cache": {
                 "hit": False,
@@ -403,7 +466,15 @@ class DayAggregator:
                 "longest_focus_seconds": longest_focus_seconds,
                 "meaningful_switches": meaningful_switches,
                 "classification_coverage": float(activity.get("coverage", 0.0)),
-                "review_completed": bool(document.completion_task_checked),
+                "review_has_content": any(
+                    (
+                        document.personal_summary_markdown.strip(),
+                        document.outputs,
+                        document.next_action_markdown.strip(),
+                        document.freeform_markdown.strip(),
+                        document.body_markdown.strip(),
+                    )
+                ),
             },
             "quality": {
                 "complete": bool(activity.get("complete", False)),
@@ -438,14 +509,14 @@ class DayAggregator:
     ) -> dict[str, Any]:
         selected_mode = mode or self.settings.default_mode
         journal_location = self.journals.locate(day)
-        upstream_fingerprint = self.settings.upstream_fingerprint()
+        input_fingerprint = self._input_fingerprint(day)
         timezone_name = self.activitywatch.timezone_name()
         today = datetime.now(ZoneInfo(timezone_name)).date()
         cached = self.cache.get(
             day,
             selected_mode,
             journal_location.fingerprint,
-            upstream_fingerprint,
+            input_fingerprint,
             is_today=day == today,
             refresh=refresh,
         )
@@ -456,31 +527,9 @@ class DayAggregator:
         try:
             activity = self.activitywatch.load_day(day, selected_mode)
         except Exception as exc:
-            start_utc, end_utc = self.activitywatch.date_range(
-                day,
-                selected_mode,
-                timezone_name,
+            activity = self._unavailable_activity(
+                day, selected_mode, timezone_name, exc
             )
-            activity = {
-                "range": {
-                    "start_utc": start_utc.isoformat(),
-                    "end_utc": end_utc.isoformat(),
-                    "timezone": timezone_name,
-                },
-                "complete": False,
-                "issues": [str(exc)],
-                "sources": [],
-                "time_accounting": {
-                    "policy": "split_parallel_sources_prefer_foreground",
-                    "wall_duration_seconds": 0.0,
-                    "afk_removed_seconds": 0.0,
-                    "background_window_removed_seconds": 0.0,
-                },
-                "events": [],
-                "categories": [],
-                "uncategorized": {"duration_seconds": 0.0},
-                "coverage": 0.0,
-            }
         response = self._build_response(
             day,
             selected_mode,
@@ -488,11 +537,133 @@ class DayAggregator:
             journal_location,
             activity,
         )
-        self.cache.put(
-            day,
-            selected_mode,
-            journal_location.fingerprint,
-            upstream_fingerprint,
-            response,
-        )
+        if response["quality"]["complete"]:
+            self.cache.put(
+                day,
+                selected_mode,
+                journal_location.fingerprint,
+                input_fingerprint,
+                response,
+            )
         return response
+
+    def _unavailable_activity(
+        self,
+        day: date,
+        mode: str,
+        timezone_name: str,
+        reason: Exception,
+    ) -> dict[str, Any]:
+        start_utc, end_utc = self.activitywatch.date_range(
+            day,
+            mode,
+            timezone_name,
+        )
+        return {
+            "range": {
+                "start_utc": start_utc.isoformat(),
+                "end_utc": end_utc.isoformat(),
+                "timezone": timezone_name,
+            },
+            "complete": False,
+            "issues": [str(reason)],
+            "sources": [],
+            "time_accounting": {
+                "policy": "split_parallel_sources_prefer_foreground",
+                "wall_duration_seconds": 0.0,
+                "afk_removed_seconds": 0.0,
+                "background_window_removed_seconds": 0.0,
+            },
+            "events": [],
+            "categories": [],
+            "uncategorized": {"duration_seconds": 0.0},
+            "coverage": 0.0,
+        }
+
+    def get_days(
+        self,
+        days: Iterable[date],
+        mode: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return a bounded range while batching uncached ActivityWatch reads."""
+        selected_days = list(dict.fromkeys(days))
+        if not selected_days:
+            return []
+
+        selected_mode = mode or self.settings.default_mode
+        timezone_name = self.activitywatch.timezone_name()
+        today = datetime.now(ZoneInfo(timezone_name)).date()
+        contexts: dict[date, Any] = {}
+        results: dict[date, dict[str, Any]] = {}
+        missing: list[date] = []
+
+        for day in selected_days:
+            input_fingerprint = self._input_fingerprint(day)
+            journal_location = self.journals.locate(day)
+            contexts[day] = (journal_location, input_fingerprint)
+            cached = self.cache.get(
+                day,
+                selected_mode,
+                journal_location.fingerprint,
+                input_fingerprint,
+                is_today=day == today,
+                refresh=False,
+            )
+            if cached is None:
+                missing.append(day)
+            else:
+                results[day] = cached
+
+        activities: dict[date, dict[str, Any]] = {}
+        if missing:
+            batch_loader = getattr(self.activitywatch, "load_days", None)
+            if callable(batch_loader):
+                try:
+                    activities = batch_loader(missing, selected_mode)
+                except Exception as exc:
+                    activities = {
+                        day: self._unavailable_activity(
+                            day, selected_mode, timezone_name, exc
+                        )
+                        for day in missing
+                    }
+            else:
+                for day in missing:
+                    try:
+                        activities[day] = self.activitywatch.load_day(
+                            day, selected_mode
+                        )
+                    except Exception as exc:
+                        activities[day] = self._unavailable_activity(
+                            day, selected_mode, timezone_name, exc
+                        )
+
+        for day in missing:
+            journal_location, input_fingerprint = contexts[day]
+            journal_content = self.journals.read(journal_location)
+            activity = activities.get(day)
+            if activity is None:
+                activity = self._unavailable_activity(
+                    day,
+                    selected_mode,
+                    timezone_name,
+                    RuntimeError("ActivityWatch batch omitted the requested day"),
+                )
+            response = self._build_response(
+                day,
+                selected_mode,
+                journal_content,
+                journal_location,
+                activity,
+            )
+            if response["quality"]["complete"]:
+                self.cache.put(
+                    day,
+                    selected_mode,
+                    journal_location.fingerprint,
+                    input_fingerprint,
+                    response,
+                )
+            results[day] = response
+
+        return [results[day] for day in selected_days]

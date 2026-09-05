@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "categories": {
+    "ai_collaboration": {"label": "AI 协作"},
+    "coding": {"label": "编码/工程"},
+    "research": {"label": "研究/论文"},
+    "writing": {"label": "写作/笔记"},
+    "communication": {"label": "沟通"},
+    "planning": {"label": "计划/安排"},
+    "reading": {"label": "阅读"},
+    "entertainment": {"label": "娱乐"},
+    "system": {"label": "系统/工具"},
+    "browsing": {"label": "网页浏览"}
+  },
+  "rules": [
+    {
+      "name": "ai-workspaces",
+      "label": "AI 工作台",
+      "category": "ai_collaboration",
+      "app_equals": ["ChatGPT", "Claude", "Codex", "Codex.exe"]
+    },
+    {
+      "name": "development-tools",
+      "label": "终端与开发工具",
+      "category": "coding",
+      "app_equals": [
+        "Code", "Code.exe", "Visual Studio Code", "Cursor", "Cursor.exe",
+        "Terminal", "iTerm2", "WindowsTerminal.exe", "kitty", "Alacritty",
+        "PyCharm", "WebStorm", "IntelliJ IDEA", "CLion", "Xcode"
+      ]
+    },
+    {
+      "name": "paper-tools",
+      "label": "论文与研究工具",
+      "category": "research",
+      "app_equals": ["Zotero", "Mendeley", "JabRef"]
+    },
+    {
+      "name": "writing-tools",
+      "label": "笔记与写作工具",
+      "category": "writing",
+      "app_equals": [
+        "Obsidian", "Obsidian.exe", "Typora", "Notion", "Notes", "备忘录",
+        "Microsoft Word", "WINWORD.EXE", "Pages"
+      ]
+    },
+    {
+      "name": "communication-tools",
+      "label": "聊天、邮件与会议",
+      "category": "communication",
+      "app_equals": [
+        "Slack", "Microsoft Teams", "Discord", "Telegram", "Mail", "邮件",
+        "Outlook", "微信", "WeChat", "Zoom", "腾讯会议"
+      ]
+    },
+    {
+      "name": "planning-tools",
+      "label": "日历与任务",
+      "category": "planning",
+      "app_equals": [
+        "Calendar", "日历", "Reminders", "提醒事项", "Things", "Todoist"
+      ]
+    },
+    {
+      "name": "browser-engineering",
+      "label": "浏览器中的工程工作",
+      "category": "coding",
+      "app_equals": [
+        "Google Chrome", "chrome.exe", "Safari", "Safari浏览器",
+        "Firefox", "firefox.exe", "Microsoft Edge", "msedge.exe"
+      ],
+      "title_contains": [
+        "GitHub", "GitLab", "localhost", "127.0.0.1", "Jupyter",
+        "Docker", "Kubernetes"
+      ]
+    },
+    {
+      "name": "browser-research",
+      "label": "浏览器中的论文与研究",
+      "category": "research",
+      "app_equals": [
+        "Google Chrome", "chrome.exe", "Safari", "Safari浏览器",
+        "Firefox", "firefox.exe", "Microsoft Edge", "msedge.exe"
+      ],
+      "title_contains": ["arXiv", "Semantic Scholar", "Google Scholar", "IEEE", "ACM"]
+    },
+    {
+      "name": "reading-tools",
+      "label": "阅读器",
+      "category": "reading",
+      "app_equals": ["Books", "图书", "Kindle", "Readest", "Preview", "预览"]
+    },
+    {
+      "name": "entertainment-tools",
+      "label": "影音与游戏",
+      "category": "entertainment",
+      "app_equals": [
+        "Steam", "Spotify", "Music", "音乐", "网易云音乐", "VLC", "IINA"
+      ]
+    },
+    {
+      "name": "system-tools",
+      "label": "系统与文件工具",
+      "category": "system",
+      "app_equals": [
+        "Finder", "访达", "System Settings", "系统设置", "explorer.exe",
+        "Task Manager", "Activity Monitor", "活动监视器"
+      ]
+    },
+    {
+      "name": "browser-fallback",
+      "label": "未细分网页浏览",
+      "category": "browsing",
+      "app_equals": [
+        "Google Chrome", "chrome.exe", "Safari", "Safari浏览器",
+        "Firefox", "firefox.exe", "Microsoft Edge", "msedge.exe"
+      ]
+    }
+  ]
+}

@@ -2,6 +2,14 @@
 
 export type DayMode = "calendar" | "routine";
 
+export interface RuntimeSettings {
+  default_mode: DayMode;
+  routine_day_start: string;
+  timezone: string;
+  journal_write_enabled: boolean;
+  activity_edit_enabled: boolean;
+}
+
 export interface ParseWarning {
   line: string;
   message: string;
@@ -15,6 +23,25 @@ export interface OverlapWarning {
   message: string;
 }
 
+export interface TimeAccounting {
+  policy: string;
+  raw_device_duration_seconds?: number;
+  wall_duration_seconds: number;
+  interactive_wall_seconds?: number;
+  foreground_media_wall_seconds?: number;
+  passive_media_seconds?: number;
+  media_activity_enabled?: boolean;
+  overlap_adjustment_seconds?: number;
+  parallel_wall_seconds?: number;
+  background_overlap_removed_seconds?: number;
+  observed_device_duration_seconds?: number;
+  afk_removed_before_media_seconds?: number;
+  afk_removed_seconds: number;
+  inactive_window_seconds?: number;
+  background_window_removed_seconds: number;
+  max_parallel_sources?: number;
+}
+
 export interface ActivitySource {
   name: string;
   label: string;
@@ -24,6 +51,7 @@ export interface ActivitySource {
   event_count?: number;
   duration_seconds?: number;
   error?: string;
+  media_activity?: Record<string, unknown>;
 }
 
 export interface CategoryAggregate {
@@ -52,6 +80,14 @@ export interface ScreenTimelineBlock {
   app: string;
   title: string;
   source: string;
+  event_refs: ActivityEventRef[];
+  manual_edit: boolean;
+  manual_edit_conflict: boolean;
+}
+
+export interface ActivityEventRef {
+  bucket_id: string;
+  event_id: string;
 }
 
 export interface OfflineActivity {
@@ -76,11 +112,6 @@ export interface RangeRhythm {
   hourly_active_seconds: number[];
 }
 
-export interface UncategorizedAppAggregate {
-  app: string;
-  duration_seconds: number;
-}
-
 export interface WorkflowNote {
   start_time: string;
   end_time: string;
@@ -99,18 +130,19 @@ export interface FileFingerprint {
 
 export interface JournalData {
   exists: boolean;
+  provider: "local" | "obsidian";
   path: string;
   absolute_path: string;
+  open_url: string;
   obsidian_url: string;
   body_markdown: string;
   personal_summary_markdown: string;
   outputs: string[];
   next_action_markdown: string;
+  freeform_markdown: string;
   workflow_notes: WorkflowNote[];
   activity_summary_markdown: string;
   kina_advice: string[];
-  completion_task_exists: boolean;
-  completion_task_checked: boolean;
   projects: string[];
   offline_activities: OfflineActivity[];
   offline_unparsed: string[];
@@ -121,6 +153,10 @@ export interface DayResponse {
   date: string;
   mode: DayMode;
   timezone: string;
+  range: {
+    start: string;
+    end: string;
+  };
   generated_at: string;
   cache: {
     hit: boolean;
@@ -133,7 +169,7 @@ export interface DayResponse {
     longest_focus_seconds: number;
     meaningful_switches: number;
     classification_coverage: number;
-    review_completed: boolean;
+    review_has_content: boolean;
   };
   quality: {
     complete: boolean;
@@ -141,6 +177,7 @@ export interface DayResponse {
     uncategorized_seconds: number;
     overlap_warnings: OverlapWarning[];
     parse_warnings: ParseWarning[];
+    time_accounting: TimeAccounting;
     sources: ActivitySource[];
   };
   categories: CategoryAggregate[];
@@ -165,8 +202,8 @@ export interface RangeResponse {
   start: string;
   end: string;
   mode: DayMode;
+  timezone: string;
   days: RangeDay[];
-  uncategorized_apps?: UncategorizedAppAggregate[];
 }
 
 export class ApiError extends Error {
@@ -200,6 +237,10 @@ async function getJSON<T>(url: string): Promise<T> {
   return requestJSON<T>(url);
 }
 
+export function fetchRuntimeSettings(): Promise<RuntimeSettings> {
+  return getJSON("/api/settings");
+}
+
 export function fetchDay(
   date: string,
   mode: DayMode,
@@ -213,14 +254,8 @@ export function fetchRange(
   start: string,
   end: string,
   mode: DayMode,
-  includeUncategorizedApps = false,
 ): Promise<RangeResponse> {
-  const include = includeUncategorizedApps
-    ? "&include=uncategorized_apps"
-    : "";
-  return getJSON(
-    `/api/range?start=${start}&end=${end}&mode=${mode}${include}`,
-  );
+  return getJSON(`/api/range?start=${start}&end=${end}&mode=${mode}`);
 }
 
 export interface WorkflowSaveRequest {
@@ -240,7 +275,35 @@ export interface WorkflowSaveResponse {
   journal_fingerprint: FileFingerprint;
 }
 
-export type ReviewField = "personal_summary" | "outputs" | "next_action";
+export type ReviewField =
+  | "personal_summary"
+  | "outputs"
+  | "next_action"
+  | "freeform";
+
+export interface JournalDocumentResponse {
+  ok: true;
+  date: string;
+  markdown: string;
+  journal_fingerprint: FileFingerprint;
+  path: string;
+  provider: "local" | "obsidian";
+  write_enabled: boolean;
+  exists: boolean;
+  has_frontmatter: boolean;
+}
+
+export function fetchJournalDocument(date: string): Promise<JournalDocumentResponse> {
+  return getJSON(`/api/journal/document?date=${encodeURIComponent(date)}`);
+}
+
+export function saveJournalDocument(date: string, markdown: string, expectedFingerprint: FileFingerprint): Promise<JournalDocumentResponse> {
+  return requestJSON("/api/journal/document", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({date, markdown, expected_fingerprint: expectedFingerprint}),
+  });
+}
 
 export interface ReviewSaveRequest {
   date: string;
@@ -261,12 +324,127 @@ export interface ReviewSaveResponse {
   journal_fingerprint: FileFingerprint;
 }
 
-export interface WeeklyReviewResponse {
+export type PeriodReviewKind = "week" | "month";
+
+export interface PeriodReviewResponse {
   ok: true;
-  week_id: string;
-  created: boolean;
+  period_id: string;
+  week_id?: string;
+  month_id?: string;
+  exists: boolean;
+  created?: boolean;
+  replaced?: boolean;
   path: string;
+  provider: "local" | "obsidian";
+  open_url: string;
   obsidian_url: string;
+  write_enabled: boolean;
+  fields: {
+    freeform: string;
+  };
+  journal_fingerprint: FileFingerprint;
+  review_field?: {
+    field: "freeform";
+    markdown: string;
+  };
+}
+
+export interface PermanentNoteResponse {
+  ok: true;
+  exists: boolean;
+  created?: boolean;
+  replaced?: boolean;
+  path: string;
+  provider: "local" | "obsidian";
+  open_url: string;
+  obsidian_url: string;
+  write_enabled: boolean;
+  markdown: string;
+  journal_fingerprint: FileFingerprint;
+}
+
+export interface ActivityCategoryOption {
+  category: string;
+  label: string;
+  custom: boolean;
+}
+
+export interface ActivityEventValues {
+  start: string;
+  end: string;
+  start_local: string;
+  end_local: string;
+  app: string;
+  title: string;
+  category: string;
+  category_label: string;
+}
+
+export interface InspectableActivityEvent {
+  bucket_id: string;
+  event_id: string;
+  source_fingerprint: string;
+  editable: boolean;
+  ended: boolean;
+  original: ActivityEventValues;
+  effective: ActivityEventValues;
+  automatic_category: {
+    category: string;
+    category_label: string;
+  };
+  manual_category: {
+    category: string;
+    label: string;
+  } | null;
+  manual_edit: boolean;
+  manual_edit_fields: string[];
+  manual_edit_conflict: boolean;
+}
+
+export interface ActivityInspectorResponse {
+  date: string;
+  mode: DayMode;
+  timezone: string;
+  bucket_id: string;
+  revision: string;
+  write_enabled: boolean;
+  categories: ActivityCategoryOption[];
+  events: InspectableActivityEvent[];
+}
+
+export interface ActivityEditRequest {
+  date: string;
+  mode: DayMode;
+  bucket_id: string;
+  event_id: string;
+  expected_source_fingerprint: string;
+  expected_revision: string;
+  start_local: string;
+  end_local: string;
+  app: string;
+  title: string;
+  category_override:
+    | { category: string }
+    | { custom_label: string }
+    | null;
+}
+
+export interface ActivityEditResponse {
+  ok: true;
+  date: string;
+  change_id: string;
+  revision: string;
+  event: InspectableActivityEvent;
+  categories: ActivityCategoryOption[];
+}
+
+export interface ActivityUndoRequest {
+  date: string;
+  mode: DayMode;
+  bucket_id: string;
+  event_id: string;
+  change_id: string;
+  expected_revision: string;
 }
 
 export function saveWorkflowDescription(
@@ -289,12 +467,110 @@ export function saveReviewField(
   });
 }
 
-export function ensureWeeklyReview(
-  weekId: string,
-): Promise<WeeklyReviewResponse> {
-  return requestJSON("/api/journal/weekly", {
+export function fetchPermanentNote(): Promise<PermanentNoteResponse> {
+  return getJSON("/api/journal/permanent");
+}
+
+export interface BeliefsResponse extends PermanentNoteResponse {
+  has_frontmatter: boolean;
+  changed?: boolean;
+}
+
+export function fetchBeliefs(): Promise<BeliefsResponse> {
+  return getJSON("/api/journal/beliefs");
+}
+
+export function saveBeliefs(markdown: string, fingerprint: FileFingerprint): Promise<BeliefsResponse> {
+  return requestJSON("/api/journal/beliefs", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ week_id: weekId }),
+    body: JSON.stringify({ markdown, expected_fingerprint: fingerprint }),
+  });
+}
+
+export function savePermanentNote(
+  markdown: string,
+  expectedFingerprint: FileFingerprint,
+): Promise<PermanentNoteResponse> {
+  return requestJSON("/api/journal/permanent", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      markdown,
+      expected_fingerprint: expectedFingerprint,
+    }),
+  });
+}
+
+export function fetchPeriodReview(
+  kind: PeriodReviewKind,
+  periodId: string,
+): Promise<PeriodReviewResponse> {
+  const endpoint = kind === "week" ? "weekly" : "monthly";
+  const parameter = kind === "week" ? "week_id" : "month_id";
+  return getJSON(
+    `/api/journal/${endpoint}?${parameter}=${encodeURIComponent(periodId)}`,
+  );
+}
+
+export function savePeriodReview(
+  kind: PeriodReviewKind,
+  periodId: string,
+  markdown: string,
+  expectedFingerprint: FileFingerprint,
+): Promise<PeriodReviewResponse> {
+  const endpoint = kind === "week" ? "weekly" : "monthly";
+  const periodKey = kind === "week" ? "week_id" : "month_id";
+  return requestJSON(`/api/journal/${endpoint}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      [periodKey]: periodId,
+      field: "freeform",
+      markdown,
+      expected_fingerprint: expectedFingerprint,
+    }),
+  });
+}
+
+export function fetchActivityInspector(
+  date: string,
+  mode: DayMode,
+  references: ActivityEventRef[],
+): Promise<ActivityInspectorResponse> {
+  const first = references[0];
+  if (!first) {
+    return Promise.reject(new Error("该时间块没有可定位的原始事件。"));
+  }
+  const parameters = new URLSearchParams({
+    date,
+    mode,
+    bucket_id: first.bucket_id,
+  });
+  for (const reference of references) {
+    if (reference.bucket_id === first.bucket_id) {
+      parameters.append("event_id", reference.event_id);
+    }
+  }
+  return getJSON(`/api/activity/inspect?${parameters.toString()}`);
+}
+
+export function saveActivityEdit(
+  payload: ActivityEditRequest,
+): Promise<ActivityEditResponse> {
+  return requestJSON("/api/activity/edit", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function undoActivityEdit(
+  payload: ActivityUndoRequest,
+): Promise<ActivityEditResponse> {
+  return requestJSON("/api/activity/undo", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
 }

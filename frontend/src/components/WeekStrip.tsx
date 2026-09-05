@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { RangeDay } from "../api";
 import { YearHeatmap } from "./YearHeatmap";
 import { categoryColor } from "../lib/colors";
@@ -27,18 +27,28 @@ function dottedDate(date: string): string {
   return date.split("-").join(".");
 }
 
-const RHYTHM_COLLAPSED_KEY = "kina-dashboard-rhythm-collapsed";
+const RHYTHM_COLLAPSED_KEY = "kinawatch-rhythm-collapsed";
+const LEGACY_RHYTHM_COLLAPSED_KEY = "kina-dashboard-rhythm-collapsed";
+
+export type RhythmMode =
+  | "rolling"
+  | "calendar"
+  | "year"
+  | "calendarYear";
 
 function storedRhythmCollapsed(): boolean {
   try {
-    return localStorage.getItem(RHYTHM_COLLAPSED_KEY) === "1";
+    return (
+      localStorage.getItem(RHYTHM_COLLAPSED_KEY) ??
+      localStorage.getItem(LEGACY_RHYTHM_COLLAPSED_KEY)
+    ) === "1";
   } catch {
     return false;
   }
 }
 
-// A read-only seven-day comparison. Each row of 24 cells follows the same
-// 06:00-to-06:00 boundary as the main ribbon; the calendar owns navigation.
+// Read-only rhythm context across short and annual ranges. Every daily
+// strip follows the same 06:00-to-06:00 boundary as the main ribbon.
 export function WeekStrip({
   days,
   yearDays,
@@ -52,6 +62,7 @@ export function WeekStrip({
   calendarYear,
   availableYears,
   selected,
+  timezone,
   mode,
   weekNumber,
   canMoveNext,
@@ -72,12 +83,11 @@ export function WeekStrip({
   calendarYear: number;
   availableYears: number[];
   selected: string;
-  mode: "rolling" | "calendar" | "year" | "calendarYear";
+  timezone: string;
+  mode: RhythmMode;
   weekNumber: number;
   canMoveNext: boolean;
-  onModeChange: (
-    mode: "rolling" | "calendar" | "year" | "calendarYear",
-  ) => void;
+  onModeChange: (mode: RhythmMode) => void;
   onCalendarYearChange: (year: number) => void;
   onShiftWeek: (delta: number) => void;
   onSelect: (date: string) => void;
@@ -94,6 +104,7 @@ export function WeekStrip({
   const latestYear = Math.max(...availableYears);
   // Collapse survives day switches (the day content remounts per date).
   const [collapsed, setCollapsed] = useState(storedRhythmCollapsed);
+  const weekstripRef = useRef<HTMLUListElement>(null);
   useEffect(() => {
     try {
       localStorage.setItem(RHYTHM_COLLAPSED_KEY, collapsed ? "1" : "0");
@@ -101,6 +112,38 @@ export function WeekStrip({
       // The preference still applies for this page session.
     }
   }, [collapsed]);
+
+  useEffect(() => {
+    const strip = weekstripRef.current;
+    const active = strip?.querySelector<HTMLElement>(
+      '.weekday[aria-current="date"]',
+    );
+    if (!strip || !active) return;
+
+    const revealSelectedDay = () => {
+      if (strip.scrollWidth <= strip.clientWidth + 1) {
+        strip.scrollLeft = 0;
+        return;
+      }
+      const stripRect = strip.getBoundingClientRect();
+      const activeRect = active.getBoundingClientRect();
+      const activeCenter =
+        strip.scrollLeft +
+        activeRect.left -
+        stripRect.left +
+        activeRect.width / 2;
+      const target = activeCenter - strip.clientWidth / 2;
+      strip.scrollLeft = Math.max(
+        0,
+        Math.min(target, strip.scrollWidth - strip.clientWidth),
+      );
+    };
+
+    revealSelectedDay();
+    const observer = new ResizeObserver(revealSelectedDay);
+    observer.observe(strip);
+    return () => observer.disconnect();
+  }, [collapsed, days.length, mode, selected]);
 
   const chooseMode = onModeChange;
 
@@ -237,6 +280,7 @@ export function WeekStrip({
         />
       ) : (
       <ul
+        ref={weekstripRef}
         className="weekstrip"
         style={{ "--week-days": Math.max(days.length, 1) } as React.CSSProperties}
       >
@@ -247,8 +291,9 @@ export function WeekStrip({
           const hours =
             r?.hourly_active_seconds ?? Array<number>(24).fill(0);
           const title = r?.first_active
-            ? `${d.date} · ${fmtClock(r.first_active)}–${fmtClock(
+            ? `${d.date} · ${fmtClock(r.first_active, timezone)}–${fmtClock(
                 r.last_active ?? r.first_active,
+                timezone,
               )} · ${fmtDuration(total)}`
             : `${d.date} · 无活动`;
           return (
@@ -256,7 +301,7 @@ export function WeekStrip({
               <button
                 type="button"
                 className={`weekday ${active ? "weekday-active" : ""}`}
-                title={`${title} · 点击查看当天`}
+                aria-label={`${title}，查看当天`}
                 aria-current={active ? "date" : undefined}
                 onClick={() => onSelect(d.date)}
                 style={{ "--heat": dayColor(d) } as React.CSSProperties}
@@ -289,8 +334,9 @@ export function WeekStrip({
               <div className="weekday-foot">
                 <span>
                   {r?.first_active
-                    ? `${fmtClock(r.first_active)}–${fmtClock(
+                    ? `${fmtClock(r.first_active, timezone)}–${fmtClock(
                         r.last_active ?? r.first_active,
+                        timezone,
                       )}`
                     : "无活动"}
                 </span>
