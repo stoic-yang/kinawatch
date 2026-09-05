@@ -150,7 +150,7 @@
   display: grid;
   grid-template-columns: var(--journal-rail-width) minmax(0, 1fr);
   align-items: start;
-  gap: 16px;
+  gap: 20px;
   min-height: calc(100dvh - 48px);
 }
 
@@ -235,7 +235,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: calc(100dvh - 48px);
-  padding: 30px clamp(24px, 2.5vw, 48px) 36px;
+  padding: 36px clamp(24px, 2.5vw, 48px) 40px;
   border: 1px solid var(--journal-rule);
   border-radius: 10px;
   background: var(--journal-paper);

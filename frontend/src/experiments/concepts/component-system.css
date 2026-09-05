@@ -5,7 +5,7 @@
   --kw-ui-canvas: var(--kw-palette-canvas, #f4f6f0);
   --kw-ui-surface: var(--kw-palette-surface, #ffffff);
   --kw-ui-surface-subtle: var(--kw-palette-surface-subtle, #fafcf7);
-  --kw-ui-rail: var(--kw-palette-rail, #e9eee3);
+  --kw-ui-rail: color-mix(in srgb, var(--kw-palette-rail, #e9eee3) 55%, var(--kw-ui-canvas));
   --kw-ui-control: var(--kw-palette-control, #edf3e7);
   --kw-ui-control-hover: var(--kw-palette-control-hover, #e5eedc);
   --kw-ui-control-active: var(--kw-palette-control-active, #dce9d1);
@@ -27,11 +27,14 @@
   --kw-heat-2: var(--kw-palette-heat-2, #abc38f);
   --kw-heat-3: var(--kw-palette-heat-3, #789b5e);
   --kw-heat-4: var(--kw-palette-heat-4, #476c38);
-  --kw-ui-card-radius: 10px;
-  --kw-ui-control-radius: 6px;
+  --kw-ui-card-radius: 12px;
+  --kw-ui-control-radius: 7px;
   --kw-ui-group-radius: 8px;
   --kw-ui-pill-radius: 999px;
-  --kw-ui-control-height: 30px;
+  --kw-ui-control-height: 32px;
+  --kw-ui-separator: color-mix(in srgb, var(--kw-ui-line) 65%, transparent);
+  --kw-ui-surface-shadow: 0 1px 2px light-dark(#202b3c04, #00000014), 0 4px 16px light-dark(#202b3c03, #0000000a);
+  --kw-ui-control-shadow: 0 1px 3px light-dark(#202b3c12, #00000030);
   --kw-ui-focus: 0 0 0 3px color-mix(in srgb, var(--kw-ui-accent) 18%, transparent);
   --kw-ui-popover-shadow: 0 12px 36px light-dark(#1c273122, #00000055);
   --canvas: var(--kw-ui-canvas);
@@ -67,13 +70,13 @@
 
 /* Surfaces */
 .theme-grove.concept-page .kw-card {
-  border-color: var(--kw-ui-line);
+  border: 1px solid var(--kw-ui-separator);
   border-radius: var(--kw-ui-card-radius);
   background: var(--kw-ui-surface);
-  box-shadow: none;
+  box-shadow: var(--kw-ui-surface-shadow);
 }
 
-.theme-grove.concept-page .journal-writing-layout > :is(.journal-context, .journal-kina-summary).kw-card { background: var(--kw-ui-surface-subtle); }
+.theme-grove.concept-page .journal-writing-layout > :is(.journal-context, .journal-kina-summary).kw-card { border-color: transparent; background: color-mix(in srgb, var(--kw-ui-surface-subtle) 70%, var(--kw-ui-canvas)); box-shadow: none; }
 .theme-grove.concept-page .journal-reference-page > .concept-timeline.kw-card,
 .theme-grove.concept-page .journal-reference-desk.kw-card,
 .theme-grove.concept-page .journal-reference-heading { max-width: 1284px; }
@@ -81,12 +84,12 @@
 .theme-grove.concept-page .journal-reference-desk.kw-card { padding: 20px 24px 2px; }
 .theme-grove.concept-page .journal-reference-heading { margin-bottom: 18px; }
 .theme-grove.concept-page .journal-reference-title h1,
-.theme-grove.concept-page .journal-paper-header h1 { font-size: 26px; font-weight: 620; letter-spacing: -.035em; }
+.theme-grove.concept-page .journal-paper-header h1 { font-size: 26px; font-weight: 600; letter-spacing: -.03em; }
 .theme-grove.concept-page .journal-reference-context { padding-bottom: 14px; }
 .theme-grove.concept-page .journal-reference-context h2 { font-size: 16px; font-weight: 650; }
 .theme-grove.concept-page .journal-workflow-segment { padding-block: 16px; }
 
-/* Metric pills */
+/* Metrics remain quieter than interactive controls. */
 .theme-grove.concept-page .kw-metric-pill {
   display: inline-flex;
   align-items: baseline;
@@ -94,9 +97,9 @@
   gap: 5px;
   min-height: 27px;
   padding: 3px 9px;
-  border: 1px solid var(--kw-ui-line);
+  border: 1px solid transparent;
   border-radius: var(--kw-ui-pill-radius);
-  background: var(--kw-ui-control);
+  background: var(--kw-ui-surface-subtle);
   color: var(--kw-ui-muted);
   font-size: 11px;
   line-height: 1.4;
@@ -105,8 +108,8 @@
 .theme-grove.concept-page .kw-metric-pill :is(b, strong) {
   color: var(--kw-ui-ink);
   font-size: 12px;
-  font-weight: 650;
-  letter-spacing: -.015em;
+  font-weight: 600;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
 .theme-grove.concept-page .kw-metric-pill :is(small, span) { color: var(--kw-ui-muted); font-size: 11px; font-weight: 450; }
@@ -119,9 +122,9 @@
   align-items: center;
   gap: 2px;
   padding: 3px;
-  border: 1px solid var(--kw-ui-line);
+  border: 1px solid var(--kw-ui-separator);
   border-radius: var(--kw-ui-group-radius);
-  background: var(--kw-ui-control);
+  background: var(--kw-ui-surface-subtle);
   box-shadow: none;
 }
 .theme-grove.concept-page .kw-segmented-control > button,
@@ -140,10 +143,11 @@
 .theme-grove.concept-page .kw-segmented-control > button:is([aria-pressed="true"], .is-active),
 .theme-grove.concept-page .review-scope-switch > .review-scope-active,
 .theme-grove.concept-page .permanent-note-mode-switch > .is-active {
-  border-color: var(--kw-ui-line-strong);
-  background: var(--kw-ui-control-active);
+  border-color: var(--kw-ui-separator);
+  background: var(--kw-ui-surface);
   color: var(--kw-ui-accent-strong);
-  font-weight: 650;
+  box-shadow: var(--kw-ui-control-shadow);
+  font-weight: 600;
 }
 .theme-grove.concept-page .kw-segmented-control > button:hover:not([aria-pressed="true"]),
 .theme-grove.concept-page :is(.review-scope-switch, .permanent-note-mode-switch) > button:hover:not(.review-scope-active, .is-active) {
@@ -154,11 +158,11 @@
 /* Navigation and disclosure rows */
 .theme-grove.concept-page .concept-navigation button {
   min-height: 42px;
-  border-radius: var(--kw-ui-card-radius);
+  border-radius: var(--kw-ui-group-radius);
   color: var(--kw-ui-muted);
 }
 .theme-grove.concept-page .concept-navigation button:hover { background: var(--kw-ui-control-hover); color: var(--kw-ui-accent-strong); }
-.theme-grove.concept-page .concept-navigation button[aria-current] { background: var(--kw-ui-control-active); color: var(--kw-ui-accent-strong); }
+.theme-grove.concept-page .concept-navigation button[aria-current] { background: color-mix(in srgb, var(--kw-ui-control-active) 65%, var(--kw-ui-rail)); color: var(--kw-ui-accent-strong); }
 .theme-grove.concept-page .sidebar-independent .sidebar-section-toggle,
 .theme-grove.concept-page .concept-calendar-toggle {
   border-radius: var(--kw-ui-control-radius);
@@ -202,9 +206,9 @@
   min-height: 27px;
   margin: 0;
   padding: 3px 9px;
-  border: 1px solid var(--kw-ui-line);
+  border: 1px solid transparent;
   border-radius: var(--kw-ui-control-radius);
-  background: var(--kw-ui-control);
+  background: transparent;
   color: var(--kw-ui-accent);
   font-size: 11px;
   line-height: 1.4;
@@ -226,9 +230,9 @@
 .theme-grove.concept-page .theme-date-controls {
   gap: 2px;
   padding: 3px;
-  border: 1px solid var(--kw-ui-line);
+  border: 1px solid var(--kw-ui-separator);
   border-radius: var(--kw-ui-group-radius);
-  background: var(--kw-ui-control);
+  background: var(--kw-ui-surface-subtle);
 }
 .theme-grove.concept-page .theme-date-controls button,
 .theme-grove.concept-page .theme-date-picker input {
@@ -276,7 +280,7 @@
 .theme-grove.concept-journal :is(.journal-reference-page, .concept-rhythm-workspace) { width: 100%; max-width: 1348px; margin-inline: auto; padding: 28px 32px 48px; }
 .theme-grove.concept-journal .kw-rhythm { max-width: 1284px; }
 .theme-grove.concept-journal :is(.kw-rhythm-card-header, .kw-annual-header) { padding: 16px 18px; gap: 12px 20px; }
-.theme-grove.concept-journal :is(.kw-rhythm-card-header h1, .kw-annual-heading h2, .journal-timeline-heading h2, .journal-reference-context h2) { margin-block: 0; font-size: 16px; font-weight: 650; letter-spacing: -.02em; line-height: 1.5; }
+.theme-grove.concept-journal :is(.kw-rhythm-card-header h1, .kw-annual-heading h2, .journal-timeline-heading h2, .journal-reference-context h2) { margin-block: 0; font-size: 15px; font-weight: 600; letter-spacing: -.01em; line-height: 1.5; }
 .theme-grove.concept-journal :is(.kw-rhythm-range-title, .kw-annual-heading p) { margin-top: 3px; font-size: 11px; }
 .theme-grove.concept-journal .kw-rhythm-axis-tick { font-size: 10px; }
 .theme-grove.concept-journal .kw-rhythm-axis-tick small { font-size: 9px; }
@@ -284,7 +288,7 @@
 .theme-grove.concept-journal .kw-rhythm-day-meta { font-size: 10px; }
 .theme-grove.concept-journal .kw-rhythm-day-meta > :is(b, em) { font-size: 10px; }
 .theme-grove.concept-journal .kw-rhythm-total-cell > strong { font-size: 14px; }
-.theme-grove.concept-journal .kw-rhythm-cell { border-color: color-mix(in srgb, var(--kw-ui-line) 55%, transparent); }
+.theme-grove.concept-journal .kw-rhythm-cell { border-color: transparent; border-radius: 3px; }
 .theme-grove.concept-journal .kw-annual { margin-top: 16px; }
 .theme-grove.concept-journal .journal-workflow .session-time { font-size: 14px; }
 .theme-grove.concept-journal .journal-workflow .session { gap: 18px; }
@@ -297,7 +301,7 @@
 .theme-grove.concept-journal .concept-navigation { background: transparent; }
 .theme-grove.concept-journal .concept-navigation button { font-size: 13px; padding-block: 10px; }
 .theme-grove.concept-journal .concept-navigation i { background: var(--kw-ui-accent); }
-.theme-grove.concept-journal .sidebar-independent .sidebar-disclosure { border-color: var(--kw-ui-line-strong); }
+.theme-grove.concept-journal .sidebar-independent .sidebar-disclosure { border-color: var(--kw-ui-separator); }
 .theme-grove.concept-journal .sidebar-independent .sidebar-section-toggle { font-size: 11px; }
 .theme-grove.concept-journal .sidebar-independent .sidebar-section-toggle svg { color: var(--kw-ui-muted); }
 .theme-grove.concept-journal .sidebar-independent .sidebar-section-actions button { background: var(--kw-ui-control-active); color: var(--kw-ui-accent-strong); }
@@ -338,4 +342,49 @@
   .theme-grove.concept-page .journal-reference-page > .concept-timeline.kw-card { padding: 14px 14px 12px; }
   .theme-grove.concept-page .journal-reference-desk.kw-card { padding: 18px 16px 2px; }
   .theme-grove.concept-page .kw-metric-pill { min-height: 26px; padding-inline: 8px; }
+}
+
+/* Quiet surfaces, consistent rhythm and visible interaction feedback. */
+.theme-grove.concept-journal .concept-navigation { gap: 4px; margin-block: 24px 24px; }
+.theme-grove.concept-journal .concept-navigation button[aria-current] { font-weight: 600; }
+.theme-grove.concept-journal .concept-brand-row .theme-brand { font-size: 19px; font-weight: 650; letter-spacing: -.045em; }
+.theme-grove.concept-journal .sidebar-independent .sidebar-section-toggle { font-weight: 550; }
+.theme-grove.concept-journal .grove-calendar :is(.filter-row, .sidebar-app-row) { padding-block: 7px; }
+.theme-grove.concept-journal .concept-sidebar-appearance { border-top: 1px solid var(--kw-ui-separator); padding-top: 12px; }
+.theme-grove.concept-journal :is(.journal-mini-timeline > header, .journal-paper-header, .journal-kina-content > h2, .journal-reference-context, .journal-outline, .beliefs-paper-meta) { border-color: var(--kw-ui-separator); }
+.theme-grove.concept-journal .journal-paper-header > div > span { font-size: 12px; }
+.theme-grove.concept-journal .journal-kina-section > h3 { font-size: 12px; font-weight: 500; }
+.theme-grove.concept-journal .journal-kina-summary .md-list-line { margin-bottom: 12px; }
+.theme-grove.concept-journal .journal-kina-summary .md-inline-code { background: transparent; }
+.theme-grove.concept-journal .journal-workflow .session + .session { border-color: var(--kw-ui-separator); }
+.theme-grove.concept-journal .journal-workflow .session-time { color: var(--kw-ui-ink); font-weight: 550; }
+.theme-grove.concept-journal .journal-workflow .session-dur { font-weight: 550; }
+.theme-grove.concept-journal .journal-workflow .session-description { border-color: var(--kw-ui-separator); }
+.theme-grove.concept-journal .journal-workflow .session-mix { height: 2px; border-radius: 2px; }
+.theme-grove.concept-journal :is(.kw-rhythm-card-header, .kw-annual-header) { border-color: var(--kw-ui-separator); }
+.theme-grove.concept-journal .kw-rhythm { --kw-rhythm-line: var(--kw-ui-separator); }
+.theme-grove.concept-journal .kw-rhythm .kw-rhythm-axis-row { --kw-row-surface: var(--kw-ui-surface); border-color: var(--kw-ui-separator); }
+.theme-grove.concept-journal .kw-rhythm .kw-rhythm-row { border-color: var(--kw-ui-separator); }
+.theme-grove.concept-journal .kw-rhythm .kw-rhythm-row[data-selected="true"] { --kw-row-surface: color-mix(in srgb, var(--kw-ui-control-active) 45%, var(--kw-ui-surface)); }
+.theme-grove.concept-journal .kw-rhythm .kw-rhythm-total-cell > strong { font-weight: 550; }
+.theme-grove.concept-journal .kw-rhythm[data-variant="overview"] .kw-rhythm-range-switch button[aria-pressed="true"] { border-color: var(--kw-ui-separator); background: var(--kw-ui-surface); box-shadow: var(--kw-ui-control-shadow); }
+.theme-grove.concept-journal .kw-annual .kw-annual-cell:is([data-state="ready"], [data-state="empty"]) { border-color: transparent; border-radius: 3px; }
+.theme-grove.concept-journal .kw-annual .kw-annual-chart { padding-block: 22px; row-gap: 14px; }
+.theme-grove.concept-journal .beliefs-outline button:hover { background: var(--kw-ui-surface-subtle); }
+.theme-grove.concept-journal .beliefs-outline button { border-radius: 0 6px 6px 0; }
+.theme-grove.concept-journal :is(.beliefs-heading h1, .beliefs-paper .md-heading) { font-weight: 600; letter-spacing: -.025em; }
+:root[data-concept="journal"] .workflow-description-dialog::backdrop { backdrop-filter: blur(3px); }
+:root[data-concept="journal"] .workflow-description-dialog-heading { border-color: var(--kw-ui-separator); }
+:root[data-concept="journal"] .workflow-description-dialog .session-note-editor textarea { border-color: var(--kw-ui-line); border-radius: 8px; background: var(--kw-ui-surface-subtle); box-shadow: none; }
+:root[data-concept="journal"] .workflow-description-dialog .session-note-editor textarea:focus { border-color: var(--kw-ui-accent); background: var(--kw-ui-surface); outline: none; box-shadow: 0 0 0 1px var(--kw-ui-accent); }
+:root[data-concept="journal"] .viewport-tooltip { padding: 13px 15px; border-color: var(--kw-ui-separator); }
+:root[data-concept="journal"] :is(button, summary, a) { -webkit-tap-highlight-color: transparent; }
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-concept="journal"] :is(button, summary, a) { transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease; }
+  :root[data-concept="journal"] .workflow-description-dialog[open] { animation: kw-dialog-appear 140ms ease-out; }
+  @keyframes kw-dialog-appear { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+}
+@media (max-width: 820px) {
+  .theme-grove.concept-journal .concept-navigation { margin-block: 12px; }
+  .theme-grove.concept-journal .concept-sidebar-appearance { border-top: 0; padding: 0; }
 }
