@@ -24,7 +24,7 @@ function Icon({kind}: {kind: string}) {
     board: <><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16m6-16v16M6 8v4m6-4v7m6-7v2"/></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18m-13 4h2m4 0h2m-8 4h2"/></>,
     rhythm: <path d="M3 15h3l3-9 4 13 3-14 2 9h3"/>,
-    beliefs: <><path d="M12 3 4 6v6c0 4 8 9 8 9s8-5 8-9V6l-8-3Z"/><path d="m8 12 3 3 5-6"/></>,
+    beliefs: <><circle cx="12" cy="12" r="9"/><path d="m16 8-2.5 5.5L8 16l2.5-5.5L16 8Z"/></>,
     flow: <><path d="M6 4v16m4-13h10m-10 5h7m-7 5h10"/><circle cx="6" cy="7" r="1.5"/><circle cx="6" cy="17" r="1.5"/></>,
     timeline: <><path d="M3 19h18M4 7v7m5-10v10m5-6v6m6-9v9"/></>,
   };
