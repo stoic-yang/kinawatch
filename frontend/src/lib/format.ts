@@ -12,8 +12,20 @@ export function fmtHours(seconds: number): string {
   return `${(seconds / 3600).toFixed(1)}h`;
 }
 
-export function fmtClock(iso: string): string {
+export function fmtClock(iso: string, timezone?: string): string {
   const d = new Date(iso);
+  if (timezone) {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(d);
+    const values = Object.fromEntries(
+      parts.map((part) => [part.type, part.value]),
+    );
+    return `${values.hour}:${values.minute}`;
+  }
   return `${String(d.getHours()).padStart(2, "0")}:${String(
     d.getMinutes(),
   ).padStart(2, "0")}`;
@@ -33,6 +45,11 @@ export function weekdayShort(dateStr: string): string {
 export function parseLocalDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split("-").map(Number);
   return new Date(y, m - 1, d);
+}
+
+export function isValidDateString(dateStr: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+  return toDateStr(parseLocalDate(dateStr)) === dateStr;
 }
 
 export function toDateStr(d: Date): string {
@@ -75,15 +92,41 @@ export function isoWeekYear(dateStr: string): number {
   return d.getFullYear();
 }
 
-export const ROUTINE_DAY_START_HOUR = 6;
-
 export function currentDayStr(
   mode: "calendar" | "routine",
+  routineDayStart = "06:00",
+  timezone?: string,
   now = new Date(),
 ): string {
-  const current = new Date(now);
-  if (mode === "routine" && current.getHours() < ROUTINE_DAY_START_HOUR) {
-    current.setDate(current.getDate() - 1);
+  let currentDate: string;
+  let currentMinutes: number;
+  if (timezone) {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(now);
+    const values = Object.fromEntries(
+      parts.map((part) => [part.type, part.value]),
+    );
+    currentDate = `${values.year}-${values.month}-${values.day}`;
+    currentMinutes = Number(values.hour) * 60 + Number(values.minute);
+  } else {
+    currentDate = toDateStr(now);
+    currentMinutes = now.getHours() * 60 + now.getMinutes();
   }
-  return toDateStr(current);
+  const [routineHour, routineMinute] = routineDayStart.split(":").map(Number);
+  const routineMinutes = routineHour * 60 + routineMinute;
+  if (
+    mode === "routine" &&
+    Number.isFinite(routineMinutes) &&
+    currentMinutes < routineMinutes
+  ) {
+    return shiftDate(currentDate, -1);
+  }
+  return currentDate;
 }

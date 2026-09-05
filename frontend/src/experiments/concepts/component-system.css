@@ -1,0 +1,341 @@
+/* One semantic contract for the shell and its top-layer/portal content.
+   Palette values are supplied by palettes.ts; fallbacks preserve other concepts. */
+:root[data-concept="journal"],
+.theme-grove.concept-page {
+  --kw-ui-canvas: var(--kw-palette-canvas, #f4f6f0);
+  --kw-ui-surface: var(--kw-palette-surface, #ffffff);
+  --kw-ui-surface-subtle: var(--kw-palette-surface-subtle, #fafcf7);
+  --kw-ui-rail: var(--kw-palette-rail, #e9eee3);
+  --kw-ui-control: var(--kw-palette-control, #edf3e7);
+  --kw-ui-control-hover: var(--kw-palette-control-hover, #e5eedc);
+  --kw-ui-control-active: var(--kw-palette-control-active, #dce9d1);
+  --kw-ui-line: var(--kw-palette-line, #dfe7d8);
+  --kw-ui-line-strong: var(--kw-palette-line-strong, #c8d6be);
+  --kw-ui-ink: var(--kw-palette-ink, #213a2b);
+  --kw-ui-muted: var(--kw-palette-muted, #718067);
+  --kw-ui-faint: var(--kw-palette-faint, #82907b);
+  --kw-ui-accent: var(--kw-palette-accent, #416844);
+  --kw-ui-accent-strong: var(--kw-palette-accent-strong, #2e562c);
+  --kw-ui-on-accent: var(--kw-palette-on-accent, #fff);
+  --kw-ui-danger: light-dark(#a13938, #f0a19b);
+  --kw-ui-danger-soft: light-dark(#faedeb, #422e35);
+  --kw-ui-warning: light-dark(#896326, #e5be7c);
+  --kw-ui-warning-soft: light-dark(#f8f0de, #38332b);
+  --kw-ui-success: light-dark(#39794d, #94cca5);
+  --kw-heat-0: var(--kw-palette-heat-0, #eaf0e3);
+  --kw-heat-1: var(--kw-palette-heat-1, #d2e1be);
+  --kw-heat-2: var(--kw-palette-heat-2, #abc38f);
+  --kw-heat-3: var(--kw-palette-heat-3, #789b5e);
+  --kw-heat-4: var(--kw-palette-heat-4, #476c38);
+  --kw-ui-card-radius: 10px;
+  --kw-ui-control-radius: 6px;
+  --kw-ui-group-radius: 8px;
+  --kw-ui-pill-radius: 999px;
+  --kw-ui-control-height: 30px;
+  --kw-ui-focus: 0 0 0 3px color-mix(in srgb, var(--kw-ui-accent) 18%, transparent);
+  --kw-ui-popover-shadow: 0 12px 36px light-dark(#1c273122, #00000055);
+  --canvas: var(--kw-ui-canvas);
+  --bg: var(--kw-ui-surface);
+  --surface: var(--kw-ui-surface);
+  --ink: var(--kw-ui-ink);
+  --text-2: var(--kw-ui-muted);
+  --text-3: var(--kw-ui-faint);
+  --hairline: var(--kw-ui-line);
+  --track: var(--kw-ui-control);
+  --accent: var(--kw-ui-accent);
+  --accent-soft: var(--kw-ui-control);
+  --now: var(--kw-ui-accent);
+  --done: var(--kw-ui-accent);
+  --tooltip-shadow: var(--kw-ui-popover-shadow);
+}
+
+.theme-grove.concept-page.concept-journal {
+  --journal-canvas: var(--kw-ui-canvas);
+  --journal-paper: var(--kw-ui-surface);
+  --journal-paper-soft: var(--kw-ui-surface-subtle);
+  --journal-panel: var(--kw-ui-control);
+  --journal-soft: var(--kw-ui-control);
+  --journal-track: var(--kw-ui-control);
+  --journal-ink: var(--kw-ui-ink);
+  --journal-muted: var(--kw-ui-muted);
+  --journal-accent: var(--kw-ui-accent);
+  --journal-accent-strong: var(--kw-ui-accent-strong);
+  --journal-decoration: var(--kw-ui-faint);
+  --journal-rule: var(--kw-ui-line);
+  --journal-rule-strong: var(--kw-ui-line-strong);
+}
+
+/* Surfaces */
+.theme-grove.concept-page .kw-card {
+  border-color: var(--kw-ui-line);
+  border-radius: var(--kw-ui-card-radius);
+  background: var(--kw-ui-surface);
+  box-shadow: none;
+}
+
+.theme-grove.concept-page .journal-writing-layout > :is(.journal-context, .journal-kina-summary).kw-card { background: var(--kw-ui-surface-subtle); }
+.theme-grove.concept-page .journal-reference-page > .concept-timeline.kw-card,
+.theme-grove.concept-page .journal-reference-desk.kw-card,
+.theme-grove.concept-page .journal-reference-heading { max-width: 1284px; }
+.theme-grove.concept-page .journal-reference-page > .concept-timeline.kw-card { margin-bottom: 16px; padding: 16px 18px 14px; }
+.theme-grove.concept-page .journal-reference-desk.kw-card { padding: 20px 24px 2px; }
+.theme-grove.concept-page .journal-reference-heading { margin-bottom: 18px; }
+.theme-grove.concept-page .journal-reference-title h1,
+.theme-grove.concept-page .journal-paper-header h1 { font-size: 26px; font-weight: 620; letter-spacing: -.035em; }
+.theme-grove.concept-page .journal-reference-context { padding-bottom: 14px; }
+.theme-grove.concept-page .journal-reference-context h2 { font-size: 16px; font-weight: 650; }
+.theme-grove.concept-page .journal-workflow-segment { padding-block: 16px; }
+
+/* Metric pills */
+.theme-grove.concept-page .kw-metric-pill {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  gap: 5px;
+  min-height: 27px;
+  padding: 3px 9px;
+  border: 1px solid var(--kw-ui-line);
+  border-radius: var(--kw-ui-pill-radius);
+  background: var(--kw-ui-control);
+  color: var(--kw-ui-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.theme-grove.concept-page .kw-metric-pill :is(b, strong) {
+  color: var(--kw-ui-ink);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: -.015em;
+  font-variant-numeric: tabular-nums;
+}
+.theme-grove.concept-page .kw-metric-pill :is(small, span) { color: var(--kw-ui-muted); font-size: 11px; font-weight: 450; }
+.theme-grove.concept-page :is(.journal-timeline-summary, .kw-rhythm-stats, .kw-annual-stats) { gap: 6px; }
+
+/* Segmented controls */
+.theme-grove.concept-page .kw-segmented-control,
+.theme-grove.concept-page :is(.review-scope-switch, .permanent-note-mode-switch) {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--kw-ui-line);
+  border-radius: var(--kw-ui-group-radius);
+  background: var(--kw-ui-control);
+  box-shadow: none;
+}
+.theme-grove.concept-page .kw-segmented-control > button,
+.theme-grove.concept-page :is(.review-scope-switch, .permanent-note-mode-switch) > button {
+  min-height: 27px;
+  padding: 4px 11px;
+  border: 1px solid transparent;
+  border-radius: var(--kw-ui-control-radius);
+  background: transparent;
+  color: var(--kw-ui-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  box-shadow: none;
+}
+.theme-grove.concept-page .kw-segmented-control > button:is([aria-pressed="true"], .is-active),
+.theme-grove.concept-page .review-scope-switch > .review-scope-active,
+.theme-grove.concept-page .permanent-note-mode-switch > .is-active {
+  border-color: var(--kw-ui-line-strong);
+  background: var(--kw-ui-control-active);
+  color: var(--kw-ui-accent-strong);
+  font-weight: 650;
+}
+.theme-grove.concept-page .kw-segmented-control > button:hover:not([aria-pressed="true"]),
+.theme-grove.concept-page :is(.review-scope-switch, .permanent-note-mode-switch) > button:hover:not(.review-scope-active, .is-active) {
+  background: var(--kw-ui-control-hover);
+  color: var(--kw-ui-accent-strong);
+}
+
+/* Navigation and disclosure rows */
+.theme-grove.concept-page .concept-navigation button {
+  min-height: 42px;
+  border-radius: var(--kw-ui-card-radius);
+  color: var(--kw-ui-muted);
+}
+.theme-grove.concept-page .concept-navigation button:hover { background: var(--kw-ui-control-hover); color: var(--kw-ui-accent-strong); }
+.theme-grove.concept-page .concept-navigation button[aria-current] { background: var(--kw-ui-control-active); color: var(--kw-ui-accent-strong); }
+.theme-grove.concept-page .sidebar-independent .sidebar-section-toggle,
+.theme-grove.concept-page .concept-calendar-toggle {
+  border-radius: var(--kw-ui-control-radius);
+  color: var(--kw-ui-muted);
+}
+.theme-grove.concept-page .sidebar-independent .sidebar-section-toggle:hover,
+.theme-grove.concept-page .concept-calendar-toggle:hover { background: var(--kw-ui-control-hover); color: var(--kw-ui-accent-strong); }
+.theme-grove.concept-page .sidebar :is(.filter-row, .sidebar-app-row) { border-radius: var(--kw-ui-control-radius); }
+.theme-grove.concept-page .sidebar :is(.filter-row, .sidebar-app-row):hover { background: var(--kw-ui-control-hover); }
+
+/* Standard controls */
+.theme-grove.concept-page :is(.concept-rhythm-toggle, .concept-timeline-toggle, .concept-focus-exit),
+.theme-grove.concept-page .concept-timeline .ribbon-view-actions button,
+.theme-grove.concept-page .kw-annual-year-controls > button,
+.theme-grove.concept-page .journal-document-error > button,
+.theme-grove.concept-page .journal-document-conflict > div:last-child > button,
+.theme-grove.concept-page .journal-inline-actions button,
+.theme-grove.concept-page :is(.concept-field-editor, .review-editor-foot, .session-note-editor-foot) button {
+  min-height: var(--kw-ui-control-height);
+  border: 1px solid var(--kw-ui-line-strong);
+  border-radius: var(--kw-ui-control-radius);
+  background: var(--kw-ui-control);
+  color: var(--kw-ui-accent);
+  box-shadow: none;
+}
+.theme-grove.concept-page :is(.concept-rhythm-toggle, .concept-timeline-toggle, .concept-focus-exit):hover,
+.theme-grove.concept-page .concept-timeline .ribbon-view-actions button:hover:not(:disabled),
+.theme-grove.concept-page .kw-annual-year-controls > button:hover:not(:disabled),
+.theme-grove.concept-page .journal-document-error > button:hover:not(:disabled),
+.theme-grove.concept-page .journal-document-conflict > div:last-child > button:hover:not(:disabled),
+.theme-grove.concept-page .journal-inline-actions button:hover:not(:disabled),
+.theme-grove.concept-page :is(.concept-field-editor, .review-editor-foot, .session-note-editor-foot) button:hover:not(:disabled) {
+  border-color: var(--kw-ui-line-strong);
+  background: var(--kw-ui-control-hover);
+  color: var(--kw-ui-accent-strong);
+}
+.theme-grove.concept-page .kw-annual-year-controls > button { width: var(--kw-ui-control-height); height: var(--kw-ui-control-height); padding: 0; }
+.theme-grove.concept-page .journal-workflow :is(.session-note-add, .session-note-edit) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 27px;
+  margin: 0;
+  padding: 3px 9px;
+  border: 1px solid var(--kw-ui-line);
+  border-radius: var(--kw-ui-control-radius);
+  background: var(--kw-ui-control);
+  color: var(--kw-ui-accent);
+  font-size: 11px;
+  line-height: 1.4;
+  text-decoration: none;
+}
+.theme-grove.concept-page .journal-workflow :is(.session-note-add, .session-note-edit):hover { border-color: var(--kw-ui-line-strong); background: var(--kw-ui-control-hover); color: var(--kw-ui-accent-strong); }
+.theme-grove.concept-page button:is(.concept-save-note, .review-editor-save, .session-note-save, .journal-inline-save) {
+  border-color: var(--kw-ui-accent);
+  background: var(--kw-ui-accent);
+  color: var(--kw-ui-on-accent);
+}
+.theme-grove.concept-page button:is(.concept-save-note, .review-editor-save, .session-note-save, .journal-inline-save):hover:not(:disabled) {
+  border-color: var(--kw-ui-accent-strong);
+  background: var(--kw-ui-accent-strong);
+  color: var(--kw-ui-on-accent);
+}
+
+/* Date control */
+.theme-grove.concept-page .theme-date-controls {
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--kw-ui-line);
+  border-radius: var(--kw-ui-group-radius);
+  background: var(--kw-ui-control);
+}
+.theme-grove.concept-page .theme-date-controls button,
+.theme-grove.concept-page .theme-date-picker input {
+  height: 28px;
+  min-height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--kw-ui-control-radius);
+  background: transparent;
+  color: var(--kw-ui-accent);
+  font-size: 10px;
+}
+.theme-grove.concept-page .theme-date-controls button:hover:not(:disabled),
+.theme-grove.concept-page .theme-date-picker input:hover { background: var(--kw-ui-control-hover); }
+.theme-grove.concept-page .theme-date-controls .theme-today { border-color: var(--kw-ui-line-strong); background: var(--kw-ui-control-active); color: var(--kw-ui-accent-strong); }
+.theme-grove.concept-page .theme-date-controls .theme-date-arrow { width: 28px; padding: 0; font-size: 20px; }
+
+/* Editors and feedback */
+.theme-grove.concept-page .session-note-editor-foot button { min-width: 56px; padding: 4px 12px; font-size: 12px; }
+.theme-grove.concept-page :is(.concept-field-editor, .review-editor, .session-note-editor, .activity-editor-form) :is(input, textarea, select) {
+  border: 1px solid var(--kw-ui-line-strong);
+  border-radius: 8px;
+  background: var(--kw-ui-surface);
+  color: var(--kw-ui-ink);
+  box-shadow: none;
+  outline: none;
+}
+.theme-grove.concept-page :is(.concept-field-editor, .review-editor, .session-note-editor, .activity-editor-form) :is(input, textarea, select):focus {
+  border-color: var(--kw-ui-accent);
+  box-shadow: var(--kw-ui-focus);
+}
+.theme-grove.concept-page :is(.concept-switch-menu, .viewport-tooltip, .kw-annual-tooltip) {
+  border-color: var(--kw-ui-line);
+  border-radius: var(--kw-ui-card-radius);
+  background: var(--kw-ui-surface);
+  box-shadow: var(--kw-ui-popover-shadow);
+}
+
+.theme-grove.concept-page :is(button, a, summary, input, textarea, select):focus-visible {
+  outline: 2px solid var(--kw-ui-accent);
+  outline-offset: 2px;
+}
+
+/* The active shell owns spacing and type; feature files own their layout. */
+.theme-grove.concept-journal { font-size: 13px; line-height: 1.5; }
+.theme-grove.concept-journal :is(.journal-reference-page, .concept-rhythm-workspace) { width: 100%; max-width: 1348px; margin-inline: auto; padding: 28px 32px 48px; }
+.theme-grove.concept-journal .kw-rhythm { max-width: 1284px; }
+.theme-grove.concept-journal :is(.kw-rhythm-card-header, .kw-annual-header) { padding: 16px 18px; gap: 12px 20px; }
+.theme-grove.concept-journal :is(.kw-rhythm-card-header h1, .kw-annual-heading h2, .journal-timeline-heading h2, .journal-reference-context h2) { margin-block: 0; font-size: 16px; font-weight: 650; letter-spacing: -.02em; line-height: 1.5; }
+.theme-grove.concept-journal :is(.kw-rhythm-range-title, .kw-annual-heading p) { margin-top: 3px; font-size: 11px; }
+.theme-grove.concept-journal .kw-rhythm-axis-tick { font-size: 10px; }
+.theme-grove.concept-journal .kw-rhythm-axis-tick small { font-size: 9px; }
+.theme-grove.concept-journal .kw-rhythm-date-cell { gap: 3px; }
+.theme-grove.concept-journal .kw-rhythm-day-meta { font-size: 10px; }
+.theme-grove.concept-journal .kw-rhythm-day-meta > :is(b, em) { font-size: 10px; }
+.theme-grove.concept-journal .kw-rhythm-total-cell > strong { font-size: 14px; }
+.theme-grove.concept-journal .kw-rhythm-cell { border-color: color-mix(in srgb, var(--kw-ui-line) 55%, transparent); }
+.theme-grove.concept-journal .kw-annual { margin-top: 16px; }
+.theme-grove.concept-journal .journal-workflow .session-time { font-size: 14px; }
+.theme-grove.concept-journal .journal-workflow .session { gap: 18px; }
+.theme-grove.concept-journal .journal-workflow-segment { padding-block: 16px; }
+
+/* Sidebar follows the same surfaces and selected/hover states as page controls. */
+.theme-grove.concept-journal .concept-rail { background: var(--kw-ui-rail); border-color: var(--kw-ui-line); }
+.theme-grove.concept-journal .grove-identity { background: transparent; }
+.theme-grove.concept-journal .grove-identity .theme-brand svg { color: var(--kw-ui-accent); }
+.theme-grove.concept-journal .concept-navigation { background: transparent; }
+.theme-grove.concept-journal .concept-navigation button { font-size: 13px; padding-block: 10px; }
+.theme-grove.concept-journal .concept-navigation i { background: var(--kw-ui-accent); }
+.theme-grove.concept-journal .sidebar-independent .sidebar-disclosure { border-color: var(--kw-ui-line-strong); }
+.theme-grove.concept-journal .sidebar-independent .sidebar-section-toggle { font-size: 11px; }
+.theme-grove.concept-journal .sidebar-independent .sidebar-section-toggle svg { color: var(--kw-ui-muted); }
+.theme-grove.concept-journal .sidebar-independent .sidebar-section-actions button { background: var(--kw-ui-control-active); color: var(--kw-ui-accent-strong); }
+.theme-grove.concept-journal .grove-calendar :is(.cal-title span, .cal-dow, .filter-dur, .sidebar-label) { color: var(--kw-ui-muted); font-size: 11px; }
+.theme-grove.concept-journal .grove-calendar :is(.filter-row, .sidebar-app-row) { color: var(--kw-ui-ink); font-size: 12px; }
+.theme-grove.concept-journal .grove-calendar .cal-day { font-size: 12px; }
+.theme-grove.concept-journal .grove-calendar .cal-day-selected { background: var(--kw-ui-accent); color: var(--kw-ui-on-accent); }
+.theme-grove.concept-journal .grove-calendar .cal-day-selected .cal-dot-recorded { background: var(--kw-ui-on-accent); }
+.theme-grove.concept-journal .grove-calendar .cal-day:hover:not(:disabled):not(.cal-day-selected) { background: var(--kw-ui-control-hover); }
+.theme-grove.concept-journal .concept-rail:is(:hover, :has(:focus-visible)) { scrollbar-color: var(--kw-ui-line-strong) transparent; }
+.theme-grove.concept-journal .concept-rail:is(:hover, :has(:focus-visible))::-webkit-scrollbar-thumb { background: var(--kw-ui-line-strong); }
+
+/* The same rules must reach portals, activity details, and keyboard focus. */
+:root[data-concept="journal"] :is(button, a, summary, input, textarea, select, [tabindex]):focus-visible { outline-color: var(--kw-ui-accent); }
+:root[data-concept="journal"] .viewport-tooltip { border-color: var(--kw-ui-line-strong); border-radius: var(--kw-ui-card-radius); background: var(--kw-ui-surface); color: var(--kw-ui-ink); box-shadow: var(--kw-ui-popover-shadow); }
+:root[data-concept="journal"] .kw-annual-tooltip > time { color: var(--kw-ui-muted); font-size: 11px; }
+:root[data-concept="journal"] .kw-annual-tooltip > strong { color: var(--kw-ui-ink); font-size: 13px; }
+:root[data-concept="journal"] .activity-editor { box-shadow: var(--kw-ui-popover-shadow); }
+:root[data-concept="journal"] .activity-editor-backdrop { background: light-dark(#202a3933, #00000066); }
+:root[data-concept="journal"] .activity-editor-actions button { min-height: 34px; border-color: var(--kw-ui-line-strong); border-radius: var(--kw-ui-control-radius); background: var(--kw-ui-control); color: var(--kw-ui-accent); }
+:root[data-concept="journal"] .activity-editor-actions button:hover:not(:disabled) { background: var(--kw-ui-control-hover); }
+:root[data-concept="journal"] .activity-editor-actions .activity-editor-save { border-color: var(--kw-ui-accent); background: var(--kw-ui-accent); color: var(--kw-ui-on-accent); }
+:root[data-concept="journal"] .activity-editor-actions .activity-editor-save:hover:not(:disabled) { background: var(--kw-ui-accent-strong); }
+:root[data-concept="journal"] :is(.activity-editor-error, .session-note-error, .journal-inline-error, .journal-document-error > p) { color: var(--kw-ui-danger); }
+:root[data-concept="journal"] .activity-editor-warning { color: var(--kw-ui-warning); }
+:root[data-concept="journal"] .activity-editor-saved { color: var(--kw-ui-success); }
+.theme-grove.concept-journal .markdown-document-editor .cm-selectionBackground,
+.theme-grove.concept-journal .markdown-document-editor .cm-content ::selection { background: color-mix(in srgb, var(--kw-ui-accent) 24%, transparent); }
+.theme-grove.concept-journal .markdown-document-editor .md-link { text-decoration-color: color-mix(in srgb, var(--kw-ui-accent) 45%, transparent); }
+.theme-grove.concept-journal button:disabled { cursor: default; }
+
+@media (max-width: 760px) {
+  .theme-grove.concept-journal :is(.journal-reference-page, .concept-rhythm-workspace) { padding: 20px 16px 36px; }
+  .theme-grove.concept-journal :is(.kw-rhythm-card-header, .kw-annual-header) { padding: 14px; }
+  .theme-grove.concept-journal .kw-rhythm-header-actions { gap: 10px; }
+  .theme-grove.concept-page .journal-reference-title h1,
+  .theme-grove.concept-page .journal-paper-header h1 { font-size: 24px; }
+  .theme-grove.concept-page .journal-reference-page > .concept-timeline.kw-card { padding: 14px 14px 12px; }
+  .theme-grove.concept-page .journal-reference-desk.kw-card { padding: 18px 16px 2px; }
+  .theme-grove.concept-page .kw-metric-pill { min-height: 26px; padding-inline: 8px; }
+}

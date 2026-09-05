@@ -18,12 +18,13 @@ class DashboardConfigTests(unittest.TestCase):
         self.assertEqual(raw["version"], 2)
         self.assertEqual(raw["host"], "127.0.0.1")
         self.assertFalse(raw["journal_write_enabled"])
+        self.assertFalse(raw["activity_edit_enabled"])
         self.assertNotIn("upstream", raw)
         self.assertNotIn("/Users/", json.dumps(raw))
         self.assertEqual(raw["journal"]["provider"], "local")
         self.assertNotIn("vault", raw["journal"])
-        self.assertEqual(raw["journal_schema_version"], 2)
-        self.assertEqual(raw["day_schema_version"], 6)
+        self.assertEqual(raw["journal_schema_version"], 3)
+        self.assertEqual(raw["day_schema_version"], 10)
 
         settings = load_settings(EXAMPLE_CONFIG_PATH)
         self.assertEqual(
@@ -31,8 +32,22 @@ class DashboardConfigTests(unittest.TestCase):
             EXAMPLE_CONFIG_PATH.parent / "categories.example.json",
         )
         self.assertEqual(settings.activitywatch["server_url"], "http://127.0.0.1:5600")
-        self.assertEqual(settings.journal_schema_version, 2)
-        self.assertEqual(settings.day_schema_version, 6)
+        self.assertEqual(settings.journal_schema_version, 3)
+        self.assertEqual(settings.day_schema_version, 10)
+        self.assertFalse(settings.activitywatch["media_activity"]["enabled"])
+        self.assertEqual(
+            settings.activitywatch["media_activity"]["rules"][0][
+                "title_contains"
+            ],
+            ["Audio playing"],
+        )
+        self.assertFalse(settings.activity_edit_enabled)
+        self.assertEqual(
+            settings.activity_edit_store_path.name,
+            "activity-edits.json",
+        )
+        self.assertEqual(settings.weekly_reviews_dir, "Review/Weekly")
+        self.assertEqual(settings.monthly_reviews_dir, "Review/Monthly")
 
     def test_local_journal_uses_managed_data_dir_without_obsidian(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

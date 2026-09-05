@@ -34,10 +34,12 @@ function Section({
   draft,
   saving,
   error,
+  editable,
   onEdit,
   onDraft,
   onCancel,
   onSave,
+  leadingContent,
   children,
 }: {
   field: ReviewField;
@@ -48,28 +50,33 @@ function Section({
   draft: string;
   saving: boolean;
   error: string | null;
+  editable: boolean;
   onEdit: () => void;
   onDraft: (value: string) => void;
   onCancel: () => void;
   onSave: () => void;
+  leadingContent?: React.ReactNode;
   children?: React.ReactNode;
 }) {
-  const filled = value.trim() !== "";
+  const editableFilled = value.trim() !== "";
+  const filled = editableFilled || leadingContent != null;
   return (
     <section className={`review-section ${filled ? "" : "review-section-empty"}`}>
       <div className="review-field-heading">
         <h3>{title}</h3>
-        {!editing && (
+        {!editing && editable && (
           <button
             type="button"
             className="review-field-action"
-            aria-label={`${filled ? "编辑" : "添加"}${title}`}
+            aria-label={`${editableFilled ? "编辑" : "添加"}${title}`}
             onClick={onEdit}
           >
-            {filled ? "编辑" : "＋ 添加"}
+            {editableFilled ? "编辑" : "＋ 添加"}
           </button>
         )}
+        {!editable && <span className="review-readonly-label">只读</span>}
       </div>
+      {leadingContent}
       {editing ? (
         <div className="review-editor">
           <textarea
@@ -110,11 +117,11 @@ function Section({
             </div>
           </div>
         </div>
-      ) : filled ? (
+      ) : editableFilled ? (
         children
-      ) : (
+      ) : leadingContent == null ? (
         <p className="empty-hint">{hint}</p>
-      )}
+      ) : null}
     </section>
   );
 }
@@ -123,14 +130,15 @@ export function ReviewPanel({
   date,
   journal,
   journalFingerprint,
+  writeEnabled,
   onSaved,
 }: {
   date: string;
   journal: JournalData;
   journalFingerprint: FileFingerprint;
+  writeEnabled: boolean;
   onSaved: () => Promise<void>;
 }) {
-  const [showActivitySummary, setShowActivitySummary] = useState(false);
   const [editingField, setEditingField] = useState<ReviewField | null>(null);
   const [draft, setDraft] = useState("");
   const [savingField, setSavingField] = useState<ReviewField | null>(null);
@@ -141,9 +149,10 @@ export function ReviewPanel({
     setDraft("");
     setSavingField(null);
     setSaveError(null);
-  }, [date, journal.path]);
+  }, [date, journal.path, writeEnabled]);
 
   function edit(field: ReviewField): void {
+    if (!writeEnabled) return;
     setEditingField(field);
     setDraft(reviewValue(journal, field));
     setSaveError(null);
@@ -156,7 +165,7 @@ export function ReviewPanel({
   }
 
   async function save(field: ReviewField): Promise<void> {
-    if (!draft.trim() || savingField) return;
+    if (!writeEnabled || !draft.trim() || savingField) return;
     setSavingField(field);
     setSaveError(null);
     try {
@@ -196,6 +205,7 @@ export function ReviewPanel({
         draft={draft}
         saving={savingField === "personal_summary"}
         error={editingField === "personal_summary" ? saveError : null}
+        editable={writeEnabled}
         onEdit={() => edit("personal_summary")}
         onDraft={setDraft}
         onCancel={cancel}
@@ -213,6 +223,7 @@ export function ReviewPanel({
         draft={draft}
         saving={savingField === "outputs"}
         error={editingField === "outputs" ? saveError : null}
+        editable={writeEnabled}
         onEdit={() => edit("outputs")}
         onDraft={setDraft}
         onCancel={cancel}
@@ -236,6 +247,7 @@ export function ReviewPanel({
         draft={draft}
         saving={savingField === "next_action"}
         error={editingField === "next_action" ? saveError : null}
+        editable={writeEnabled}
         onEdit={() => edit("next_action")}
         onDraft={setDraft}
         onCancel={cancel}
@@ -253,39 +265,19 @@ export function ReviewPanel({
         draft={draft}
         saving={savingField === "freeform"}
         error={editingField === "freeform" ? saveError : null}
+        editable={writeEnabled}
         onEdit={() => edit("freeform")}
         onDraft={setDraft}
         onCancel={cancel}
         onSave={() => void save("freeform")}
+        leadingContent={
+          journal.body_markdown.trim() !== "" ? (
+            <MarkdownLite text={journal.body_markdown} />
+          ) : undefined
+        }
       >
         <MarkdownLite text={journal.freeform_markdown} />
       </Section>
-
-      {journal.body_markdown.trim() !== "" && (
-        <section className="review-section">
-          <h3>其他日记正文（只读）</h3>
-          <MarkdownLite text={journal.body_markdown} />
-        </section>
-      )}
-
-      {journal.activity_summary_markdown.trim() !== "" && (
-        <section className="review-section">
-          <h3>
-            <button
-              className="fold-btn"
-              onClick={() => setShowActivitySummary((value) => !value)}
-            >
-              一天活动小总结（Kina 生成）
-              <span className="fold-arrow">
-                {showActivitySummary ? "▾" : "▸"}
-              </span>
-            </button>
-          </h3>
-          {showActivitySummary && (
-            <MarkdownLite text={journal.activity_summary_markdown} />
-          )}
-        </section>
-      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta, timezone
@@ -8,14 +9,41 @@ from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import (
+    HTTPRedirectHandler,
+    ProxyHandler,
+    Request,
+    build_opener,
+)
 from zoneinfo import ZoneInfo
 
+from .activity_edits import ActivityEditStore
 from .config import DashboardSettings, load_json
 
 
 class ActivityWatchError(RuntimeError):
     pass
+
+
+class _RejectRedirects(HTTPRedirectHandler):
+    """Keep an approved loopback request from being redirected elsewhere."""
+
+    def redirect_request(
+        self,
+        request: Request,
+        file_pointer: Any,
+        code: int,
+        message: str,
+        headers: Any,
+        new_url: str,
+    ) -> Request | None:
+        raise HTTPError(
+            request.full_url,
+            code,
+            "ActivityWatch redirects are not allowed",
+            headers,
+            file_pointer,
+        )
 
 
 def _timestamp(raw_value: str) -> datetime:
@@ -52,30 +80,80 @@ def _normalize(raw_value: Any) -> str:
     return "" if raw_value is None else str(raw_value).casefold()
 
 
+def _source_fingerprint(
+    item: dict[str, Any],
+    bucket_id: str,
+) -> str:
+    payload = {
+        "bucket_id": bucket_id,
+        "event_id": str(item.get("id")) if item.get("id") is not None else None,
+        "timestamp": str(item.get("timestamp") or ""),
+        "duration": float(item.get("duration", 0.0)),
+        "data": item.get("data") if isinstance(item.get("data"), dict) else {},
+    }
+    return hashlib.sha256(
+        json.dumps(
+            payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+
+
 class ActivityWatchRESTClient:
     def __init__(self, base_url: str, timeout_seconds: float = 10):
-        normalized = base_url.rstrip("/")
+        normalized = base_url.strip().rstrip("/")
+        if not normalized or any(character.isspace() for character in normalized):
+            raise ValueError("ActivityWatch server_url is invalid")
         parsed = urlsplit(normalized)
-        if parsed.scheme not in {"http", "https"}:
+        scheme = parsed.scheme.casefold()
+        hostname = (parsed.hostname or "").rstrip(".").casefold()
+        if scheme not in {"http", "https"}:
             raise ValueError("ActivityWatch server_url must use http or https")
-        if parsed.hostname not in {"127.0.0.1", "localhost", "::1"}:
+        if hostname not in {"127.0.0.1", "localhost", "::1"}:
             raise ValueError(
                 "KinaWatch only supports a loopback ActivityWatch server in v1"
             )
+        if (
+            parsed.username is not None
+            or parsed.password is not None
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError(
+                "ActivityWatch server_url must not include credentials, a query, "
+                "or a fragment"
+            )
+        try:
+            port = parsed.port
+        except ValueError as exc:
+            raise ValueError("ActivityWatch server_url port is invalid") from exc
+        if port is not None and not 1 <= port <= 65535:
+            raise ValueError("ActivityWatch server_url port is invalid")
         self.base_url = normalized
-        self.timeout_seconds = timeout_seconds
+        self.timeout_seconds = float(timeout_seconds)
+        if self.timeout_seconds <= 0:
+            raise ValueError("ActivityWatch timeout_seconds must be positive")
+        # Environment proxy variables must never route private ActivityWatch
+        # data away from the local machine. Redirects are rejected so an
+        # initially valid loopback URL cannot become an SSRF hop.
+        self._opener = build_opener(ProxyHandler({}), _RejectRedirects())
 
     def _get(self, path: str, parameters: dict[str, str] | None = None) -> Any:
         query = f"?{urlencode(parameters)}" if parameters else ""
-        request = Request(
+        request = Request(  # noqa: S310 - validated loopback URL only.
             f"{self.base_url}{path}{query}",
             headers={"Accept": "application/json"},
         )
         try:
-            with urlopen(request, timeout=self.timeout_seconds) as response:
+            with self._opener.open(request, timeout=self.timeout_seconds) as response:
                 return json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace").strip()
+            try:
+                detail = exc.read(4096).decode("utf-8", errors="replace").strip()
+            finally:
+                exc.close()
             raise ActivityWatchError(
                 f"ActivityWatch returned HTTP {exc.code}: {detail}"
             ) from exc
@@ -127,9 +205,11 @@ class ActivityWatchAdapter:
         self,
         settings: DashboardSettings,
         client: ActivityWatchRESTClient | Any | None = None,
+        edit_store: ActivityEditStore | None = None,
     ):
         self.settings = settings
         self._client = client
+        self.activity_edits = edit_store or ActivityEditStore(settings)
         self._resolved: dict[str, Any] | None = None
         self._classification_cache: tuple[tuple[int, int], dict[str, Any]] | None = None
 
@@ -146,17 +226,20 @@ class ActivityWatchAdapter:
             self._classification_cache is not None
             and self._classification_cache[0] == fingerprint
         ):
-            return self._classification_cache[1]
-        payload = load_json(path)
-        categories = payload.get("categories")
-        rules = payload.get("rules")
-        if not isinstance(categories, dict) or not isinstance(rules, list):
-            raise ValueError(
-                "ActivityWatch categories file requires object 'categories' "
-                "and array 'rules'"
-            )
-        self._classification_cache = (fingerprint, payload)
-        return payload
+            payload = self._classification_cache[1]
+        else:
+            payload = load_json(path)
+            categories = payload.get("categories")
+            rules = payload.get("rules")
+            if not isinstance(categories, dict) or not isinstance(rules, list):
+                raise ValueError(
+                    "ActivityWatch categories file requires object 'categories' "
+                    "and array 'rules'"
+                )
+            self._classification_cache = (fingerprint, payload)
+        categories = dict(payload["categories"])
+        categories.update(self.activity_edits.custom_categories())
+        return {**payload, "categories": categories}
 
     def _api(self) -> ActivityWatchRESTClient | Any:
         if self._client is None:
@@ -254,26 +337,21 @@ class ActivityWatchAdapter:
         return self._resolved
 
     @staticmethod
-    def _parse_event(
+    def _normalize_event(
         item: dict[str, Any],
         bucket_id: str,
         source: str,
-        start_utc: datetime,
-        end_utc: datetime,
     ) -> dict[str, Any] | None:
         if "timestamp" not in item:
             return None
         raw_start = _timestamp(str(item["timestamp"]))
         raw_duration = float(item.get("duration", 0.0))
-        raw_end = raw_start + timedelta(seconds=raw_duration)
-        clipped_start = max(raw_start, start_utc)
-        clipped_end = min(raw_end, end_utc)
-        if clipped_end <= clipped_start:
+        if raw_duration <= 0:
             return None
         data = item.get("data") if isinstance(item.get("data"), dict) else {}
         return {
-            "timestamp": clipped_start.isoformat(),
-            "duration_seconds": (clipped_end - clipped_start).total_seconds(),
+            "timestamp": raw_start.isoformat(),
+            "duration_seconds": raw_duration,
             "raw_timestamp": raw_start.isoformat(),
             "raw_duration_seconds": raw_duration,
             "app": data.get("app"),
@@ -285,6 +363,36 @@ class ActivityWatchAdapter:
             "status": data.get("status"),
             "source": source,
             "bucket_id": bucket_id,
+            "event_id": (
+                str(item["id"]) if item.get("id") is not None else None
+            ),
+            "source_fingerprint": _source_fingerprint(item, bucket_id),
+        }
+
+    def _parse_event(
+        self,
+        item: dict[str, Any],
+        bucket_id: str,
+        source: str,
+        start_utc: datetime,
+        end_utc: datetime,
+    ) -> dict[str, Any] | None:
+        event = self._normalize_event(item, bucket_id, source)
+        if event is None:
+            return None
+        event = self.activity_edits.apply_event(event)
+        effective_start = _timestamp(str(event["timestamp"]))
+        effective_end = effective_start + timedelta(
+            seconds=float(event["duration_seconds"])
+        )
+        clipped_start = max(effective_start, start_utc)
+        clipped_end = min(effective_end, end_utc)
+        if clipped_end <= clipped_start:
+            return None
+        return {
+            **event,
+            "timestamp": clipped_start.isoformat(),
+            "duration_seconds": (clipped_end - clipped_start).total_seconds(),
         }
 
     def _load_events(
@@ -308,6 +416,29 @@ class ActivityWatchAdapter:
             )
             is not None
         ]
+
+    @staticmethod
+    def _clip_parsed_events(
+        events: list[dict[str, Any]],
+        start_utc: datetime,
+        end_utc: datetime,
+    ) -> list[dict[str, Any]]:
+        """Clip already-normalized events to one day inside a batched query."""
+        clipped: list[dict[str, Any]] = []
+        for event in events:
+            event_start, event_end = _event_interval(event)
+            start = max(event_start, start_utc)
+            end = min(event_end, end_utc)
+            if end <= start:
+                continue
+            clipped.append(
+                {
+                    **event,
+                    "timestamp": start.isoformat(),
+                    "duration_seconds": (end - start).total_seconds(),
+                }
+            )
+        return clipped
 
     @staticmethod
     def _active_intervals(
@@ -371,6 +502,7 @@ class ActivityWatchAdapter:
                         **event,
                         "timestamp": start.isoformat(),
                         "duration_seconds": share,
+                        "wall_end_timestamp": end.isoformat(),
                         "overlap_adjusted": len(active) > 1,
                     }
                 )
@@ -398,12 +530,64 @@ class ActivityWatchAdapter:
                 return False
         return True
 
+    def _media_activity_rules(self) -> tuple[bool, list[dict[str, Any]]]:
+        config = self._activity_config().get("media_activity") or {}
+        enabled = bool(config.get("enabled", False))
+        rules = [rule for rule in config.get("rules", []) if isinstance(rule, dict)]
+        return enabled, rules
+
+    @classmethod
+    def _is_foreground_media(
+        cls,
+        event: dict[str, Any],
+        rules: list[dict[str, Any]],
+    ) -> bool:
+        return any(cls._rule_matches(event, rule) for rule in rules)
+
+    @classmethod
+    def _apply_media_activity(
+        cls,
+        window_events: list[dict[str, Any]],
+        active_intervals: list[tuple[datetime, datetime]],
+        *,
+        enabled: bool,
+        rules: list[dict[str, Any]],
+        afk_applied: bool,
+    ) -> list[dict[str, Any]]:
+        if not afk_applied:
+            return [
+                {
+                    **event,
+                    "media_playing": bool(
+                        enabled and cls._is_foreground_media(event, rules)
+                    ),
+                }
+                for event in window_events
+            ]
+        effective: list[dict[str, Any]] = []
+        for event in window_events:
+            if enabled and cls._is_foreground_media(event, rules):
+                effective.append({**event, "media_playing": True})
+            else:
+                effective.extend(cls._clip_events([event], active_intervals))
+        return effective
+
     @classmethod
     def _classify(
         cls,
         event: dict[str, Any],
         classification: dict[str, Any],
     ) -> dict[str, str] | None:
+        manual_category = str(event.get("manual_category") or "").strip()
+        if manual_category:
+            return {
+                "category": manual_category,
+                "category_label": str(
+                    event.get("manual_category_label") or manual_category
+                ),
+                "rule": "manual-override",
+                "rule_label": "手动分类",
+            }
         for rule in classification.get("rules", []):
             if not isinstance(rule, dict) or not cls._rule_matches(event, rule):
                 continue
@@ -412,6 +596,11 @@ class ActivityWatchAdapter:
                 continue
             return {
                 "category": category,
+                "category_label": str(
+                    classification.get("categories", {})
+                    .get(category, {})
+                    .get("label", category)
+                ),
                 "rule": str(rule.get("name") or category),
                 "rule_label": str(rule.get("label") or rule.get("name") or category),
             }
@@ -537,32 +726,39 @@ class ActivityWatchAdapter:
             "uncategorized": uncategorized_row,
         }
 
-    def load_day(self, day: date, mode: str) -> dict[str, Any]:
-        resolved = self._resolve_buckets()
-        classification = self._classification_config()
-        timezone_name = self.timezone_name()
-        start_utc, end_utc = self.date_range(day, mode, timezone_name)
-        source = str(
-            self._activity_config().get("source_label")
-            or resolved["info"].get("hostname")
-            or "local"
-        )
-        window_events = self._load_events(
-            resolved["window_bucket_id"], source, start_utc, end_utc
-        )
+    def _summarize_day(
+        self,
+        *,
+        resolved: dict[str, Any],
+        classification: dict[str, Any],
+        timezone_name: str,
+        source: str,
+        start_utc: datetime,
+        end_utc: datetime,
+        window_events: list[dict[str, Any]],
+        afk_events: list[dict[str, Any]],
+    ) -> dict[str, Any]:
         observed_seconds = sum(
             float(event["duration_seconds"]) for event in window_events
         )
         active_intervals: list[tuple[datetime, datetime]] = []
-        afk_events: list[dict[str, Any]] = []
-        if resolved["afk_bucket_id"]:
-            afk_events = self._load_events(
-                resolved["afk_bucket_id"], source, start_utc, end_utc
-            )
+        afk_applied = bool(resolved["afk_bucket_id"])
+        if afk_applied:
             active_intervals = self._active_intervals(afk_events)
-            active_events = self._clip_events(window_events, active_intervals)
+            interactive_events = self._clip_events(window_events, active_intervals)
         else:
-            active_events = window_events
+            interactive_events = window_events
+        media_enabled, media_rules = self._media_activity_rules()
+        active_events = self._apply_media_activity(
+            window_events,
+            active_intervals,
+            enabled=media_enabled,
+            rules=media_rules,
+            afk_applied=afk_applied,
+        )
+        interactive_before_background = sum(
+            float(event["duration_seconds"]) for event in interactive_events
+        )
         active_before_background = sum(
             float(event["duration_seconds"]) for event in active_events
         )
@@ -576,11 +772,28 @@ class ActivityWatchAdapter:
             for event in active_events
             if _normalize(event.get("app")) not in background
         ]
+        interactive_foreground = [
+            event
+            for event in interactive_events
+            if _normalize(event.get("app")) not in background
+        ]
         foreground_seconds = sum(
             float(event["duration_seconds"]) for event in foreground
         )
+        interactive_wall_events, _ = self._partition_overlaps(
+            interactive_foreground
+        )
+        interactive_wall_seconds = sum(
+            float(event["duration_seconds"]) for event in interactive_wall_events
+        )
         events, overlap_seconds = self._partition_overlaps(foreground)
         wall_seconds = sum(float(event["duration_seconds"]) for event in events)
+        media_events = [event for event in foreground if event.get("media_playing")]
+        media_intervals = _merge_intervals(
+            [_event_interval(event) for event in media_events]
+        )
+        foreground_media_seconds = _duration(media_intervals)
+        passive_media_seconds = max(0.0, wall_seconds - interactive_wall_seconds)
 
         categories_meta = classification.get("categories", {})
         annotated = []
@@ -600,29 +813,53 @@ class ActivityWatchAdapter:
                     {
                         **event,
                         "category": match["category"],
-                        "category_label": categories_meta.get(
-                            match["category"], {}
-                        ).get("label", match["category"]),
+                        "category_label": match.get("category_label")
+                        or categories_meta.get(match["category"], {}).get(
+                            "label",
+                            match["category"],
+                        ),
                         "classification_rule": match["rule"],
                     }
                 )
         aggregates = self._aggregate_categories(events, classification, 20)
-        afk_applied = bool(resolved["afk_bucket_id"])
+        manual_conflicts = sum(
+            bool(event.get("manual_edit_conflict")) for event in events
+        )
+        issues = []
+        if manual_conflicts:
+            issues.append(
+                f"{manual_conflicts} 条手动活动校正因原始事件变化而未应用。"
+            )
         inactive_window_seconds = (
             max(0.0, (end_utc - start_utc).total_seconds() - _duration(active_intervals))
             if afk_applied
             else 0.0
         )
         time_accounting = {
-            "policy": "activitywatch_rest_afk_intersection",
+            "policy": (
+                "activitywatch_rest_afk_plus_foreground_media"
+                if afk_applied and media_enabled
+                else "activitywatch_rest_afk_intersection"
+            ),
             "raw_device_duration_seconds": foreground_seconds,
             "wall_duration_seconds": wall_seconds,
+            "interactive_wall_seconds": interactive_wall_seconds,
+            "foreground_media_wall_seconds": foreground_media_seconds,
+            "passive_media_seconds": passive_media_seconds,
+            "media_activity_enabled": media_enabled,
             "overlap_adjustment_seconds": max(0.0, foreground_seconds - wall_seconds),
             "parallel_wall_seconds": 0.0,
             "background_overlap_removed_seconds": 0.0,
             "max_parallel_sources": 1 if events else 0,
             "observed_device_duration_seconds": observed_seconds,
-            "afk_removed_seconds": max(0.0, observed_seconds - active_before_background),
+            "afk_removed_before_media_seconds": max(
+                0.0,
+                observed_seconds - interactive_before_background,
+            ),
+            "afk_removed_seconds": max(
+                0.0,
+                observed_seconds - active_before_background,
+            ),
             "inactive_window_seconds": inactive_window_seconds,
             "background_window_removed_seconds": max(
                 0.0, active_before_background - foreground_seconds
@@ -637,6 +874,7 @@ class ActivityWatchAdapter:
             "bucket_id": resolved["window_bucket_id"],
             "event_count": len(events),
             "duration_seconds": wall_seconds,
+            "manual_edit_conflicts": manual_conflicts,
             "observed_event_count": len(window_events),
             "observed_duration_seconds": observed_seconds,
             "afk_filter": {
@@ -651,6 +889,12 @@ class ActivityWatchAdapter:
                     "background_window_removed_seconds"
                 ],
             },
+            "media_activity": {
+                "enabled": media_enabled,
+                "matched_event_count": len(media_events),
+                "foreground_media_seconds": foreground_media_seconds,
+                "passive_media_seconds": passive_media_seconds,
+            },
         }
         return {
             "bucket_id": resolved["window_bucket_id"],
@@ -662,11 +906,243 @@ class ActivityWatchAdapter:
             "sources": [source_payload],
             "time_accounting": time_accounting,
             "complete": True,
-            "issues": [],
+            "issues": issues,
             "raw_event_count": len(window_events),
             "event_count": len(events),
             "events": annotated,
             **aggregates,
+        }
+
+    def _load_context(
+        self,
+    ) -> tuple[dict[str, Any], dict[str, Any], str, str]:
+        resolved = self._resolve_buckets()
+        classification = self._classification_config()
+        timezone_name = self.timezone_name()
+        source = str(
+            self._activity_config().get("source_label")
+            or resolved["info"].get("hostname")
+            or "local"
+        )
+        return resolved, classification, timezone_name, source
+
+    def load_day(self, day: date, mode: str) -> dict[str, Any]:
+        resolved, classification, timezone_name, source = self._load_context()
+        start_utc, end_utc = self.date_range(day, mode, timezone_name)
+        window_events = self._load_events(
+            resolved["window_bucket_id"], source, start_utc, end_utc
+        )
+        afk_events: list[dict[str, Any]] = []
+        if resolved["afk_bucket_id"]:
+            afk_events = self._load_events(
+                resolved["afk_bucket_id"], source, start_utc, end_utc
+            )
+        return self._summarize_day(
+            resolved=resolved,
+            classification=classification,
+            timezone_name=timezone_name,
+            source=source,
+            start_utc=start_utc,
+            end_utc=end_utc,
+            window_events=window_events,
+            afk_events=afk_events,
+        )
+
+    def load_days(self, days: list[date], mode: str) -> dict[date, dict[str, Any]]:
+        """Load a bounded group with one REST query per ActivityWatch bucket."""
+        selected_days = sorted(set(days))
+        if not selected_days:
+            return {}
+
+        resolved, classification, timezone_name, source = self._load_context()
+        batch_start, _ = self.date_range(selected_days[0], mode, timezone_name)
+        _, batch_end = self.date_range(selected_days[-1], mode, timezone_name)
+        window_batch = self._load_events(
+            resolved["window_bucket_id"], source, batch_start, batch_end
+        )
+        afk_batch: list[dict[str, Any]] = []
+        if resolved["afk_bucket_id"]:
+            afk_batch = self._load_events(
+                resolved["afk_bucket_id"], source, batch_start, batch_end
+            )
+
+        results: dict[date, dict[str, Any]] = {}
+        for day in selected_days:
+            start_utc, end_utc = self.date_range(day, mode, timezone_name)
+            results[day] = self._summarize_day(
+                resolved=resolved,
+                classification=classification,
+                timezone_name=timezone_name,
+                source=source,
+                start_utc=start_utc,
+                end_utc=end_utc,
+                window_events=self._clip_parsed_events(
+                    window_batch, start_utc, end_utc
+                ),
+                afk_events=self._clip_parsed_events(afk_batch, start_utc, end_utc),
+            )
+        return results
+
+    def correction_fingerprint(self, day: date) -> str:
+        return self.activity_edits.fingerprint_for_day(day)
+
+    @staticmethod
+    def _local_input_value(value: datetime, zone: ZoneInfo) -> str:
+        return (
+            value.astimezone(zone)
+            .replace(tzinfo=None)
+            .isoformat(timespec="seconds")
+        )
+
+    @classmethod
+    def _category_view(
+        cls,
+        event: dict[str, Any],
+        classification: dict[str, Any],
+    ) -> dict[str, str]:
+        match = cls._classify(event, classification)
+        if match is None:
+            return {"category": "uncategorized", "category_label": "未分类"}
+        return {
+            "category": match["category"],
+            "category_label": match.get("category_label")
+            or match["category"],
+        }
+
+    def inspect_events(
+        self,
+        day: date,
+        mode: str,
+        bucket_id: str,
+        event_ids: list[str],
+    ) -> dict[str, Any]:
+        resolved, classification, timezone_name, source = self._load_context()
+        if bucket_id != resolved["window_bucket_id"]:
+            raise ValueError("只能检查当前配置的窗口活动 bucket。")
+        requested = {str(value) for value in event_ids}
+        start_utc, end_utc = self.date_range(day, mode, timezone_name)
+        raw_items = self._api().events(bucket_id, start_utc, end_utc)
+        zone = ZoneInfo(timezone_name)
+        now_utc = datetime.now(timezone.utc)
+        rows: list[dict[str, Any]] = []
+        for item in raw_items:
+            original = self._normalize_event(item, bucket_id, source)
+            if original is None:
+                continue
+            event_id = original.get("event_id")
+            if event_id is None or str(event_id) not in requested:
+                continue
+            effective = self.activity_edits.apply_event(original)
+            original_start = _timestamp(str(original["timestamp"]))
+            original_end = original_start + timedelta(
+                seconds=float(original["duration_seconds"])
+            )
+            effective_start = _timestamp(str(effective["timestamp"]))
+            effective_end = effective_start + timedelta(
+                seconds=float(effective["duration_seconds"])
+            )
+            automatic_event = dict(effective)
+            automatic_event.pop("manual_category", None)
+            automatic_event.pop("manual_category_label", None)
+            original_category = self._category_view(original, classification)
+            automatic_category = self._category_view(
+                automatic_event,
+                classification,
+            )
+            effective_category = self._category_view(
+                effective,
+                classification,
+            )
+            rows.append(
+                {
+                    "bucket_id": bucket_id,
+                    "event_id": str(event_id),
+                    "source_fingerprint": original["source_fingerprint"],
+                    "editable": original_end <= now_utc - timedelta(seconds=60),
+                    "ended": original_end <= now_utc,
+                    "original": {
+                        "start": original_start.isoformat(),
+                        "end": original_end.isoformat(),
+                        "start_local": self._local_input_value(
+                            original_start,
+                            zone,
+                        ),
+                        "end_local": self._local_input_value(
+                            original_end,
+                            zone,
+                        ),
+                        "app": str(original.get("app") or ""),
+                        "title": str(original.get("title") or ""),
+                        **original_category,
+                    },
+                    "effective": {
+                        "start": effective_start.isoformat(),
+                        "end": effective_end.isoformat(),
+                        "start_local": self._local_input_value(
+                            effective_start,
+                            zone,
+                        ),
+                        "end_local": self._local_input_value(
+                            effective_end,
+                            zone,
+                        ),
+                        "app": str(effective.get("app") or ""),
+                        "title": str(effective.get("title") or ""),
+                        **effective_category,
+                    },
+                    "automatic_category": automatic_category,
+                    "manual_category": (
+                        {
+                            "category": str(effective["manual_category"]),
+                            "label": str(
+                                effective.get("manual_category_label")
+                                or effective["manual_category"]
+                            ),
+                        }
+                        if effective.get("manual_category")
+                        else None
+                    ),
+                    "manual_edit": bool(effective.get("manual_edit")),
+                    "manual_edit_fields": list(
+                        effective.get("manual_edit_fields") or []
+                    ),
+                    "manual_edit_conflict": bool(
+                        effective.get("manual_edit_conflict")
+                    ),
+                }
+            )
+        rows.sort(key=lambda item: item["original"]["start"])
+        category_rows = [
+            {
+                "category": str(category),
+                "label": str(metadata.get("label") or category),
+                "custom": bool(metadata.get("custom")),
+            }
+            for category, metadata in classification.get("categories", {}).items()
+            if isinstance(metadata, dict)
+        ]
+        category_rows.append(
+            {
+                "category": "uncategorized",
+                "label": "未分类",
+                "custom": False,
+            }
+        )
+        category_rows.sort(
+            key=lambda item: (
+                item["category"] == "uncategorized",
+                item["custom"],
+                item["label"],
+            )
+        )
+        return {
+            "date": day.isoformat(),
+            "mode": mode,
+            "timezone": timezone_name,
+            "bucket_id": bucket_id,
+            "revision": self.activity_edits.revision_token(),
+            "categories": category_rows,
+            "events": rows,
         }
 
     def health(self) -> dict[str, Any]:
@@ -675,6 +1151,7 @@ class ActivityWatchAdapter:
             self._classification_config()
             resolved = self._resolve_buckets()
             info = resolved["info"]
+            edit_health = self.activity_edits.health()
             return {
                 "available": True,
                 "api_available": True,
@@ -684,6 +1161,7 @@ class ActivityWatchAdapter:
                 "window_bucket_id": resolved["window_bucket_id"],
                 "afk_bucket_id": resolved["afk_bucket_id"],
                 "integration": "activitywatch-rest",
+                "activity_edits": edit_health,
             }
         except Exception as exc:
             return {
@@ -695,4 +1173,5 @@ class ActivityWatchAdapter:
                 "window_bucket_id": "",
                 "afk_bucket_id": "",
                 "integration": "activitywatch-rest",
+                "activity_edits": self.activity_edits.health(),
             }

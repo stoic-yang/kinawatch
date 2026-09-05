@@ -21,8 +21,9 @@ Backend Extension Rule。
 - 未分类时间在单日内的应用去向：从 `timeline` 中
   `category == "uncategorized"` 的块聚合。
 
-现有 timeline 粒度（相邻同 app/title/category 合并）对以上用途足够，
-暂不需要原始事件流。
+现有 timeline 粒度（相邻同 app/title/category 合并）对以上展示用途足够。
+后续的手动校正功能不把合并块直接作为写目标：screen block 已增加
+`event_refs`，只有用户点击后才通过 `/api/activity/inspect` 按需读取底层事件。
 
 ## P0 — 静态托管 dist/（日常使用不依赖 Node）
 
@@ -55,10 +56,9 @@ Backend Extension Rule。
 **用户问题**：这一周我的作息节律怎么漂移的？每天几点开始活动、
 几点收工？哪天熬夜了？
 
-现在 `RangeDay` 只有总量，前端周条只能画"每天总时长"。要画
-"七天节律小图"（每天一条 24h 迷你带或起止区间），需要每日的
-时间分布，而 range 端点故意不返回 timeline——这是合理的，
-所以请求一个压缩摘要。
+默认 `RangeDay` 继续只返回总量与压缩节律摘要。明确需要周时间线时，
+前端可使用 `include=timeline` 请求该范围内的 screen blocks；月视图与其他
+普通范围请求不带此 include，避免无条件放大响应体。
 
 **需求**：`RangeDay` 增加可选字段：
 
@@ -79,18 +79,18 @@ rhythm?: {
 **验收**：`/api/range` 响应体积仍然紧凑（每天多 ~100 字节），
 单元测试覆盖跨午夜（routine mode）对齐。
 
-## P2 — 范围级"未分类去向" （分类规则维护入口）
+## 已实现 — 范围级主要应用与"未分类去向"
 
 **用户问题**：最近一周未分类时间主要是哪些应用？我该往 Kina
 分类规则里补什么？
 
 单日的未分类去向前端已能算；跨天需要后端聚合（range 不含 timeline）。
 
-**需求**：`/api/range` 增加可选查询参数 `include=uncategorized_apps`，
-返回每天或整段 Top N（N=5 足够）未分类应用及秒数。实现方式
-（逐日字段或整段汇总）由后端定。
-
-优先级低：v1 前端未使用；做 P1 时顺手评估即可。
+`/api/range` 现支持 `include=top_apps` 与
+`include=uncategorized_apps`。前者返回整段 Top 6 应用、秒数及主分类，
+供周/月侧栏复用日视图的主要应用样式；后者返回整段 Top 5 未分类应用。
+两者都直接复用 range 已加载的日级 timeline，不额外读取 ActivityWatch，
+未请求时不计算也不返回。
 
 ## P2 — 浏览器域名维度（产品决策，暂不实现）
 

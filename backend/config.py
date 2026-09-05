@@ -13,8 +13,8 @@ from .models import FileFingerprint
 from .paths import default_config_path, default_data_dir, expanded_path
 
 
-CURRENT_JOURNAL_SCHEMA_VERSION = 2
-CURRENT_DAY_SCHEMA_VERSION = 6
+CURRENT_JOURNAL_SCHEMA_VERSION = 3
+CURRENT_DAY_SCHEMA_VERSION = 10
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -73,8 +73,25 @@ class DashboardSettings:
         return bool(self.raw.get("journal_write_enabled", False))
 
     @property
+    def activity_edit_enabled(self) -> bool:
+        return bool(self.raw.get("activity_edit_enabled", False))
+
+    @property
+    def activity_edit_store_path(self) -> Path:
+        configured = self.raw.get("activity_edit_store_path")
+        if configured:
+            return self.configured_path(str(configured))
+        return (default_data_dir() / "activity-edits.json").resolve(
+            strict=False
+        )
+
+    @property
     def weekly_reviews_dir(self) -> str:
         return str(self.raw.get("weekly_reviews_dir", "Review/Weekly"))
+
+    @property
+    def monthly_reviews_dir(self) -> str:
+        return str(self.raw.get("monthly_reviews_dir", "Review/Monthly"))
 
     @property
     def cache_dir(self) -> Path:
@@ -141,6 +158,51 @@ class DashboardSettings:
             normalized.setdefault("timeout_seconds", 10)
             normalized.setdefault("filter_afk", True)
             normalized.setdefault("background_app_equals", [])
+            media_activity = normalized.get("media_activity") or {}
+            if not isinstance(media_activity, dict):
+                raise ValueError("activitywatch.media_activity must be an object")
+            media_rules = media_activity.get("rules") or []
+            if not isinstance(media_rules, list):
+                raise ValueError("activitywatch.media_activity.rules must be an array")
+            matcher_keys = {
+                f"{field}_{operator}"
+                for field in (
+                    "app",
+                    "title",
+                    "url",
+                    "project",
+                    "file",
+                    "language",
+                    "status",
+                )
+                for operator in ("equals", "contains", "regex")
+            }
+            for rule in media_rules:
+                if not isinstance(rule, dict):
+                    raise ValueError(
+                        "activitywatch.media_activity.rules entries must be objects"
+                    )
+                configured_matchers = matcher_keys.intersection(rule)
+                if not configured_matchers:
+                    raise ValueError(
+                        "activitywatch.media_activity rules require a matcher"
+                    )
+                for key in configured_matchers:
+                    values = rule.get(key)
+                    if (
+                        not isinstance(values, list)
+                        or not values
+                        or any(not str(value).strip() for value in values)
+                    ):
+                        raise ValueError(
+                            f"activitywatch.media_activity rule {key} requires "
+                            "non-empty values"
+                        )
+            normalized["media_activity"] = {
+                **media_activity,
+                "enabled": bool(media_activity.get("enabled", False)),
+                "rules": [dict(rule) for rule in media_rules],
+            }
             return normalized
 
         upstream = self.upstream
@@ -166,6 +228,7 @@ class DashboardSettings:
             "background_app_equals": list(
                 legacy.get("background_app_equals") or []
             ),
+            "media_activity": {"enabled": False, "rules": []},
             "categories_file": categories_path,
             "legacy_config_file": activity_path,
         }
@@ -185,6 +248,8 @@ class DashboardSettings:
             normalized.setdefault("daily_notes_dir", "Daily")
             normalized.setdefault("daily_note_date_format", "%Y-%m-%d")
             normalized.setdefault("daily_note_template", [])
+            normalized.setdefault("permanent_note_path", "incoming.md")
+            normalized.setdefault("beliefs_note_path", "Review/我的人生信念.md")
 
             if provider == "local":
                 storage_dir = normalized.get("storage_dir")
@@ -232,6 +297,8 @@ class DashboardSettings:
                 review.get("daily_note_date_format", "%Y-%m-%d")
             ),
             "daily_note_template": list(review.get("daily_note_template") or []),
+            "permanent_note_path": "incoming.md",
+            "beliefs_note_path": "Review/我的人生信念.md",
             "legacy_obsidian_config_file": obsidian_path,
             "legacy_review_config_file": review_path,
         }

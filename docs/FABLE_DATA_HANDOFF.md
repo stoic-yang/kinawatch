@@ -103,8 +103,10 @@ GET /api/range?start=YYYY-MM-DD&end=YYYY-MM-DD&mode=calendar
 - It intentionally excludes full journal bodies and detailed timelines.
 - Each range day may include `rhythm`, containing the first/last active
   timestamps and 24 mode-aligned hourly active-second buckets.
-- Add `include=uncategorized_apps` to receive a whole-range Top 5 application
-  summary for uncategorized screen time.
+- Add `include=top_apps` to receive the whole-range Top 6 applications with
+  each application's dominant category; add `include=uncategorized_apps` for
+  the Top 5 applications in uncategorized screen time. Values may be combined
+  with a comma.
 - It is available for any cross-day exploration; it does not imply that the
   frontend must contain a seven-day chart.
 
@@ -138,7 +140,9 @@ A screen block can expose:
 - application name;
 - window title;
 - category id and label;
-- explicit project value when the upstream event contains one.
+- explicit project value when the upstream event contains one;
+- the raw bucket/event references used to derive it;
+- whether a manual correction is active or has a source conflict.
 
 An offline block can expose:
 
@@ -153,8 +157,18 @@ An offline block can expose:
 The current screen timeline merges immediately adjacent events only when
 category, project, application, title, and source all match. It is more
 detailed than category totals but is not the untouched raw ActivityWatch
-event stream. If the design requires raw events, event search, grouping by
-domain, or a different aggregation level, request that backend capability.
+event stream. `event_refs` allow the UI to call `GET /api/activity/inspect`
+only after the user selects a display block; the response returns each
+underlying raw event separately with original/effective values and edit
+versions. Event search, grouping by domain, or a different aggregation level
+still requires a separate backend capability.
+
+When `activity_edit_enabled` is true, `PUT /api/activity/edit` can explicitly
+override one ended event's time, app, title, or category in the KinaWatch-owned
+overlay. `PUT /api/activity/undo` reverses the returned `change_id` if neither
+the raw source fingerprint nor overlay revision has changed. These endpoints
+never write ActivityWatch. New independent activities and global category-rule
+editing are not part of this contract.
 
 ### Category data
 
@@ -191,8 +205,10 @@ that as a new backend/product capability.
 - `parse_warnings`: malformed journal structures that were preserved;
 - `overlap_warnings`: screen/offline time overlaps;
 - `sources`: source-specific counts, duration, bucket and AFK information;
-- `time_accounting`: AFK removal, background removal, overlap adjustment and
-  the upstream accounting policy.
+- `time_accounting`: interactive wall time, foreground/passive media time,
+  AFK removal before and after media recovery, background removal, overlap
+  adjustment and the upstream accounting policy. `overview.active_seconds`
+  is the effective screen-time union, not the sum of these diagnostic fields.
 
 These fields make it possible to communicate uncertainty, but they do not
 dictate a warning panel or any other presentation.
@@ -346,15 +362,18 @@ properties, workflows, or other dates. The same fingerprint, per-note lock,
 atomic replacement, and `409` conflict rules as workflow saves apply. There is
 no autosave, field deletion, or background migration.
 
-### Weekly review entry
+### Weekly and monthly review entry
 
-`PUT /api/journal/weekly` accepts one validated ISO `week_id` such as
-`2026-W29`. It maps that value to the single canonical
-`Review/Weekly/2026-W29.md` path and creates the template only when the file is
-absent. Existing weekly notes are never rewritten by this endpoint. The response
-includes `provider`; `open_url` and the compatibility field `obsidian_url` are
-empty for local storage and contain the stable `obsidian://open` URI for the
-Obsidian provider.
+`GET /api/journal/weekly?week_id=2026-W29` reads the canonical weekly
+`自由记录` field without creating a note. `PUT /api/journal/weekly` saves that
+field as `freeform` using the returned fingerprint. The monthly equivalent is
+`GET /api/journal/monthly?month_id=2026-07` plus
+`PUT /api/journal/monthly`; it uses `Review/Monthly/2026-07.md`.
+A missing period note is created only by an explicit save. Existing
+frontmatter, legacy headings, unknown sections, and all non-target content are
+preserved. The response includes a shared `period_id` and `provider`;
+`open_url` and the compatibility field `obsidian_url` are empty for local
+storage and contain the stable `obsidian://open` URI for the Obsidian provider.
 
 ### Generated activity summary
 
@@ -468,8 +487,9 @@ data. The product remains local-only and read-mostly:
 - do not send this data to external services;
 - do not add analytics or remote fonts that transmit page activity;
 - write daily notes only through the explicit restricted workflow-description
-  and review-field endpoints, and weekly notes only through idempotent
-  create-if-absent; every other note region remains read-only;
+  and review-field endpoints, and weekly/monthly notes only one canonical H2
+  field at a time with the same fingerprint/lock/atomic safeguards; every
+  other note region remains read-only;
 - do not modify ActivityWatch data;
 - keep API access on the local machine.
 

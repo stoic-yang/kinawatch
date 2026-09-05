@@ -7,6 +7,11 @@ from .models import JournalDocument, OfflineActivity, ParseWarning, WorkflowNote
 
 
 HEADING_RE = re.compile(r"^##\s+(.+?)\s*$")
+# Structured fields use H2. An H1 also ends an H2 field, while H3-H6 remain
+# valid nested Markdown inside the field.
+SECTION_BOUNDARY_RE = re.compile(
+    r"^(?P<marks>#{1,2})\s+(?P<title>.+?)\s*$"
+)
 # Older Kina templates used this checkbox as review state. It is no longer a
 # product field, but silently consume the exact legacy line so historical
 # notes do not surface it as ordinary journal prose.
@@ -36,6 +41,12 @@ WORKFLOW_GROUP_ENTRY_RE = re.compile(
     r"(?:\s*[–—-]\s*(?P<end>[01]\d|2[0-3]):(?P<end_min>[0-5]\d))?"
     r"\*\*\s*$"
 )
+WORKFLOW_GROUP_MARKER_RE = re.compile(
+    r"^\s*<!--\s*kinawatch:workflow:"
+    r"(?P<start>[01]\d|2[0-3]):(?P<start_min>[0-5]\d)"
+    r"(?:\s*[–—-]\s*(?P<end>[01]\d|2[0-3]):(?P<end_min>[0-5]\d))?"
+    r"\s*-->\s*$"
+)
 WORKFLOW_CALLOUT_TITLE_RES = (
     re.compile(
         r"^(?P<start>[01]\d|2[0-3]):(?P<start_min>[0-5]\d)"
@@ -55,6 +66,11 @@ WORKFLOW_STANDALONE_BLOCK_RE = re.compile(
 REVIEW_GROUP_TITLE_RE = re.compile(r"^复盘$")
 REVIEW_GROUP_ENTRY_RE = re.compile(
     r"^\s*\*\*(?P<title>我的总结|今日总结|今日产出|明天的计划|明日第一步|自由记录)\*\*\s*$"
+)
+REVIEW_GROUP_MARKER_RE = re.compile(
+    r"^\s*<!--\s*kinawatch:review:"
+    r"(?P<field>personal_summary|outputs|next_action|freeform)"
+    r"\s*-->\s*$"
 )
 LEGACY_PLUS_WORKFLOW_RE = re.compile(
     r"^\s*-\+\*\*工作流\+"
@@ -163,7 +179,9 @@ def _parse_offline_line(raw_line: str) -> tuple[OfflineActivity | None, str | No
         int(time_match.group("end")),
         int(time_match.group("end_min")),
     )
-    crosses_midnight = end_seconds <= start_seconds
+    if end_seconds == start_seconds:
+        return None, "离线活动的开始和结束时间不能相同。"
+    crosses_midnight = end_seconds < start_seconds
     duration_seconds = end_seconds - start_seconds
     if crosses_midnight:
         duration_seconds += int(timedelta(days=1).total_seconds())
@@ -318,6 +336,67 @@ def _parse_workflow_group_callout(
         body_lines.append(body_match.group("body").rstrip())
         index += 1
 
+    marker_indexes = [
+        entry_index
+        for entry_index, line in enumerate(body_lines)
+        if WORKFLOW_GROUP_MARKER_RE.match(line)
+    ]
+    if marker_indexes:
+        if any(line.strip() for line in body_lines[: marker_indexes[0]]):
+            return None
+        marked_entries: list[WorkflowNote] = []
+        for marker_position, entry_index in enumerate(marker_indexes):
+            marker_match = WORKFLOW_GROUP_MARKER_RE.match(
+                body_lines[entry_index]
+            )
+            if marker_match is None:
+                continue
+            next_entry = (
+                marker_indexes[marker_position + 1]
+                if marker_position + 1 < len(marker_indexes)
+                else len(body_lines)
+            )
+            title_index = entry_index + 1
+            if title_index >= next_entry:
+                return None
+            title_match = WORKFLOW_GROUP_ENTRY_RE.match(body_lines[title_index])
+            if title_match is None:
+                return None
+            marker_start = (
+                f"{marker_match.group('start')}:{marker_match.group('start_min')}"
+            )
+            title_start = (
+                f"{title_match.group('start')}:{title_match.group('start_min')}"
+            )
+            marker_end = (
+                f"{marker_match.group('end')}:{marker_match.group('end_min')}"
+                if marker_match.group("end") is not None
+                else ""
+            )
+            title_end = (
+                f"{title_match.group('end')}:{title_match.group('end_min')}"
+                if title_match.group("end") is not None
+                else ""
+            )
+            if (marker_start, marker_end) != (title_start, title_end):
+                return None
+            note = _clean_markdown(body_lines[title_index + 1 : next_entry])
+            # A marked empty entry records an explicit clear. Keep it so a
+            # generated summary cannot reappear as this workflow's fallback.
+            marked_entries.append(
+                WorkflowNote(
+                    start_time=marker_start,
+                    end_time=marker_end,
+                    note=note,
+                    block_id="",
+                    raw="\n".join(
+                        f"> {line}" if line else ">"
+                        for line in body_lines[entry_index:next_entry]
+                    ).rstrip(),
+                )
+            )
+        return marked_entries, index
+
     entries: list[WorkflowNote] = []
     entry_index = 0
     while entry_index < len(body_lines):
@@ -387,6 +466,41 @@ def _parse_review_group_callout(
         body_lines.append(body_match.group("body").rstrip())
         index += 1
 
+    marker_indexes = [
+        entry_index
+        for entry_index, line in enumerate(body_lines)
+        if REVIEW_GROUP_MARKER_RE.match(line)
+    ]
+    if marker_indexes:
+        if any(line.strip() for line in body_lines[: marker_indexes[0]]):
+            return None
+        marked_fields: dict[str, list[str]] = {}
+        for marker_position, entry_index in enumerate(marker_indexes):
+            marker_match = REVIEW_GROUP_MARKER_RE.match(body_lines[entry_index])
+            if marker_match is None:
+                continue
+            canonical = marker_match.group("field")
+            if canonical in marked_fields:
+                return None
+            next_entry = (
+                marker_indexes[marker_position + 1]
+                if marker_position + 1 < len(marker_indexes)
+                else len(body_lines)
+            )
+            title_index = entry_index + 1
+            if title_index >= next_entry:
+                return None
+            title_match = REVIEW_GROUP_ENTRY_RE.match(body_lines[title_index])
+            if (
+                title_match is None
+                or SECTION_ALIASES[title_match.group("title")] != canonical
+            ):
+                return None
+            marked_fields[canonical] = body_lines[
+                title_index + 1 : next_entry
+            ]
+        return marked_fields, index
+
     fields: dict[str, list[str]] = {}
     entry_index = 0
     while entry_index < len(body_lines):
@@ -442,11 +556,20 @@ def parse_journal(content: str) -> JournalDocument:
     while line_index < len(raw_lines):
         review_result = _parse_review_group_callout(raw_lines, line_index)
         if review_result is not None:
+            containing_section = current_section
             flush_current()
             review_fields, line_index = review_result
             for name, lines in review_fields.items():
                 _append_section(sections, name, lines)
-            current_section = None
+            # Kina's generated timeline and KinaWatch's user-authored review
+            # fields intentionally share `## 一天活动小总结`. After consuming
+            # the protected review callout, resume that H2 so the following
+            # `今日轨迹` callout remains available for workflow descriptions.
+            current_section = (
+                "activity_summary"
+                if containing_section == "activity_summary"
+                else None
+            )
             continue
 
         group_result = _parse_workflow_group_callout(raw_lines, line_index)
@@ -477,10 +600,15 @@ def parse_journal(content: str) -> JournalDocument:
         if LEGACY_COMPLETION_RE.match(raw_line):
             continue
 
-        heading_match = HEADING_RE.match(raw_line)
-        if heading_match:
+        boundary_match = SECTION_BOUNDARY_RE.match(raw_line)
+        if boundary_match:
             flush_current()
-            canonical = SECTION_ALIASES.get(heading_match.group(1).strip())
+            heading_match = HEADING_RE.match(raw_line)
+            canonical = (
+                SECTION_ALIASES.get(heading_match.group(1).strip())
+                if heading_match is not None
+                else None
+            )
             if canonical is not None:
                 current_section = canonical
             else:

@@ -68,6 +68,16 @@ class JournalParserTests(unittest.TestCase):
         self.assertEqual(len(document.parse_warnings), 3)
         self.assertIn("HH:MM-HH:MM", document.parse_warnings[0].message)
 
+    def test_equal_offline_times_are_rejected_instead_of_counting_a_day(self) -> None:
+        document = parse_journal(
+            "## 离线活动\n"
+            "- 09:00-09:00 | 学习\n"
+        )
+
+        self.assertEqual(document.offline_activities, [])
+        self.assertEqual(len(document.parse_warnings), 1)
+        self.assertIn("不能相同", document.parse_warnings[0].message)
+
     def test_latest_workflow_note_for_same_start_wins(self) -> None:
         document = parse_journal(
             "- **工作流 09:10–09:30**：第一版。 ^workflow-0910\n"
@@ -179,6 +189,28 @@ class JournalParserTests(unittest.TestCase):
         self.assertIn("开场文字。", document.body_markdown)
         self.assertIn("结尾文字。", document.body_markdown)
         self.assertNotIn("[!abstract]- 复盘", document.body_markdown)
+
+    def test_generated_summary_after_review_group_remains_workflow_source(self) -> None:
+        document = parse_journal(
+            "## 一天活动小总结\n\n"
+            "> [!abstract]- 复盘\n"
+            "> <!-- kinawatch:review:freeform -->\n"
+            "> **自由记录**\n"
+            "> 用户自己写的复盘。\n\n"
+            "> [!abstract] 今日轨迹\n"
+            "> - `约09:00–10:00`　完成工作流描述接入。\n"
+            "> - **今日收束：** 完成验证。\n"
+        )
+
+        self.assertEqual(document.freeform_markdown, "用户自己写的复盘。")
+        self.assertIn(
+            "> - `约09:00–10:00`　完成工作流描述接入。",
+            document.activity_summary_markdown,
+        )
+        self.assertNotIn(
+            "用户自己写的复盘",
+            document.activity_summary_markdown,
+        )
 
     def test_legacy_tomorrow_first_step_remains_readable(self) -> None:
         document = parse_journal(

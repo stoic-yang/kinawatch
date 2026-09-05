@@ -1,0 +1,104 @@
+.markdown-document-editor {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 800px;
+  min-width: 0;
+  flex: 1;
+  margin-inline: auto;
+  color: var(--journal-ink, #263a2d);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.9;
+}
+
+.markdown-document-editor .cm-editor {
+  flex: 1;
+  min-height: 360px;
+  width: 100%;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.markdown-document-editor .cm-editor.cm-focused { outline: none; }
+.markdown-document-editor .cm-scroller { flex: 1; overflow: visible; font: inherit; }
+.markdown-document-editor .cm-content {
+  align-self: stretch;
+  width: 100%;
+  min-height: 360px;
+  padding: 4px 0 96px;
+  caret-color: var(--journal-accent, #416844);
+}
+.markdown-document-editor[data-readonly="true"] .cm-editor,
+.markdown-document-editor[data-readonly="true"] .cm-content { min-height: 0; }
+.markdown-document-editor[data-readonly="true"] .cm-content { padding-bottom: 12px; }
+.markdown-document-editor .cm-line { padding: 0; }
+.markdown-document-editor .cm-placeholder { color: var(--journal-muted, #6f7e70); opacity: .72; }
+.markdown-document-editor .cm-cursor { border-left-color: var(--journal-accent, #416844); }
+.markdown-document-editor .cm-selectionBackground,
+.markdown-document-editor .cm-focused .cm-selectionBackground { background: #cde1bb88; }
+.markdown-document-editor .cm-content ::selection { background: #cde1bb88; }
+
+.markdown-document-editor .md-heading {
+  color: var(--journal-ink, #263a2d);
+  font-weight: 650;
+  letter-spacing: -.02em;
+  line-height: 1.45;
+  padding-top: .7em;
+  padding-bottom: .24em;
+}
+.markdown-document-editor .md-heading-1 { font-size: 1.9em; }
+.markdown-document-editor .md-heading-2 { font-size: 1.52em; }
+.markdown-document-editor .md-heading-3 { font-size: 1.25em; }
+.markdown-document-editor .md-heading-4 { font-size: 1.1em; }
+.markdown-document-editor .md-heading-5 { font-size: 1em; }
+.markdown-document-editor .md-heading-6 { font-size: .94em; color: var(--journal-muted, #6f7e70); }
+.markdown-document-editor .md-strong { font-weight: 680; }
+.markdown-document-editor .md-emphasis { font-style: italic; }
+.markdown-document-editor .md-strike { text-decoration: line-through; }
+.markdown-document-editor .md-syntax { color: var(--journal-decoration, #82907d); font-weight: 400; }
+.markdown-document-editor .md-link { color: var(--journal-accent, #416844); text-decoration: underline; text-decoration-color: #41684455; text-underline-offset: .18em; }
+.markdown-document-editor .md-link-source { color: var(--journal-muted, #6f7e70); }
+
+.markdown-document-editor .md-inline-code,
+.markdown-document-editor .md-code-block,
+.markdown-document-editor .md-table-row { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+.markdown-document-editor .md-inline-code {
+  padding: .12em .28em;
+  border-radius: 4px;
+  background: var(--journal-soft, #edf2e8);
+  color: var(--journal-accent-strong, #33502f);
+  font-size: .88em;
+}
+.markdown-document-editor .md-code-block {
+  padding: .06em 14px;
+  background: var(--journal-paper-soft, #f4f6f0);
+  font-size: .88em;
+  line-height: 1.75;
+  letter-spacing: 0;
+}
+.markdown-document-editor .md-code-start { padding-top: 12px; border-radius: 6px 6px 0 0; }
+.markdown-document-editor .md-code-end { padding-bottom: 12px; border-radius: 0 0 6px 6px; }
+.markdown-document-editor .md-code-fence { min-height: 1.4em; font-size: .76em; color: var(--journal-muted, #6f7e70); }
+.markdown-document-editor .md-code-info { letter-spacing: .03em; }
+.markdown-document-editor .md-list-line { padding-left: 1.4em; text-indent: -1.4em; }
+.markdown-document-editor .md-list-bullet { display: inline-block; width: .55em; color: var(--journal-accent, #416844); text-align: center; text-indent: 0; }
+.markdown-document-editor .md-blockquote { padding-left: 16px; border-left: 2px solid var(--journal-rule-strong, #c4d0bb); color: var(--journal-muted, #6f7e70); }
+.markdown-document-editor .md-callout { padding: 2px 16px; border-left-color: var(--journal-accent, #416844); background: var(--journal-paper-soft, #f4f6f0); }
+.markdown-document-editor .md-callout-header { padding-top: 10px; color: var(--journal-ink, #263a2d); font-weight: 600; }
+.markdown-document-editor .md-callout-end { padding-bottom: 10px; }
+.markdown-document-editor .md-callout-icon { display: inline-flex; align-items: center; gap: 8px; margin-right: 8px; color: var(--journal-accent, #416844); text-indent: 0; }
+.markdown-document-editor .md-callout-default-title { color: var(--journal-ink, #263a2d); }
+.markdown-document-editor .md-task-checkbox { width: 13px; height: 13px; margin: 0 5px 0 1px; accent-color: var(--journal-accent, #416844); vertical-align: -.08em; cursor: pointer; }
+.markdown-document-editor .md-task-checkbox:disabled { cursor: default; }
+.markdown-document-editor .md-task-complete { color: var(--journal-muted, #6f7e70); text-decoration: line-through; }
+.markdown-document-editor .md-table-row { padding: 3px 8px; font-size: .88em; border-bottom: 1px solid var(--journal-rule, #e2e8de); }
+.markdown-document-editor .md-table-header { font-weight: 650; background: var(--journal-soft, #edf2e8); }
+.markdown-document-editor .md-table-delimiter { color: var(--journal-decoration, #82907d); }
+
+@media (max-width: 600px) {
+  .markdown-document-editor { font-size: 14.5px; }
+  .markdown-document-editor .md-heading-1 { font-size: 1.72em; }
+  .markdown-document-editor .cm-content { padding-bottom: 64px; }
+}
