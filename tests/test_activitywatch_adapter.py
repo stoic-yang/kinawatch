@@ -175,6 +175,7 @@ class ActivityWatchAdapterTests(unittest.TestCase):
         self.assertFalse(payload["events"][0].get("media_playing", False))
 
     def test_load_days_queries_each_bucket_once_and_splits_the_batch(self) -> None:
+        self.settings.activitywatch["timezone"] = "Asia/Shanghai"
         first = date(2026, 7, 15)
         second = date(2026, 7, 16)
 
