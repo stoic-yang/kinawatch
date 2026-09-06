@@ -91,6 +91,19 @@ outside the current contract.
 
 ## Journal providers
 
+### Generated workflow descriptions
+
+KinaWatch displays timestamped generated descriptions beside their workflow
+segments. The optional external generator combines Computer Use / Computer
+History observations with the ActivityWatch timeline and must preserve the
+screen-session boundaries (a gap greater than 15 minutes starts a new session).
+Manual descriptions retain priority. The existing `一天活动小总结` / `今日轨迹`
+container remains readable for compatibility; it is not a separate recap panel.
+The journal view hides generated summary and legacy advice blocks while
+preserving their source bytes during user edits. Automatic advice is disabled;
+new output contains only descriptions for the observed workflows. Missing
+evidence must be stated rather than replaced with inferred tasks or outcomes.
+
 The public configuration defaults to KinaWatch-managed local Markdown:
 
 ```json

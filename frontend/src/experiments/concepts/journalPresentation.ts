@@ -47,6 +47,14 @@ export function presentJournal(source: string): JournalPresentation {
   const summaries: JournalPresentation["summaries"] = [];
   const tree = markdownLanguage.parser.parse(source);
   for (let node = tree.topNode.firstChild; node; node = node.nextSibling) {
+    // Legacy generated advice used an H2 plus a numbered list. Hide that
+    // known block without swallowing subsequent unheaded user diary prose.
+    if (node.name === "ATXHeading2" && /^##\s+Kina\s*建议\s*#*\s*$/.test(source.slice(node.from, node.to))) {
+      const next = node.nextSibling;
+      const end = next?.name === "OrderedList" ? next.to : node.to;
+      ranges.push({ from: lineStart(source, node.from), to: throughBlankLines(source, end) });
+      continue;
+    }
     if (node.name === "BulletList") {
       for (let item = node.firstChild; item; item = item.nextSibling) {
         const raw = source.slice(item.from, item.to);

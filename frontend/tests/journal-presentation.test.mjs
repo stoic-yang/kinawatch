@@ -12,6 +12,17 @@ after(() => rm(directory, { recursive: true, force: true }));
 await build({ entryPoints: [fileURLToPath(new URL("../src/experiments/concepts/journalPresentation.ts", import.meta.url))], outfile: output, bundle: true, platform: "node", format: "esm" });
 const { presentJournal, editPresentedJournal, updateJournalPresentation } = await import(pathToFileURL(output).href);
 
+test("legacy advice is hidden while following user prose survives editing", () => {
+  const source = "## Kina 建议\n\n1. 合成旧建议。\n2. 第二条旧建议。\n\n用户的普通日记。\n\n## 阅读\n保留正文。\n";
+  const view = presentJournal(source);
+  assert.ok(!view.markdown.includes("旧建议"));
+  assert.ok(!view.markdown.includes("Kina 建议"));
+  assert.ok(view.markdown.includes("用户的普通日记。"));
+  const at = view.markdown.indexOf("普通");
+  const updated = editPresentedJournal(view, [{from: at, to: at + 2, insert: "更新"}]);
+  assert.equal(updated, source.replace("普通", "更新"));
+});
+
 for (const newline of ["\n", "\r\n"]) {
   const summary = ["## 一天活动小总结", "> [!abstract] 今日轨迹", "> - 合成摘要 **保留**", "", ""].join(newline);
   const advice = ["> [!tip] Kina 建议", "> 合成建议", "", ""].join(newline);

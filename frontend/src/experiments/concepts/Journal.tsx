@@ -58,7 +58,7 @@ export function Journal(app: ConceptProps) {
       <div className="journal-concept">
         <BeliefsPage active={page === "beliefs"}/>
         <section className="journal-writing-page" hidden={page !== "journal"} aria-label="日记">
-          <div className={`journal-writing-layout${presentation.summaries.length ? " has-kina-summary" : ""}`}>
+          <div className="journal-writing-layout">
             <aside className="journal-context kw-card" aria-label="日记参考与大纲"><div className="journal-context-content">
               <JournalTimeline day={app.day} displayDay={app.displayDay} timezone={app.timezone} visible={page === "journal"} />
               {headings.length > 0 && <nav className="journal-outline" aria-label="日记标题大纲">
@@ -94,15 +94,6 @@ export function Journal(app: ConceptProps) {
                 </section>}
               </div>
             </article>
-            {presentation.summaries.length > 0 && <aside className="journal-kina-summary kw-card" aria-label="Kina 总结">
-              <div className="journal-kina-content">
-                <h2>Kina 总结</h2>
-                {presentation.summaries.map((summary, index) => <section key={`${summary.title}-${index}`} className="journal-kina-section">
-                  {summary.title !== "Kina 总结" && summary.title !== "Kina总结" && <h3>{summary.title}</h3>}
-                  <MarkdownDocumentEditor value={summary.markdown} onChange={() => {}} readOnly ariaLabel={`Kina 总结：${summary.title}`} placeholder="" />
-                </section>)}
-              </div>
-            </aside>}
           </div>
         </section>
 
