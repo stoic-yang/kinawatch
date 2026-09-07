@@ -106,8 +106,8 @@ export function Journal(app: ConceptProps) {
 
             <aside className="journal-day-sidebar grove-calendar kw-card" aria-label="当日日历与活动">
               <div className="journal-day-sidebar-content">
-                {isValidElement<{ independentSections?: boolean; afterCalendar?: ReactNode }>(app.calendar)
-                  ? cloneElement(app.calendar, { independentSections: true, afterCalendar: <HealthDiarySummary state={health} date={app.date}/> })
+                {isValidElement<{ independentSections?: boolean; healthSummary?: ReactNode }>(app.calendar)
+                  ? cloneElement(app.calendar, { independentSections: true, healthSummary: health.snapshot?.available ? <HealthDiarySummary state={health} date={app.date}/> : undefined })
                   : app.calendar}
               </div>
             </aside>

@@ -39,7 +39,7 @@ export function Sidebar({
   onShowAll,
   onCollapse,
   independentSections = false,
-  afterCalendar,
+  healthSummary,
 }: {
   date: string;
   today: string;
@@ -54,7 +54,7 @@ export function Sidebar({
   onShowAll: () => void;
   onCollapse: () => void;
   independentSections?: boolean;
-  afterCalendar?: ReactNode;
+  healthSummary?: ReactNode;
 }) {
   const sectionId = useId();
   const [compact, setCompact] = useState(() => window.matchMedia("(max-width: 820px)").matches);
@@ -215,7 +215,10 @@ export function Sidebar({
   return (
     <aside id="activity-sidebar" className={`sidebar${independentSections ? " sidebar-independent" : ""}`} aria-label="日期与活动导航">
       {independentSections ? section("calendar", "日历", calendar) : calendar}
-      {afterCalendar}
+      {healthSummary && (independentSections
+        ? section("health", "健康", healthSummary)
+        : <div className="sidebar-section"><div className="sidebar-label">健康</div>{healthSummary}</div>
+      )}
       {categories.length > 0 && (independentSections
         ? section("categories", "主要分类", categoryRows, showAll)
         : <div className="sidebar-section">

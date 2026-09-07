@@ -38,11 +38,10 @@ function DayBars({ days, selected, kind, onSelect }: {
 export function HealthDiarySummary({ state, date }: { state: PersonalHealthState; date: string }) {
   if (!state.snapshot?.available) return null;
   const day = state.snapshot.days.find(item => item.date === date);
-  return <section className="health-diary-summary" aria-label="当日健康摘要">
-    <h2 className="health-diary-heading">健康</h2>
-    <div><span>睡眠时长</span><strong>{sleepDuration(day?.sleep?.minutes)}</strong></div>
-    <div><span>步数</span><strong>{day?.steps ? numbers.format(day.steps.count) : "未记录"}</strong></div>
-  </section>;
+  return <dl className="health-diary-summary" aria-label="当日健康摘要">
+    <div><dt>睡眠时长</dt><dd>{sleepDuration(day?.sleep?.minutes)}</dd></div>
+    <div><dt>步数</dt><dd>{day?.steps ? numbers.format(day.steps.count) : "未记录"}</dd></div>
+  </dl>;
 }
 
 export function HealthPage({ active, app, state }: { active: boolean; app: ConceptProps; state: PersonalHealthState }) {

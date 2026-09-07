@@ -62,11 +62,10 @@
 .health-empty h2 { font-size: 20px; font-weight: 500; margin: 20px 0 0; }
 .health-empty p { color: var(--kw-ui-muted); line-height: 1.9; font-size: 13px; margin: 12px 0 24px; }
 .health-empty small { margin-top: 20px; color: var(--kw-ui-muted); font-size: 11px; }
-.health-diary-summary { padding: 20px 4px; margin: 20px 0 12px; border-block: 1px solid var(--kw-ui-separator); }
-.health-diary-heading { margin: 0; padding: 0 0 12px; color: var(--kw-ui-ink); font-size: 12px; font-weight: 600; line-height: 1.6; }
+.health-diary-summary { padding: 0 4px; margin: 0; }
 .health-diary-summary > div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 7px 0; }
-.health-diary-summary > div span { color: var(--kw-ui-muted); font-size: 12px; }
-.health-diary-summary strong { font-size: 14px; font-weight: 550; color: var(--kw-ui-ink); font-variant-numeric: tabular-nums; }
+.health-diary-summary dt { color: var(--kw-ui-muted); font-size: 12px; }
+.health-diary-summary dd { margin: 0; font-size: 14px; font-weight: 400; color: var(--kw-ui-ink); font-variant-numeric: tabular-nums; }
 @media (max-width: 1280px) { .health-page { padding-inline: 32px; } .health-overview, .health-detail-grid { gap: 32px; } .health-steps-card { padding-left: 24px; } .health-big-number { font-size: 38px; } }
 @media (max-width: 1100px) { .health-overview { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); } .health-detail-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) { .health-page { padding: 28px 20px; } .health-overview { grid-template-columns: minmax(0, 1fr); gap: 28px; } .health-heading { gap: 16px; align-items: start; margin-bottom: 32px; } .health-heading h1 { font-size: 24px; } .health-heading-actions { gap: 8px; width: 100%; } .health-steps-card { padding-left: 0; border-left: 0; } .health-big-number { font-size: 34px; } .health-bars-grid { column-gap: 4px; } .health-bar-value { font-size: 10px; } .health-detail-grid { gap: 28px; } }
