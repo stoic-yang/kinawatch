@@ -4,19 +4,17 @@
 .beliefs-heading p { margin: 10px 0 0; color: var(--kw-ui-muted); font-size: 13px; line-height: 1.7; }
 .beliefs-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .beliefs-page button { cursor: pointer; }
-.beliefs-actions button, .beliefs-error button, .beliefs-empty button { min-height: 34px; padding: 7px 13px; border: 1px solid var(--kw-ui-line); border-radius: var(--kw-ui-control-radius); background: var(--kw-ui-control); color: var(--kw-ui-ink); font: inherit; font-size: 12px; }
-.beliefs-actions button:hover:not(:disabled), .beliefs-error button:hover, .beliefs-empty button:hover { background: var(--kw-ui-control-hover); border-color: var(--kw-ui-line-strong); }
+.beliefs-actions button, .beliefs-error button { min-height: 34px; padding: 7px 13px; border: 1px solid var(--kw-ui-line); border-radius: var(--kw-ui-control-radius); background: var(--kw-ui-control); color: var(--kw-ui-ink); font: inherit; font-size: 12px; }
+.beliefs-actions button:hover:not(:disabled), .beliefs-error button:hover { background: var(--kw-ui-control-hover); border-color: var(--kw-ui-line-strong); }
 .beliefs-actions .beliefs-save { background: var(--kw-ui-accent); color: var(--kw-ui-on-accent); border-color: var(--kw-ui-accent); }
 .beliefs-actions .beliefs-save:hover:not(:disabled) { background: var(--kw-ui-accent-strong); }
 .beliefs-actions button:disabled { opacity: .5; cursor: default; }
-.beliefs-actions a { color: var(--kw-ui-muted); font-size: 12px; text-decoration: none; }
-.beliefs-actions a:hover { color: var(--kw-ui-accent); }
 .beliefs-layout { display: grid; gap: 28px; }
 .beliefs-layout.has-outline { grid-template-columns: minmax(0, 1fr) 180px; }
 .beliefs-paper { min-height: 580px; padding: 32px clamp(24px, 4vw, 60px) 48px; }
 .beliefs-paper-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-bottom: 20px; margin-bottom: 18px; border-bottom: 1px solid var(--kw-ui-line); color: var(--kw-ui-muted); font-size: 11px; }
 .beliefs-paper .markdown-document-editor { font-size: 15px; line-height: 1.95; }
-.beliefs-paper.is-editing .cm-content { min-height: 470px; }
+.beliefs-paper .markdown-document-editor:not([data-readonly="true"]) .cm-content { min-height: 470px; }
 .beliefs-paper .md-heading { color: var(--kw-ui-ink); }
 .beliefs-outline { align-self: start; position: sticky; top: 32px; padding-top: 26px; }
 .beliefs-outline h2 { margin: 0 0 14px; color: var(--kw-ui-muted); font-size: 11px; font-weight: 500; }
