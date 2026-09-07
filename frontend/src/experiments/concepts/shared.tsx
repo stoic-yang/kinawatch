@@ -149,17 +149,15 @@ export function ConceptFrame({concept, app, nav, active, onNavigate, children, f
       <div className="concept-brand-row"><div className="grove-identity"><Brand/>{concept !== "journal" && <p><span className="grove-seed"/>林间 <span>GROVE</span></p>}</div>{concept === "journal" ?
         <button className="concept-sidebar-toggle" type="button" onClick={toggleSidebar}
           aria-label={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"} title={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}
-          aria-expanded={!sidebarCollapsed} aria-controls="concept-sidebar-details">
+          aria-expanded={!sidebarCollapsed} aria-controls="concept-navigation">
           <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d={sidebarCollapsed ? "m13 9 3 3-3 3" : "m16 9-3 3 3 3"}/>
           </svg>
         </button> : <ConceptSwitcher current={concept}/>}</div>
-      <nav className="concept-navigation" aria-label="主要页面">{nav.map(item => <button key={item.id} type="button" aria-current={activeNavigation === item.id ? "page" : undefined}
+      <nav id="concept-navigation" className="concept-navigation" aria-label="主要页面">{nav.map(item => <button key={item.id} type="button" aria-current={activeNavigation === item.id ? "page" : undefined}
         aria-label={item.label} title={sidebarCollapsed ? item.label : undefined}
         onClick={() => item.id === "weekly-rhythm" ? showRhythm(true) : navigate(item.id)}><Icon kind={item.icon ?? "note"}/><span>{item.label}</span>{activeNavigation === item.id && <i/>}</button>)}</nav>
-      {concept === "journal" ? <section id="concept-sidebar-details" className="grove-calendar concept-calendar concept-sidebar-sections" aria-label="日历、分类与应用" hidden={sidebarCollapsed}>
-        {isValidElement<{ independentSections?: boolean }>(app.calendar) ? cloneElement(app.calendar, { independentSections: true }) : app.calendar}
-      </section> : <>
+      {concept !== "journal" && <>
         <button className="concept-calendar-toggle" type="button" aria-expanded={calendarOpen} onClick={() => setCalendarOpen(!calendarOpen)}><Icon kind="calendar"/>日历与分类<span>{calendarOpen ? "−" : "+"}</span></button>
         <section className={`grove-calendar concept-calendar ${calendarOpen ? "is-open" : ""}`} aria-label="日期与分类"><CalendarPanel>{app.calendar}</CalendarPanel></section>
       </>}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { cloneElement, isValidElement, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { fmtClock } from "../../lib/format";
 import { ConceptFrame, SessionNotes } from "./shared";
 import type { ConceptProps } from "./types";
@@ -94,6 +94,14 @@ export function Journal(app: ConceptProps) {
                 </section>}
               </div>
             </article>
+
+            <aside className="journal-day-sidebar grove-calendar kw-card" aria-label="当日日历与活动">
+              <div className="journal-day-sidebar-content">
+                {isValidElement<{ independentSections?: boolean }>(app.calendar)
+                  ? cloneElement(app.calendar, { independentSections: true })
+                  : app.calendar}
+              </div>
+            </aside>
           </div>
         </section>
 
@@ -111,7 +119,7 @@ export function Journal(app: ConceptProps) {
                 <section className="journal-workflow-segment" id={`journal-session-${index}`} key={`${app.date}-${session.start}`} aria-label={`${fmtClock(session.start, app.timezone)} 至 ${fmtClock(session.end, app.timezone)} 的活动`}>
                   <SessionNotes app={app} sessions={[session]} descriptionLayout="aside" />
                 </section>
-              )) : app.day?.timeline.some((block) => block.kind === "screen") ? <p className="empty-hint">当前筛选下没有活动，可以在侧栏恢复分类。</p> : app.day ? <SessionNotes app={app} sessions={[]} /> : null}
+              )) : app.day?.timeline.some((block) => block.kind === "screen") ? <p className="empty-hint">当前筛选下没有活动，可以在日记右侧恢复分类。</p> : app.day ? <SessionNotes app={app} sessions={[]} /> : null}
             </div>
           </div>
 

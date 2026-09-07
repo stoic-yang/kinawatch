@@ -76,7 +76,7 @@
   box-shadow: var(--kw-ui-surface-shadow);
 }
 
-.theme-grove.concept-page .journal-writing-layout > :is(.journal-context, .journal-kina-summary).kw-card { border-color: transparent; background: color-mix(in srgb, var(--kw-ui-surface-subtle) 70%, var(--kw-ui-canvas)); box-shadow: none; }
+.theme-grove.concept-page .journal-writing-layout > :is(.journal-context, .journal-kina-summary, .journal-day-sidebar).kw-card { border-color: transparent; background: color-mix(in srgb, var(--kw-ui-surface-subtle) 70%, var(--kw-ui-canvas)); box-shadow: none; }
 .theme-grove.concept-page .journal-reference-page > .concept-timeline.kw-card,
 .theme-grove.concept-page .journal-reference-desk.kw-card,
 .theme-grove.concept-page .journal-reference-heading { max-width: 1284px; }
