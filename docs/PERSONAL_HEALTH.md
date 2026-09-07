@@ -49,7 +49,10 @@ for comparison. Exclude the incomplete export day from the daily mean.
 
 The UI provides 7/30-day windows, a themed calendar picker, period navigation,
 missing-data markers, and an entry back to the selected day's journal. Controls
-share the title row; the five panels use compact spacing and chart heights.
+share the title row. The five data regions sit in a centered, open layout with
+no card outlines, more whitespace, subtle separators and bounded chart sizes.
+Sleep duration has the strongest visual emphasis. Short desktop windows use
+tighter spacing so all five regions remain visible at 1280 by 720.
 The on-page explanation footer has been removed; the calculation contract
 remains documented here. Narrow layouts wrap and scroll naturally.
 

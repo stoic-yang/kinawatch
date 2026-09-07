@@ -84,19 +84,19 @@ export function HealthPage({ active, app, state }: { active: boolean; app: Conce
     {error && <div className="health-error" role="alert">{error}<button type="button" onClick={state.reload} disabled={importing}>重新读取</button></div>}
     {loading && !snapshot && <p className="health-loading" role="status">正在读取健康记录…</p>}
     {importing && <p className="health-loading" role="status">正在整理睡眠和步数，请稍候。</p>}
-    {snapshot && !snapshot.available && <div className="health-empty kw-card"><Moon/><h2>从一晚睡眠开始</h2><p>导入 Apple 健康的 export.zip，回看睡眠时长、作息时间与每日步数。<br/>文件会在这台电脑上处理。</p>{importButton}<small>iPhone 健康 → 头像 → 导出所有健康数据</small></div>}
+    {snapshot && !snapshot.available && <div className="health-empty"><Moon/><h2>从一晚睡眠开始</h2><p>导入 Apple 健康的 export.zip，回看睡眠时长、作息时间与每日步数。<br/>文件会在这台电脑上处理。</p>{importButton}<small>iPhone 健康 → 头像 → 导出所有健康数据</small></div>}
     {snapshot?.available && <>
       <div className="health-overview">
-        <article className="health-sleep-card kw-card"><div className="health-card-kicker"><span><Moon/>睡眠时长</span><div className="health-card-actions"><span>{fullDate(app.date)}{sleep?.basis === "in_bed" ? " · 估算" : ""}</span><button type="button" className="health-journal-link" onClick={openJournal} aria-label="打开这天的日记" title="打开这天的日记"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="M5 15 15 5M6 5h9v9"/></svg></button></div></div>
+        <article className="health-sleep-card"><div className="health-card-kicker"><span><Moon/>睡眠时长</span><div className="health-card-actions"><span>{fullDate(app.date)}{sleep?.basis === "in_bed" ? " · 估算" : ""}</span><button type="button" className="health-journal-link" onClick={openJournal} aria-label="打开这天的日记" title="打开这天的日记"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="M5 15 15 5M6 5h9v9"/></svg></button></div></div>
           <div className="health-sleep-content"><div><strong className={`health-big-number ${!sleep ? "is-missing" : ""}`}>{sleepDuration(sleep?.minutes)}</strong><p>{sleep ? `主要时段 ${healthClock(sleep.start)} — ${healthClock(sleep.end)}` : "当天没有睡眠记录，留白也没关系。"}</p>
             {sleep && sleep.sessions.length > 1 && <p>另含 {sleep.sessions.length - 1} 段小睡 · {sleepDuration(sleep.minutes - sleep.main_minutes)}</p>}</div>
             <div className="health-period-average"><span>近 {span} 天平均</span><strong>{sleepDuration(average)}</strong><small>{recordedSleep} / {span} 天有记录</small></div></div>
         </article>
-        <article className="health-steps-card kw-card"><div className="health-card-kicker"><span>步数</span></div><strong className={`health-big-number ${!selected?.steps ? "is-missing" : ""}`}>{selected?.steps ? numbers.format(selected.steps.count) : "未记录"}</strong><p>近 {span} 天日均 <b>{stepAverage === null ? "未记录" : numbers.format(stepAverage)}</b> 步</p><div className="health-source-totals">{selected?.steps && Object.entries(selected.steps.sources).map(([source, count]) => <span key={source}>{source}<b>{numbers.format(count)}</b></span>)}</div></article>
+        <article className="health-steps-card"><div className="health-card-kicker"><span>步数</span></div><strong className={`health-big-number ${!selected?.steps ? "is-missing" : ""}`}>{selected?.steps ? numbers.format(selected.steps.count) : "未记录"}</strong><p>近 {span} 天日均 <b>{stepAverage === null ? "未记录" : numbers.format(stepAverage)}</b> 步</p><div className="health-source-totals">{selected?.steps && Object.entries(selected.steps.sources).map(([source, count]) => <span key={source}>{source}<b>{numbers.format(count)}</b></span>)}</div></article>
       </div>
-      <article className="health-duration-card kw-card"><header className="health-section-heading"><h2>睡眠时长</h2></header><DayBars days={days} selected={app.date} kind="sleep" onSelect={app.selectDate}/></article>
+      <article className="health-duration-card"><header className="health-section-heading"><h2>睡眠时长</h2></header><DayBars days={days} selected={app.date} kind="sleep" onSelect={app.selectDate}/></article>
       <div className="health-detail-grid">
-        <article className="health-timing-card kw-card"><header className="health-section-heading"><div><h2>作息时间</h2><p>最近 7 天的主要睡眠时段</p></div></header><div className="health-clock-axis"><span>18:00</span><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span></div>
+        <article className="health-timing-card"><header className="health-section-heading"><div><h2>作息时间</h2><p>最近 7 天的主要睡眠时段</p></div></header><div className="health-clock-axis"><span>18:00</span><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span></div>
           {timingDays.map(day => {
             const item = day.sleep;
             const left = item ? nightPosition(item.start) : 0;
@@ -104,7 +104,7 @@ export function HealthPage({ active, app, state }: { active: boolean; app: Conce
             return <button type="button" className="health-timing-row" key={day.date} aria-pressed={day.date === app.date} onClick={() => app.selectDate(day.date)} aria-label={`${fullDate(day.date)}，${item ? `${healthClock(item.start)}至${healthClock(item.end)}` : "未记录"}`}><span>{shortDate(day.date)}</span><span className="health-night-track">{item ? <span className="health-night-interval" style={{ left: `${left}%`, width: `${width}%` }}/>: <span className="health-no-night">未记录</span>}</span><small>{item ? `${healthClock(item.start)}–${healthClock(item.end)}` : "—"}</small></button>;
           })}
         </article>
-        <article className="health-steps-chart kw-card"><header className="health-section-heading"><h2>每日步数</h2><span>估算</span></header><DayBars days={days} selected={app.date} kind="steps" onSelect={app.selectDate}/></article>
+        <article className="health-steps-chart"><header className="health-section-heading"><h2>每日步数</h2><span>估算</span></header><DayBars days={days} selected={app.date} kind="steps" onSelect={app.selectDate}/></article>
       </div>
     </>}
   </section>;
