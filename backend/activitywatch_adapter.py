@@ -484,26 +484,37 @@ class ActivityWatchAdapter:
     ) -> tuple[list[dict[str, Any]], float]:
         if not events:
             return [], 0.0
-        rows = [(*_event_interval(event), event) for event in events]
-        boundaries = sorted({value for start, end, _ in rows for value in (start, end)})
+        starts: dict[datetime, list[int]] = defaultdict(list)
+        ends: dict[datetime, list[int]] = defaultdict(list)
+        boundaries: set[datetime] = set()
+        for index, event in enumerate(events):
+            start, end = _event_interval(event)
+            boundaries.update((start, end))
+            if end > start:
+                starts[start].append(index)
+                ends[end].append(index)
+        ordered_boundaries = sorted(boundaries)
+        active_indices: set[int] = set()
         adjusted: list[dict[str, Any]] = []
         overlap_seconds = 0.0
-        for start, end in zip(boundaries, boundaries[1:]):
+        for start, end in zip(ordered_boundaries, ordered_boundaries[1:]):
+            active_indices.update(starts.get(start, ()))
+            active_indices.difference_update(ends.get(start, ()))
             seconds = (end - start).total_seconds()
-            active = [event for left, right, event in rows if left < end and right > start]
-            if not active or seconds <= 0:
+            if not active_indices or seconds <= 0:
                 continue
-            if len(active) > 1:
+            if len(active_indices) > 1:
                 overlap_seconds += seconds
-            share = seconds / len(active)
-            for event in active:
+            share = seconds / len(active_indices)
+            # Preserve input order within overlaps, including identical events.
+            for index in sorted(active_indices):
                 adjusted.append(
                     {
-                        **event,
+                        **events[index],
                         "timestamp": start.isoformat(),
                         "duration_seconds": share,
                         "wall_end_timestamp": end.isoformat(),
-                        "overlap_adjusted": len(active) > 1,
+                        "overlap_adjusted": len(active_indices) > 1,
                     }
                 )
         return adjusted, overlap_seconds
@@ -646,13 +657,37 @@ class ActivityWatchAdapter:
         }
 
     @classmethod
-    def _aggregate_categories(
+    def _classify_events(
         cls,
         events: list[dict[str, Any]],
         classification: dict[str, Any],
+    ) -> list[tuple[dict[str, Any], dict[str, str] | None]]:
+        # Only reuse matches within this calculation, so changed rules or
+        # manual overrides never inherit a match from a previous request.
+        fields = (
+            "app", "title", "url", "project", "file", "language", "status",
+            "manual_category", "manual_category_label",
+        )
+        matches: dict[tuple[tuple[str, bool], ...], dict[str, str] | None] = {}
+        classified = []
+        for event in events:
+            # Rules use both str(value) and str(value or "") for matching.
+            key = tuple(
+                (str(event.get(field)), bool(event.get(field))) for field in fields
+            )
+            if key not in matches:
+                matches[key] = cls._classify(event, classification)
+            classified.append((event, matches[key]))
+        return classified
+
+    @classmethod
+    def _aggregate_categories(
+        cls,
+        classified: list[tuple[dict[str, Any], dict[str, str] | None]],
+        classification: dict[str, Any],
         limit: int,
     ) -> dict[str, Any]:
-        total = sum(float(event["duration_seconds"]) for event in events)
+        total = sum(float(event["duration_seconds"]) for event, _ in classified)
         category_events: dict[str, list[dict[str, Any]]] = defaultdict(list)
         rule_stats: dict[str, dict[str, dict[str, Any]]] = defaultdict(
             lambda: defaultdict(
@@ -660,8 +695,7 @@ class ActivityWatchAdapter:
             )
         )
         uncategorized: list[dict[str, Any]] = []
-        for event in events:
-            match = cls._classify(event, classification)
+        for event, match in classified:
             if match is None:
                 uncategorized.append(event)
                 continue
@@ -796,9 +830,9 @@ class ActivityWatchAdapter:
         passive_media_seconds = max(0.0, wall_seconds - interactive_wall_seconds)
 
         categories_meta = classification.get("categories", {})
+        classified = self._classify_events(events, classification)
         annotated = []
-        for event in events:
-            match = self._classify(event, classification)
+        for event, match in classified:
             if match is None:
                 annotated.append(
                     {
@@ -821,7 +855,7 @@ class ActivityWatchAdapter:
                         "classification_rule": match["rule"],
                     }
                 )
-        aggregates = self._aggregate_categories(events, classification, 20)
+        aggregates = self._aggregate_categories(classified, classification, 20)
         manual_conflicts = sum(
             bool(event.get("manual_edit_conflict")) for event in events
         )

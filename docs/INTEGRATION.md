@@ -47,6 +47,14 @@ contract before caching. Cached days still bypass ActivityWatch completely.
 This keeps the statistics identical to individual day reads while avoiding two
 REST round trips for every cold day.
 
+Cold calculations share each event's category match between the annotated
+timeline and category totals. Repeated matching contexts reuse a result only
+within that day's calculation, including every rule field and manual override;
+there is no persistent classification cache to invalidate. Overlap accounting
+tracks interval starts and ends instead of rescanning every event at every
+boundary, preserving equal sharing, split boundaries and original event order.
+These optimizations leave the response and day-cache schema unchanged.
+
 ## Category rules
 
 `activitywatch.categories_file` points to a JSON object with `categories` and
