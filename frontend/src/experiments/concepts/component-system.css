@@ -32,6 +32,7 @@
   --kw-ui-group-radius: 8px;
   --kw-ui-pill-radius: 999px;
   --kw-ui-control-height: 32px;
+  --kw-ui-sidebar-width: 224px;
   --kw-ui-separator: color-mix(in srgb, var(--kw-ui-line) 80%, transparent);
   --kw-ui-surface-shadow: 0 1px 2px light-dark(#202b3c03, #00000014);
   --kw-ui-control-shadow: 0 1px 3px light-dark(#202b3c12, #00000030);
@@ -280,7 +281,7 @@
 }
 
 /* The active shell owns spacing and type; feature files own their layout. */
-.theme-grove.concept-journal { grid-template-columns: 204px minmax(0, 1fr); font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+.theme-grove.concept-journal { grid-template-columns: var(--kw-ui-sidebar-width) minmax(0, 1fr); font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
 .theme-grove.concept-journal :is(.journal-reference-page, .concept-rhythm-workspace) { width: 100%; max-width: 1348px; margin-inline: auto; padding: 28px 32px 48px; }
 .theme-grove.concept-journal .kw-rhythm { max-width: 1284px; }
 .theme-grove.concept-journal :is(.kw-rhythm-card-header, .kw-annual-header) { padding: 16px 18px; gap: 12px 20px; }
