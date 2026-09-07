@@ -116,7 +116,7 @@ export function JournalTimeline({ day, displayDay, timezone, visible }: { day: D
 
   return <section className="journal-mini-timeline" aria-label="当天活动时间线">
     <header>
-      <h2>工作流</h2>
+      <h2>时间线</h2>
       <span className="journal-mini-total" aria-label="全天屏幕时间">{displayDay ? fmtDuration(model.groups.reduce((total, group) => total + group.seconds, 0)) : "—"}<span className="journal-mini-total-caption">屏幕时间</span></span>
     </header>
     <div ref={surface} className={`journal-vertical-timeline${zoomed ? " is-zoomed" : ""}${dragging ? " is-dragging" : ""}`} role="group" tabIndex={model.bars.length ? 0 : undefined}
