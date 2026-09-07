@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import mimetypes
+import threading
 import time
 from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -22,6 +23,7 @@ from .config import DashboardSettings, load_settings
 from .day_aggregator import DayAggregator
 from .journal_repository import JournalRepository
 from .paths import PROJECT_ROOT
+from .personal_health import HealthImportConflict, MAX_IMPORT_BYTES, PersonalHealthStore
 from .workflow_writer import (
     WorkflowWriteConflict,
     WorkflowWriteDisabled,
@@ -60,6 +62,8 @@ class DashboardApplication:
         activity_editor: ActivityEditor | Any | None = None,
     ):
         self.settings = settings
+        self._personal_health: PersonalHealthStore | None = None
+        self._personal_health_lock = threading.Lock()
         self.journals = journals or JournalRepository(settings)
         edit_store = (
             getattr(activitywatch, "activity_edits", None)
@@ -83,6 +87,14 @@ class DashboardApplication:
             self.activitywatch,
             edit_store,
         )
+
+    @property
+    def personal_health(self) -> PersonalHealthStore:
+        # Resolve health-specific settings only when this endpoint is used.
+        with self._personal_health_lock:
+            if self._personal_health is None:
+                self._personal_health = PersonalHealthStore(self.settings.timezone_name())
+            return self._personal_health
 
     def health(self) -> dict[str, Any]:
         journal_health = self.journals.health()
@@ -437,6 +449,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         try:
             if parsed.path == "/api/health":
                 payload = self.server.application.health()
+            elif parsed.path == "/api/personal-health":
+                payload = self.server.application.personal_health.read()
             elif parsed.path == "/api/settings":
                 payload = self.server.application.runtime_settings()
             elif parsed.path == "/api/day":
@@ -473,6 +487,36 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self._write_json({"ok": False, "error": str(exc)}, status=409)
         except Exception as exc:
             self._write_json({"ok": False, "error": str(exc)}, status=500)
+
+    def do_POST(self) -> None:
+        self.server.touch()
+        if not self._validate_request_authority():
+            return
+        if urlparse(self.path).path != "/api/personal-health/import":
+            self._write_json({"ok": False, "error": "not found"}, status=404)
+            return
+        try:
+            if self.headers.get_content_type() != "application/zip":
+                raise ValueError("请选择 Apple 健康导出的 ZIP 文件。")
+            size = int(self.headers.get("Content-Length", "0"))
+            if not 0 < size <= MAX_IMPORT_BYTES:
+                raise ValueError("请选择不超过 64 MB 的健康导出 ZIP。")
+            if self.headers.get("Transfer-Encoding"):
+                raise ValueError("不支持此上传方式。")
+            self.connection.settimeout(60)
+            body = self.rfile.read(size)
+            if len(body) != size:
+                raise ValueError("文件上传未完成，请重试。")
+            result = self.server.application.personal_health.import_archive(
+                body, self.headers.get("If-Match", ""),
+            )
+            self._write_json(result)
+        except HealthImportConflict as exc:
+            self._write_json({"ok": False, "error": str(exc)}, status=409)
+        except (ValueError, TimeoutError) as exc:
+            self._write_json({"ok": False, "error": str(exc)}, status=400)
+        except Exception:
+            self._write_json({"ok": False, "error": "健康数据导入失败，原有记录已保留。"}, status=500)
 
     def do_PUT(self) -> None:
         self.server.touch()

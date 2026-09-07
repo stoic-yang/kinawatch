@@ -48,6 +48,10 @@ needed.
 - The beliefs endpoint may update only the body of `journal.beliefs_note_path`
   (default `Review/我的人生信念.md`), preserving properties and requiring an
   explicit save. Reading never creates or imports a note.
+- Personal health imports require an explicit ZIP selection and matching
+  snapshot revision. Retain only sleep and steps summaries under the platform
+  user-data directory; never retain the archive, import other health metrics,
+  or write health data to journals automatically. See `docs/PERSONAL_HEALTH.md`.
 - A weekly-note write may update only the canonical `自由记录` H2 field in
   the fixed `Review/Weekly/YYYY-Www.md` note. Preserve frontmatter, headings,
   legacy sections, unknown sections, and every non-target field.

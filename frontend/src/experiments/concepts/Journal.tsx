@@ -8,17 +8,21 @@ import { extractJournalHeadings, type JournalHeading } from "./journalOutline";
 import { JournalTimeline } from "./JournalTimeline";
 import { presentJournal, updateJournalPresentation, type JournalPresentation } from "./journalPresentation";
 import { BeliefsPage } from "./BeliefsPage";
+import { HealthDiarySummary, HealthPage } from "./HealthPage";
+import { usePersonalHealth } from "./personalHealth";
 import "./journal.css";
 
 const JOURNAL_NAV = [
   { id: "journal", label: "日记", icon: "note" },
   { id: "reference", label: "时间线", icon: "timeline" },
   { id: "weekly-rhythm", label: "节律", icon: "rhythm" },
+  { id: "health", label: "健康", icon: "health" },
   { id: "beliefs", label: "信念", icon: "beliefs" },
 ];
 
 export function Journal(app: ConceptProps) {
   const [page, setPage] = useState("journal");
+  const health = usePersonalHealth(page === "health" || page === "journal");
   const session = useMemo(() => journalDocumentSession(app.date), [app.date]);
   const documentState = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const editor = useRef<MarkdownDocumentEditorHandle>(null);
@@ -57,6 +61,7 @@ export function Journal(app: ConceptProps) {
     <ConceptFrame concept="journal" app={app} nav={JOURNAL_NAV} active={page} onNavigate={setPage} timelinePageId="reference">{timeline => (
       <div className="journal-concept">
         <BeliefsPage active={page === "beliefs"}/>
+        <HealthPage active={page === "health"} app={app} state={health}/>
         <section className="journal-writing-page" hidden={page !== "journal"} aria-label="日记">
           <div className="journal-writing-layout">
             <aside className="journal-context kw-card" aria-label="日记参考与大纲"><div className="journal-context-content">
@@ -97,6 +102,7 @@ export function Journal(app: ConceptProps) {
 
             <aside className="journal-day-sidebar grove-calendar kw-card" aria-label="当日日历与活动">
               <div className="journal-day-sidebar-content">
+                <HealthDiarySummary state={health} date={app.date}/>
                 {isValidElement<{ independentSections?: boolean }>(app.calendar)
                   ? cloneElement(app.calendar, { independentSections: true })
                   : app.calendar}
