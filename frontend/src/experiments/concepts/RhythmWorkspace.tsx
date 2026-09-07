@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { fetchRange, type DayMode, type RangeDay } from "../../api";
 import { fmtDuration, shiftDate, startOfISOWeek, weekdayShort } from "../../lib/format";
+import { ViewportTooltip, type ViewportTooltipAnchor } from "../../components/ViewportTooltip";
 import { AnnualRhythm } from "./AnnualRhythm";
 import "./rhythm-workspace.css";
 
@@ -33,7 +34,6 @@ export type RhythmWorkspaceProps = {
 };
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index);
-const AXIS_HOURS = Array.from({ length: 9 }, (_, index) => index * 3);
 const STATE_LABELS: Record<RowState, string> = {
   loading: "读取中",
   error: "读取失败",
@@ -99,7 +99,28 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
   // Changing the selection never changes this request or its seven-day frame.
   const dates = useMemo(() => HOURS.slice(0, 7).map((index) => shiftDate(rangeStart, index)), [rangeStart]);
   const startMinutes = clockMinutes(dayStartClock);
-  const midnightPercent = startMinutes === 0 ? null : ((1440 - startMinutes) / 1440) * 100;
+  const hours = useMemo(() => HOURS.map(index => ({
+    index,
+    from: hourClock(startMinutes, index),
+    to: hourClock(startMinutes, index + 1),
+    startsNextDay: index > 0 && hourClock(startMinutes, index).nextDay && !hourClock(startMinutes, index - 1).nextDay,
+  })), [startMinutes]);
+  const [tooltip, setTooltip] = useState<{ key: string; date: string; hour: number; anchor: ViewportTooltipAnchor } | null>(null);
+  const tooltipId = useId();
+  const pendingInspection = useRef<number | null>(null);
+  const hideTooltip = useCallback(() => setTooltip(null), []);
+  const dismissTooltip = useCallback(() => {
+    if (pendingInspection.current !== null) cancelAnimationFrame(pendingInspection.current);
+    pendingInspection.current = null;
+    setTooltip(null);
+  }, []);
+  useEffect(() => { dismissTooltip(); return dismissTooltip; }, [dismissTooltip, requestKey, visible]);
+  function inspectHour(date: string, hour: number, element: Element) {
+    if (pendingInspection.current !== null) cancelAnimationFrame(pendingInspection.current);
+    pendingInspection.current = null;
+    const bounds = element.getBoundingClientRect();
+    setTooltip({ key: requestKey, date, hour, anchor: { x: bounds.x + bounds.width / 2, top: bounds.top, bottom: bounds.bottom } });
+  }
 
   useEffect(() => {
     if (!visible) return;
@@ -155,6 +176,11 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
   const partialDays = rows.filter((row) => row.state === "partial").length;
   const loading = !current || current.status === "loading";
 
+  const activeTooltip = visible && tooltip?.key === requestKey ? tooltip : null;
+  const tooltipRow = activeTooltip ? rows.find(row => row.date === activeTooltip.date) : null;
+  const tooltipHour = activeTooltip ? hours[activeTooltip.hour] : null;
+  const tooltipSeconds = tooltipRow?.hours?.[activeTooltip?.hour ?? 0];
+
   return <section className="kw-rhythm" hidden={!visible} aria-label={variant === "overview" ? "活动节律" : "七日活动节律"} data-variant={variant} data-range={rangeMode} data-request-key={requestKey} data-status={current?.status ?? "loading"}>
     <div className="kw-rhythm-board kw-card">
       <header className="kw-rhythm-card-header">
@@ -173,29 +199,44 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
       {current?.status === "error" && <div className="kw-rhythm-notice is-error" role="alert"><span>暂时无法读取节律。{current.message}</span><button type="button" onClick={() => setRetry((value) => value + 1)}>重试</button></div>}
       {current?.status === "ready" && (missingDays > 0 || partialDays > 0) && <p className="kw-rhythm-notice" role="status">{[missingDays ? `${missingDays} 天未返回数据` : "", partialDays ? `${partialDays} 天数据不完整` : ""].filter(Boolean).join("，")}；暂不展示完整合计。</p>}
       {variant !== "overview" && <p className="kw-rhythm-scroll-hint">左右滑动查看完整 24 小时 <span aria-hidden="true">↔</span></p>}
-      <div className="kw-rhythm-scroller" tabIndex={0} aria-label="七天小时活动矩阵，可左右滚动" aria-busy={loading}>
+      <div className="kw-rhythm-scroller" tabIndex={0} aria-label="七天小时活动矩阵，每列一小时，可左右滚动" aria-busy={loading} onMouseLeave={dismissTooltip}>
         <div className="kw-rhythm-matrix">
-          <div className="kw-rhythm-axis-row" aria-hidden="true"><span className="kw-rhythm-axis-date">日期</span><span className="kw-rhythm-axis-total">活动时间</span><div className="kw-rhythm-hour-axis">{AXIS_HOURS.map((hour) => {
-            const tick = hourClock(startMinutes, hour);
-            return <span className={`kw-rhythm-axis-tick ${hour === 0 ? "is-first" : hour === 24 ? "is-last" : ""}`} key={hour} style={{ left: `${(hour / 24) * 100}%` }}><time>{tick.clock}</time>{tick.nextDay && <small>次日</small>}</span>;
-          })}</div></div>
+          <div className="kw-rhythm-axis-row" aria-hidden="true"><span className="kw-rhythm-axis-date">日期</span><span className="kw-rhythm-axis-total">活动时间</span><div className="kw-rhythm-hour-axis">{hours.map(hour =>
+            <span className="kw-rhythm-axis-tick" key={hour.index} data-hour={hour.index} data-next-day={hour.startsNextDay || undefined} data-highlighted={activeTooltip?.hour === hour.index || undefined}>
+              <time data-clock={hour.from.clock}>{hour.from.clock.endsWith(":00") ? hour.from.clock.slice(0, 2) : hour.from.clock}</time>{hour.startsNextDay && <small>次日</small>}
+            </span>
+          )}</div></div>
           {rows.map((row) => {
             const selected = row.date === selectedDate;
             const today = row.date === currentDate;
             const label = distributionLabel(row);
             const ratio = row.seconds === null || peakSeconds === 0 ? null : Math.min(100, (row.seconds / peakSeconds) * 100);
             const note = `${longDate(row.date)}，星期${weekdayShort(row.date)}${today ? "，今天" : ""}${selected ? "，当前选中" : ""}，${STATE_LABELS[row.state]}${row.seconds === null ? "" : `，${row.state === "partial" ? "已记录" : ""}活动时间${fmtDuration(row.seconds)}`}${row.hasNote ? "，有笔记" : ""}${row.distribution === "not-provided" ? "，未提供小时分布" : ""}`;
-            return <button type="button" className="kw-rhythm-row" key={row.date} data-date={row.date} data-state={row.state} data-distribution={row.distribution} data-today={today} data-selected={selected} aria-pressed={selected} aria-label={note} disabled={row.state === "future"} onClick={() => onSelect(row.date)} title={row.issues.length ? row.issues.join("\n") : undefined}>
+            return <button type="button" className="kw-rhythm-row" key={row.date} data-date={row.date} data-state={row.state} data-distribution={row.distribution} data-today={today} data-selected={selected} aria-pressed={selected} aria-label={note} disabled={row.state === "future"} onClick={() => onSelect(row.date)}
+              aria-describedby={activeTooltip?.date === row.date ? tooltipId : undefined} aria-keyshortcuts="ArrowLeft ArrowRight Home End"
+              onFocus={event => { const cell = event.currentTarget.querySelector('[data-hour="0"]'); if (cell) inspectHour(row.date, 0, cell); }}
+              onBlur={dismissTooltip} onMouseLeave={dismissTooltip}
+              onKeyDown={event => {
+                if (event.key === "Escape") { event.preventDefault(); dismissTooltip(); return; }
+                if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+                event.preventDefault();
+                const currentHour = activeTooltip?.date === row.date ? activeTooltip.hour : 0;
+                const next = event.key === "Home" ? 0 : event.key === "End" ? 23 : Math.max(0, Math.min(23, currentHour + (event.key === "ArrowRight" ? 1 : -1)));
+                const cell = event.currentTarget.querySelector(`[data-hour="${next}"]`);
+                if (cell) { cell.scrollIntoView({ block: "nearest", inline: "nearest" }); if (pendingInspection.current !== null) cancelAnimationFrame(pendingInspection.current); pendingInspection.current = requestAnimationFrame(() => inspectHour(row.date, next, cell)); }
+              }}>
               <span className="kw-rhythm-date-cell"><span className="kw-rhythm-date-line"><time dateTime={row.date}>{shortDate(row.date)}</time>{row.hasNote && <NoteMark />}</span><span className="kw-rhythm-day-meta"><span className={today ? "kw-rhythm-today" : undefined}>{today ? "今天" : `周${weekdayShort(row.date)}`}</span>{row.state === "partial" ? <em>不完整</em> : selected ? <b>已选</b> : null}</span></span>
               <span className="kw-rhythm-total-cell"><strong data-seconds={row.seconds ?? undefined}>{row.seconds === null ? "—" : fmtDuration(row.seconds)}</strong>{ratio === null ? <small>{STATE_LABELS[row.state]}</small> : row.state === "partial" ? <small className="kw-rhythm-partial-total">仅已记录</small> : <span className="kw-rhythm-day-bar" aria-hidden="true"><i style={{ width: `${ratio}%` }} /></span>}</span>
               <span className={`kw-rhythm-hours ${row.hours ? "" : "is-unavailable"}`}>
-                <span className="kw-rhythm-cells" aria-hidden="true">{HOURS.map((hour) => {
-                  const seconds = row.hours?.[hour];
-                  const from = hourClock(startMinutes, hour);
-                  const to = hourClock(startMinutes, hour + 1);
-                  return <span className="kw-rhythm-cell" key={hour} data-hour={hour} data-distribution={row.distribution} data-seconds={seconds} style={seconds === undefined ? undefined : { background: heatColor(seconds) }} title={seconds === undefined ? label ?? "未提供分布" : `${from.nextDay ? "次日 " : ""}${from.clock}–${to.nextDay ? "次日 " : ""}${to.clock} · 活动时间 ${fmtDuration(seconds)}`} />;
+                <span className="kw-rhythm-cells" aria-hidden="true">{hours.map(hour => {
+                  const seconds = row.hours?.[hour.index];
+                  return <span className="kw-rhythm-cell" key={hour.index} data-hour={hour.index} data-distribution={row.distribution} data-seconds={seconds}
+                    data-next-day={hour.startsNextDay || undefined} data-highlighted={activeTooltip?.hour === hour.index || undefined}
+                    data-inspected={activeTooltip?.date === row.date && activeTooltip.hour === hour.index || undefined}
+                    onMouseEnter={event => inspectHour(row.date, hour.index, event.currentTarget)}>
+                    <span className="kw-rhythm-cell-fill" style={seconds === undefined ? undefined : { background: heatColor(seconds) }} />
+                  </span>;
                 })}</span>
-                {midnightPercent !== null && <i className="kw-rhythm-midnight" style={{ left: `${midnightPercent}%` } as CSSProperties} aria-hidden="true" />}
                 {label && <span className="kw-rhythm-distribution-label">{label}</span>}
               </span>
             </button>;
@@ -203,6 +244,12 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
         </div>
       </div>
     </div>
+    {activeTooltip && tooltipRow && tooltipHour && <ViewportTooltip id={tooltipId} className="kw-rhythm-tooltip" anchor={activeTooltip.anchor} side="above" onDismiss={hideTooltip}>
+      <time dateTime={tooltipRow.date}>{longDate(tooltipRow.date)}</time>
+      <strong>{tooltipHour.from.nextDay ? "次日 " : ""}{tooltipHour.from.clock}–{tooltipHour.to.nextDay && !tooltipHour.from.nextDay ? "次日 " : ""}{tooltipHour.to.clock}</strong>
+      <span>{tooltipSeconds === undefined ? distributionLabel(tooltipRow) : `活动时间 ${fmtDuration(tooltipSeconds)}`}</span>
+      {tooltipRow.issues.length > 0 && <small>{tooltipRow.issues.join(" · ")}</small>}
+    </ViewportTooltip>}
     {variant === "overview" && <AnnualRhythm currentDate={currentDate} selectedDate={selectedDate} dayMode={dayMode} visible={visible} onSelect={onSelect} />}
   </section>;
 }

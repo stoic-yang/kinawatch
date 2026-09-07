@@ -288,13 +288,12 @@
 .theme-grove.concept-journal :is(.kw-rhythm-card-header, .kw-annual-header) { padding: 16px 18px; gap: 12px 20px; }
 .theme-grove.concept-journal :is(.kw-rhythm-card-header h1, .kw-annual-heading h2, .journal-timeline-heading h2, .journal-reference-context h2) { margin-block: 0; font-size: 15px; font-weight: 600; letter-spacing: -.01em; line-height: 1.5; }
 .theme-grove.concept-journal :is(.kw-rhythm-range-title, .kw-annual-heading p) { margin-top: 3px; font-size: 11px; }
-.theme-grove.concept-journal .kw-rhythm-axis-tick { font-size: 10px; }
+.theme-grove.concept-journal .kw-rhythm-axis-tick { font-size: 11px; }
 .theme-grove.concept-journal .kw-rhythm-axis-tick small { font-size: 9px; }
 .theme-grove.concept-journal .kw-rhythm-date-cell { gap: 3px; }
 .theme-grove.concept-journal .kw-rhythm-day-meta { font-size: 10px; }
 .theme-grove.concept-journal .kw-rhythm-day-meta > :is(b, em) { font-size: 10px; }
 .theme-grove.concept-journal .kw-rhythm-total-cell > strong { font-size: 14px; }
-.theme-grove.concept-journal .kw-rhythm-cell { border-color: transparent; border-radius: 3px; }
 .theme-grove.concept-journal .kw-annual { margin-top: 16px; }
 .theme-grove.concept-journal .journal-workflow .session-time { font-size: 14px; }
 .theme-grove.concept-journal .journal-workflow .session { gap: 18px; }
