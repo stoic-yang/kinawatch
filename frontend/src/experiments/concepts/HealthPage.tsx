@@ -73,7 +73,7 @@ export function HealthPage({ active, app, state }: { active: boolean; app: Conce
       const file = event.target.files?.[0]; event.target.value = "";
       if (file) void state.importFile(file);
     }}/>
-    <header className="health-heading"><div><h1>健康</h1><p>留意睡眠，也留意每天的活动。</p></div>{importButton}</header>
+    <header className="health-heading"><h1>健康</h1>{importButton}</header>
     {error && <div className="health-error" role="alert">{error}<button type="button" onClick={state.reload} disabled={importing}>重新读取</button></div>}
     {loading && !snapshot && <p className="health-loading" role="status">正在读取健康记录…</p>}
     {importing && <p className="health-loading" role="status">正在整理睡眠和步数，请稍候。</p>}
@@ -84,15 +84,14 @@ export function HealthPage({ active, app, state }: { active: boolean; app: Conce
         <div className="health-date-controls"><button type="button" aria-label="上一个健康周期" onClick={() => goPeriod(-1)}>‹</button><span>{shortDate(days[0].date)} — {shortDate(end)}</span><button type="button" aria-label="下一个健康周期" disabled={end >= app.currentDate} onClick={() => goPeriod(1)}>›</button><input aria-label="健康记录日期" type="date" max={app.currentDate} value={app.date} onChange={event => { if (/^\d{4}-\d{2}-\d{2}$/.test(event.target.value) && event.target.value <= app.currentDate) { setEnd(event.target.value); app.selectDate(event.target.value); } }}/></div>
       </div>
       <div className="health-overview">
-        <article className="health-sleep-card kw-card"><div className="health-card-kicker"><span><Moon/>睡眠时长</span><span>{fullDate(app.date)}{sleep?.basis === "in_bed" ? " · 估算" : ""}</span></div>
+        <article className="health-sleep-card kw-card"><div className="health-card-kicker"><span><Moon/>睡眠时长</span><div className="health-card-actions"><span>{fullDate(app.date)}{sleep?.basis === "in_bed" ? " · 估算" : ""}</span><button type="button" className="health-journal-link" onClick={openJournal} aria-label="打开这天的日记" title="打开这天的日记"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="M5 15 15 5M6 5h9v9"/></svg></button></div></div>
           <div className="health-sleep-content"><div><strong className={`health-big-number ${!sleep ? "is-missing" : ""}`}>{sleepDuration(sleep?.minutes)}</strong><p>{sleep ? `主要时段 ${healthClock(sleep.start)} — ${healthClock(sleep.end)}` : "当天没有睡眠记录，留白也没关系。"}</p>
             {sleep && sleep.sessions.length > 1 && <p>另含 {sleep.sessions.length - 1} 段小睡 · {sleepDuration(sleep.minutes - sleep.main_minutes)}</p>}</div>
             <div className="health-period-average"><span>近 {span} 天平均</span><strong>{sleepDuration(average)}</strong><small>{recordedSleep} / {span} 天有记录</small></div></div>
-          <footer>{sleep ? `${sleep.source} · ${sleep.basis === "in_bed" ? "按卧床区间估算" : "按睡眠记录汇总"}，包含小睡。` : "未记录的日期不计入平均值。"}<button type="button" onClick={openJournal}>打开这天的日记 <span aria-hidden="true">↗</span></button></footer>
         </article>
-        <article className="health-steps-card kw-card"><div className="health-card-kicker"><span>步数</span><span>估算{app.date === rangeEnd ? " · 截至导出" : ""}</span></div><strong className={`health-big-number ${!selected?.steps ? "is-missing" : ""}`}>{selected?.steps ? numbers.format(selected.steps.count) : "未记录"}</strong><p>近 {span} 天日均 <b>{stepAverage === null ? "未记录" : numbers.format(stepAverage)}</b> 步</p><div className="health-source-totals">{selected?.steps && Object.entries(selected.steps.sources).map(([source, count]) => <span key={source}>{source}<b>{numbers.format(count)}</b></span>)}</div></article>
+        <article className="health-steps-card kw-card"><div className="health-card-kicker"><span>步数</span></div><strong className={`health-big-number ${!selected?.steps ? "is-missing" : ""}`}>{selected?.steps ? numbers.format(selected.steps.count) : "未记录"}</strong><p>近 {span} 天日均 <b>{stepAverage === null ? "未记录" : numbers.format(stepAverage)}</b> 步</p><div className="health-source-totals">{selected?.steps && Object.entries(selected.steps.sources).map(([source, count]) => <span key={source}>{source}<b>{numbers.format(count)}</b></span>)}</div></article>
       </div>
-      <article className="health-duration-card kw-card"><header className="health-section-heading"><div><h2>睡眠时长</h2><p>点击一天，查看当日记录。</p></div><span>{recordedSleep} 天有记录</span></header><DayBars days={days} selected={app.date} kind="sleep" onSelect={app.selectDate}/><footer className="health-chart-footnote">横线表示未记录；记录按结束日期归属。</footer></article>
+      <article className="health-duration-card kw-card"><header className="health-section-heading"><h2>睡眠时长</h2></header><DayBars days={days} selected={app.date} kind="sleep" onSelect={app.selectDate}/></article>
       <div className="health-detail-grid">
         <article className="health-timing-card kw-card"><header className="health-section-heading"><div><h2>作息时间</h2><p>最近 7 天的主要睡眠时段</p></div></header><div className="health-clock-axis"><span>18:00</span><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span></div>
           {timingDays.map(day => {
@@ -102,9 +101,9 @@ export function HealthPage({ active, app, state }: { active: boolean; app: Conce
             return <button type="button" className="health-timing-row" key={day.date} aria-pressed={day.date === app.date} onClick={() => app.selectDate(day.date)} aria-label={`${fullDate(day.date)}，${item ? `${healthClock(item.start)}至${healthClock(item.end)}` : "未记录"}`}><span>{shortDate(day.date)}</span><span className="health-night-track">{item ? <span className="health-night-interval" style={{ left: `${left}%`, width: `${width}%` }}/>: <span className="health-no-night">未记录</span>}</span><small>{item ? `${healthClock(item.start)}–${healthClock(item.end)}` : "—"}</small></button>;
           })}
         </article>
-        <article className="health-steps-chart kw-card"><header className="health-section-heading"><div><h2>每日步数</h2><p>手机和手环，补上不同的活动时段。</p></div><span>估算</span></header><DayBars days={days} selected={app.date} kind="steps" onSelect={app.selectDate}/></article>
+        <article className="health-steps-chart kw-card"><header className="health-section-heading"><h2>每日步数</h2><span>估算</span></header><DayBars days={days} selected={app.date} kind="steps" onSelect={app.selectDate}/></article>
       </div>
-      <details className="health-data-notes"><summary>数据来源与统计方式<span>导出于 {snapshot.exported_at?.slice(0, 16).replace("T", " ")}</span></summary><div><p>睡眠：优先采用实际睡眠记录；没有实际睡眠记录时使用卧床区间估算。小睡计入总时长，重叠区间只计算一次，空白日期不视为零小时。</p><p>步数：每个自然小时取各来源较高值，再汇总到当天。跨小时记录按时长分配；不同设备在同一小时记录了不重叠的活动时，仍可能低估。此数值不保证与 Apple 健康完全一致。导出当天尚未结束，不计入步数日均。</p><p>当前数据来自一次文件导入，尚未自动同步。更新时请选择新的完整导出；只保留睡眠和步数的每日摘要，心率等其他数据不保存。</p>{(snapshot.record_counts?.skipped ?? 0) > 0 && <p>{snapshot.record_counts?.skipped} 条记录因时间或格式无效未纳入统计。</p>}</div></details>
+      <details className="health-data-notes"><summary>数据来源与统计方式</summary><div><p>睡眠：优先采用实际睡眠记录；没有实际睡眠记录时使用卧床区间估算。小睡计入总时长，重叠区间只计算一次，空白日期不视为零小时。</p><p>步数：每个自然小时取各来源较高值，再汇总到当天。跨小时记录按时长分配；不同设备在同一小时记录了不重叠的活动时，仍可能低估。此数值不保证与 Apple 健康完全一致。导出当天尚未结束，不计入步数日均。</p><p>当前数据来自一次文件导入，尚未自动同步。更新时请选择新的完整导出；只保留睡眠和步数的每日摘要，心率等其他数据不保存。</p>{(snapshot.record_counts?.skipped ?? 0) > 0 && <p>{snapshot.record_counts?.skipped} 条记录因时间或格式无效未纳入统计。</p>}</div></details>
     </>}
   </section>;
 }
