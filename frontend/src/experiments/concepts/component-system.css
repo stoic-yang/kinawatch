@@ -78,8 +78,9 @@
 }
 
 .theme-grove.concept-page .journal-writing-layout > :is(.journal-context, .journal-manuscript, .journal-day-sidebar).kw-card { border: 0; border-radius: 0; background: var(--kw-ui-surface); box-shadow: none; }
+.theme-grove.concept-page .journal-writing-layout > :is(.journal-context, .journal-day-sidebar).kw-card { background: var(--kw-ui-surface-subtle); }
 .theme-grove.concept-page .journal-writing-layout > .journal-context.kw-card { border-right: 1px solid var(--kw-ui-separator); }
-.theme-grove.concept-page .journal-writing-layout > .journal-day-sidebar.kw-card { border-left: 1px solid var(--kw-ui-separator); background: var(--kw-ui-surface-subtle); }
+.theme-grove.concept-page .journal-writing-layout > .journal-day-sidebar.kw-card { border-left: 1px solid var(--kw-ui-separator); }
 .theme-grove.concept-page .journal-reference-page > .concept-timeline.kw-card,
 .theme-grove.concept-page .journal-reference-desk.kw-card,
 .theme-grove.concept-page .journal-reference-heading { max-width: 1284px; }
