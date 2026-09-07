@@ -1,0 +1,22 @@
+.kw-date-picker { display: inline-flex; flex-shrink: 0; }
+.kw-date-picker > .kw-date-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 32px; padding: 5px 9px; border: 1px solid var(--kw-ui-line); border-radius: var(--kw-ui-control-radius); background: var(--kw-ui-surface); color: var(--kw-ui-ink); font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; white-space: nowrap; }
+.kw-date-trigger:is(:hover, [aria-expanded="true"]) { border-color: var(--kw-ui-line-strong); background: var(--kw-ui-control-hover); }
+.kw-date-trigger svg { color: var(--kw-ui-muted); }
+.kw-date-popover { position: fixed; inset: auto; width: min(280px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto; margin: 0; padding: 12px; border: 1px solid var(--kw-ui-line-strong); border-radius: var(--kw-ui-card-radius); background: var(--kw-ui-surface); color: var(--kw-ui-ink); box-shadow: var(--kw-ui-popover-shadow); font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; }
+.kw-date-popover::backdrop { background: transparent; }
+.kw-date-popover button { font: inherit; color: inherit; border: 0; border-radius: var(--kw-ui-control-radius); background: transparent; cursor: pointer; }
+.kw-date-popover button:disabled { opacity: .3; cursor: default; }
+.kw-date-popover button:hover:not(:disabled) { background: var(--kw-ui-control-hover); }
+.kw-date-popover header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-bottom: 10px; }
+.kw-date-popover header strong { font-size: 14px; font-weight: 600; }
+.kw-date-popover header button { width: 30px; height: 30px; font-size: 20px; }
+.kw-date-weekdays, .kw-date-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.kw-date-weekdays span { display: grid; place-items: center; height: 28px; color: var(--kw-ui-muted); font-size: 11px; }
+.kw-date-week { margin-top: 3px; }
+.kw-date-popover .kw-date-day { width: 100%; height: 32px; padding: 0; font-size: 13px; border: 1px solid transparent; }
+.kw-date-day[data-outside="true"] { color: var(--kw-ui-muted); }
+.kw-date-popover .kw-date-day[aria-current="date"] { border-color: var(--kw-ui-line-strong); }
+.kw-date-popover .kw-date-day[aria-pressed="true"] { background: var(--kw-ui-accent); color: var(--kw-ui-on-accent); font-weight: 600; }
+.kw-date-popover footer { display: flex; justify-content: space-between; border-top: 1px solid var(--kw-ui-separator); margin-top: 12px; padding-top: 8px; }
+.kw-date-popover footer button { min-height: 30px; padding: 4px 9px; color: var(--kw-ui-accent); }
+.kw-date-trigger:focus-visible, .kw-date-popover button:focus-visible { outline: 2px solid var(--kw-ui-accent); outline-offset: 2px; }

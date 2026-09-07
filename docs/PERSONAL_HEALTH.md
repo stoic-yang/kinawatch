@@ -47,8 +47,11 @@ devices within one hour can be undercounted, and the result is not guaranteed
 to match Apple's source-priority aggregation. Retain per-source daily totals
 for comparison. Exclude the incomplete export day from the daily mean.
 
-The UI provides 7/30-day windows, date and period navigation, missing-data
-markers, source explanations, and an entry back to the selected day's journal.
+The UI provides 7/30-day windows, a themed calendar picker, period navigation,
+missing-data markers, and an entry back to the selected day's journal. Controls
+share the title row; the five panels use compact spacing and chart heights.
+The on-page explanation footer has been removed; the calculation contract
+remains documented here. Narrow layouts wrap and scroll naturally.
 
 ## API
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ConceptProps } from "./types";
+import { DatePicker } from "../../components/DatePicker";
 import { healthClock, healthWindow, meanSleep, nightPosition, shiftHealthDate, sleepDuration,
   type HealthDay, type PersonalHealthState } from "./personalHealth";
 import "./health.css";
@@ -73,16 +74,18 @@ export function HealthPage({ active, app, state }: { active: boolean; app: Conce
       const file = event.target.files?.[0]; event.target.value = "";
       if (file) void state.importFile(file);
     }}/>
-    <header className="health-heading"><h1>健康</h1>{importButton}</header>
+    <header className="health-heading">
+      <div className="health-title-group"><h1>健康</h1>{snapshot?.available && <div className="kw-segmented-control" aria-label="健康查看范围">{[7, 30].map(value => <button type="button" key={value} aria-pressed={span === value} className={span === value ? "is-active" : ""} onClick={() => setSpan(value)}>近 {value} 天</button>)}</div>}</div>
+      <div className="health-heading-actions">{snapshot?.available && <>
+        <div className="health-period-nav"><button type="button" aria-label="上一个健康周期" onClick={() => goPeriod(-1)}>‹</button><span>{shortDate(days[0].date)} — {shortDate(end)}</span><button type="button" aria-label="下一个健康周期" disabled={end >= app.currentDate} onClick={() => goPeriod(1)}>›</button></div>
+        <DatePicker date={app.date} maxDate={app.currentDate} active={active} label="健康记录日期" onSelect={date => { setEnd(date); app.selectDate(date); }}/>
+      </>}{importButton}</div>
+    </header>
     {error && <div className="health-error" role="alert">{error}<button type="button" onClick={state.reload} disabled={importing}>重新读取</button></div>}
     {loading && !snapshot && <p className="health-loading" role="status">正在读取健康记录…</p>}
     {importing && <p className="health-loading" role="status">正在整理睡眠和步数，请稍候。</p>}
     {snapshot && !snapshot.available && <div className="health-empty kw-card"><Moon/><h2>从一晚睡眠开始</h2><p>导入 Apple 健康的 export.zip，回看睡眠时长、作息时间与每日步数。<br/>文件会在这台电脑上处理。</p>{importButton}<small>iPhone 健康 → 头像 → 导出所有健康数据</small></div>}
     {snapshot?.available && <>
-      <div className="health-toolbar">
-        <div className="kw-segmented-control" aria-label="健康查看范围">{[7, 30].map(value => <button type="button" key={value} aria-pressed={span === value} className={span === value ? "is-active" : ""} onClick={() => setSpan(value)}>近 {value} 天</button>)}</div>
-        <div className="health-date-controls"><button type="button" aria-label="上一个健康周期" onClick={() => goPeriod(-1)}>‹</button><span>{shortDate(days[0].date)} — {shortDate(end)}</span><button type="button" aria-label="下一个健康周期" disabled={end >= app.currentDate} onClick={() => goPeriod(1)}>›</button><input aria-label="健康记录日期" type="date" max={app.currentDate} value={app.date} onChange={event => { if (/^\d{4}-\d{2}-\d{2}$/.test(event.target.value) && event.target.value <= app.currentDate) { setEnd(event.target.value); app.selectDate(event.target.value); } }}/></div>
-      </div>
       <div className="health-overview">
         <article className="health-sleep-card kw-card"><div className="health-card-kicker"><span><Moon/>睡眠时长</span><div className="health-card-actions"><span>{fullDate(app.date)}{sleep?.basis === "in_bed" ? " · 估算" : ""}</span><button type="button" className="health-journal-link" onClick={openJournal} aria-label="打开这天的日记" title="打开这天的日记"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="M5 15 15 5M6 5h9v9"/></svg></button></div></div>
           <div className="health-sleep-content"><div><strong className={`health-big-number ${!sleep ? "is-missing" : ""}`}>{sleepDuration(sleep?.minutes)}</strong><p>{sleep ? `主要时段 ${healthClock(sleep.start)} — ${healthClock(sleep.end)}` : "当天没有睡眠记录，留白也没关系。"}</p>
@@ -103,7 +106,6 @@ export function HealthPage({ active, app, state }: { active: boolean; app: Conce
         </article>
         <article className="health-steps-chart kw-card"><header className="health-section-heading"><h2>每日步数</h2><span>估算</span></header><DayBars days={days} selected={app.date} kind="steps" onSelect={app.selectDate}/></article>
       </div>
-      <details className="health-data-notes"><summary>数据来源与统计方式</summary><div><p>睡眠：优先采用实际睡眠记录；没有实际睡眠记录时使用卧床区间估算。小睡计入总时长，重叠区间只计算一次，空白日期不视为零小时。</p><p>步数：每个自然小时取各来源较高值，再汇总到当天。跨小时记录按时长分配；不同设备在同一小时记录了不重叠的活动时，仍可能低估。此数值不保证与 Apple 健康完全一致。导出当天尚未结束，不计入步数日均。</p><p>当前数据来自一次文件导入，尚未自动同步。更新时请选择新的完整导出；只保留睡眠和步数的每日摘要，心率等其他数据不保存。</p>{(snapshot.record_counts?.skipped ?? 0) > 0 && <p>{snapshot.record_counts?.skipped} 条记录因时间或格式无效未纳入统计。</p>}</div></details>
     </>}
   </section>;
 }
