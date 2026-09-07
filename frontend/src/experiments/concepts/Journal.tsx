@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { cloneElement, isValidElement, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { fmtClock } from "../../lib/format";
 import { ConceptFrame, SessionNotes } from "./shared";
 import type { ConceptProps } from "./types";
@@ -65,7 +65,11 @@ export function Journal(app: ConceptProps) {
         <section className="journal-writing-page" hidden={page !== "journal"} aria-label="日记">
           <div className="journal-writing-layout">
             <aside className="journal-context kw-card" aria-label="日记参考与大纲"><div className="journal-context-content">
-              <JournalTimeline day={app.day} displayDay={app.displayDay} timezone={app.timezone} visible={page === "journal"} />
+              <div className="journal-activity-panel">
+                <JournalTimeline day={app.day} displayDay={app.displayDay} timezone={app.timezone} visible={page === "journal"} />
+                <div className="journal-activity-status">{app.status}</div>
+              </div>
+              {app.warnings}
               {headings.length > 0 && <nav className="journal-outline" aria-label="日记标题大纲">
                 <h2>大纲</h2>
                 {headings.map(heading => <button type="button" key={heading.id} data-level={heading.level} title={heading.title} style={{paddingLeft: `${8 + (heading.level - headingBase) * 12}px`}} onClick={() => jumpToHeading(heading)}>
@@ -102,9 +106,8 @@ export function Journal(app: ConceptProps) {
 
             <aside className="journal-day-sidebar grove-calendar kw-card" aria-label="当日日历与活动">
               <div className="journal-day-sidebar-content">
-                <HealthDiarySummary state={health} date={app.date}/>
-                {isValidElement<{ independentSections?: boolean }>(app.calendar)
-                  ? cloneElement(app.calendar, { independentSections: true })
+                {isValidElement<{ independentSections?: boolean; afterCalendar?: ReactNode }>(app.calendar)
+                  ? cloneElement(app.calendar, { independentSections: true, afterCalendar: <HealthDiarySummary state={health} date={app.date}/> })
                   : app.calendar}
               </div>
             </aside>

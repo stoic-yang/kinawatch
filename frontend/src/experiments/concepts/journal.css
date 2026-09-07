@@ -200,6 +200,15 @@
 .journal-concept .journal-mini-timeline > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 0 16px; padding-bottom: 14px; border-bottom: 1px solid var(--journal-rule); }
 .journal-concept .journal-mini-timeline h2 { margin: 0; color: var(--journal-ink); font-size: 13px; font-weight: 650; line-height: 22px; white-space: nowrap; }
 
+/* Loading belongs to the activity panel, without moving the writing surface
+   or the calendar on every date change. Errors keep their retry action here. */
+.journal-concept .journal-activity-panel { position: relative; }
+.journal-concept .journal-activity-status { position: absolute; top: 70px; inset-inline: 0; }
+.journal-concept .journal-activity-status:empty { display: none; }
+.journal-concept .journal-activity-status .loading { margin: 0; padding: 18px 0; font-size: 11px; }
+.journal-concept .journal-activity-status .error-card { margin: 0; padding: 12px; background: var(--journal-paper-soft); font-size: 12px; }
+.journal-concept .journal-context-content > .quality-warnings { margin: 16px 0 0; }
+
 .journal-concept .journal-outline h2 {
   margin: 0;
   color: var(--journal-ink);
