@@ -1,5 +1,5 @@
 import type { DayResponse, ScreenTimelineBlock } from "../../api";
-import { buildSessions, type ScreenSession } from "../../lib/sessions";
+import { summarizeSession, type ScreenSession } from "../../lib/sessions";
 
 const HALF_HOUR_MS = 30 * 60 * 1000;
 const BREAK_MS = 5 * 60 * 1000;
@@ -36,7 +36,12 @@ export function buildJournalActivity(day: DayResponse | null): ScreenSession[] {
   let blocks: ScreenTimelineBlock[] = [], currentSlot = -1, currentEnd = 0, currentSeconds = 0;
   const apps = new Map<string, number>();
   const flush = () => {
-    if (blocks.length) sessions.push(...buildSessions({ ...day, timeline: blocks }));
+    if (blocks.length) {
+      const owner = day.workflows.sessions.find(workflow =>
+        Date.parse(blocks[0].start) >= Date.parse(workflow.start)
+        && Date.parse(blocks[blocks.length - 1].end) <= Date.parse(workflow.end));
+      sessions.push(summarizeSession(blocks, owner?.id));
+    }
     blocks = [];
     apps.clear();
     currentSeconds = 0;

@@ -150,6 +150,13 @@ export interface JournalData {
 }
 
 export interface DayResponse {
+  workflows: {
+    version: number;
+    id: string;
+    cutoff: string;
+    min_active_seconds: number;
+    sessions: Array<{ id: string; start: string; end: string; active_seconds: number }>;
+  };
   date: string;
   mode: DayMode;
   timezone: string;

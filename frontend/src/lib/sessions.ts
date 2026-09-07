@@ -1,10 +1,5 @@
 import type { DayResponse, ScreenTimelineBlock } from "../api";
 
-// A "session" is a stretch of screen activity with no gap longer than
-// SESSION_GAP_SECONDS. This is a presentation-level grouping computed on the
-// client; the backend timeline stays authoritative.
-const SESSION_GAP_SECONDS = 15 * 60;
-
 export interface CategorySlice {
   category: string;
   label: string;
@@ -18,6 +13,7 @@ export interface AppSlice {
 }
 
 export interface ScreenSession {
+  workflowId?: string;
   start: string;
   end: string;
   seconds: number;
@@ -68,30 +64,25 @@ function screenBlocks(day: DayResponse): ScreenTimelineBlock[] {
 }
 
 export function buildSessions(day: DayResponse): ScreenSession[] {
-  const sessions: ScreenSession[] = [];
-  let current: ScreenTimelineBlock[] = [];
+  const blocks = screenBlocks(day);
+  return day.workflows.sessions.flatMap(workflow => {
+    const visible = blocks.filter(block => toMs(block.start) >= toMs(workflow.start)
+      && toMs(block.end) <= toMs(workflow.end));
+    return visible.length ? [{ ...summarizeSession(visible, workflow.id),
+      start: workflow.start, end: workflow.end }] : [];
+  });
+}
 
-  const flush = () => {
-    if (current.length === 0) return;
-    sessions.push({
-      start: current[0].start,
-      end: current[current.length - 1].end,
-      seconds: current.reduce((s, b) => s + b.duration_seconds, 0),
-      categories: summarizeCategories(current),
-      topApps: summarizeApps(current).slice(0, 3),
-    });
-    current = [];
+/** Summarize a view fragment without defining another workflow boundary. */
+export function summarizeSession(blocks: ScreenTimelineBlock[], workflowId?: string): ScreenSession {
+  return {
+    workflowId,
+    start: blocks[0].start,
+    end: blocks[blocks.length - 1].end,
+    seconds: blocks.reduce((sum, block) => sum + block.duration_seconds, 0),
+    categories: summarizeCategories(blocks),
+    topApps: summarizeApps(blocks).slice(0, 3),
   };
-
-  for (const block of screenBlocks(day)) {
-    const last = current[current.length - 1];
-    if (last && toMs(block.start) - toMs(last.end) > SESSION_GAP_SECONDS * 1000) {
-      flush();
-    }
-    current.push(block);
-  }
-  flush();
-  return sessions;
 }
 
 export function topAppsForDay(day: DayResponse, limit = 6): AppSlice[] {

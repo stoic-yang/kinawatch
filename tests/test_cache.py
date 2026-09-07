@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import threading
 import unittest
@@ -82,6 +83,15 @@ class DayCacheTests(unittest.TestCase):
                 now_epoch=101 + self.settings.today_ttl_seconds,
             )
         )
+
+    def test_pre_minimum_workflow_snapshot_is_rejected_even_for_historical_days(self) -> None:
+        self.cache.put(self.day, "calendar", self.fingerprint, "upstream-a", self.response)
+        path = self.cache._path(self.day, "calendar")
+        stored = json.loads(path.read_text())
+        stored["_cache_meta"]["day_schema_version"] = 11
+        path.write_text(json.dumps(stored))
+        self.assertIsNone(self.cache.get(self.day, "calendar", self.fingerprint,
+                                         "upstream-a", is_today=False))
 
     def test_refresh_and_per_date_invalidation_are_narrow(self) -> None:
         other_day = date(2026, 7, 14)

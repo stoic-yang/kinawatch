@@ -14,7 +14,7 @@
   "cache_dir": "~/.cache/kinawatch",
   "journal_schema_version": 3,
   "activity_schema_version": 2,
-  "day_schema_version": 10,
+  "day_schema_version": 12,
   "timeline_merge_gap_seconds": 2,
   "focus_gap_seconds": 120,
   "meaningful_block_seconds": 60,

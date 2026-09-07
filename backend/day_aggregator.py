@@ -11,6 +11,7 @@ from .cache import DayCache
 from .config import DashboardSettings
 from .journal_parser import parse_journal
 from .journal_repository import JournalRepository
+from .workflow_sessions import build_workflow_snapshot
 
 
 def _timestamp(raw_value: str) -> datetime:
@@ -442,6 +443,7 @@ class DayAggregator:
         ]
         uncategorized = activity.get("uncategorized", {})
         parse_warnings = journal.get("parse_warnings", [])
+        generated_at = datetime.now(ZoneInfo(timezone_name)).isoformat()
 
         return {
             "date": day.isoformat(),
@@ -451,7 +453,8 @@ class DayAggregator:
                 "start": str(activity["range"]["start_utc"]),
                 "end": str(activity["range"]["end_utc"]),
             },
-            "generated_at": datetime.now(ZoneInfo(timezone_name)).isoformat(),
+            "generated_at": generated_at,
+            "workflows": build_workflow_snapshot(timeline, min(_timestamp(generated_at), range_end).isoformat()),
             "cache": {
                 "hit": False,
                 "journal_fingerprint": journal_location.fingerprint.to_dict(),

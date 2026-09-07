@@ -13,7 +13,7 @@ const { buildJournalTimeline, journalTimelineBarAt, clampJournalTimelineView, zo
 const start = Date.parse("2026-09-04T06:00:00+08:00");
 const clock = seconds => new Date(start + seconds * 1000).toISOString();
 const block = (from, to, app = "Editor", category = "work") => ({ kind: "screen", start: clock(from), end: clock(to), duration_seconds: to - from, app, category, category_label: category, title: "Synthetic", project: "", event_refs: [] });
-const day = timeline => ({ range: { start: clock(0), end: clock(86400) }, timeline, journal: { workflow_notes: [], activity_summary_markdown: "" } });
+const day = timeline => ({ workflows: { sessions: timeline.filter(block => block.kind === "screen").map((block, index) => ({ id: index.toString(16).padStart(16, "0"), start: block.start, end: block.end })) }, range: { start: clock(0), end: clock(86400) }, timeline, journal: { workflow_notes: [], activity_summary_markdown: "" } });
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-10, `${actual} != ${expected}`);
 
 test("positions and bar lengths preserve elapsed time, idle gaps and source data", () => {

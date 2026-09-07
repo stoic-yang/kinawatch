@@ -128,7 +128,7 @@ export function Journal(app: ConceptProps) {
                 <section className="journal-workflow-segment" id={`journal-session-${index}`} key={`${app.date}-${session.start}`} aria-label={`${fmtClock(session.start, app.timezone)} 至 ${fmtClock(session.end, app.timezone)} 的活动`}>
                   <SessionNotes app={app} sessions={[session]} descriptionLayout="aside" />
                 </section>
-              )) : app.day?.timeline.some((block) => block.kind === "screen") ? <p className="empty-hint">当前筛选下没有活动，可以在日记右侧恢复分类。</p> : app.day ? <SessionNotes app={app} sessions={[]} /> : null}
+              )) : app.day && app.day.workflows.sessions.length === 0 ? <p className="empty-hint">暂无满 15 分钟的工作流。</p> : app.day?.timeline.some((block) => block.kind === "screen") ? <p className="empty-hint">当前筛选下没有活动，可以在日记右侧恢复分类。</p> : app.day ? <SessionNotes app={app} sessions={[]} /> : null}
             </div>
           </div>
 

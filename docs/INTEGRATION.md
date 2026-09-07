@@ -93,6 +93,30 @@ outside the current contract.
 
 ### Generated workflow descriptions
 
+`GET /api/day` returns `workflows: {version: 1, id, cutoff, min_active_seconds, sessions}`. Each
+session has `id`, `start`, `end` and `active_seconds`; the backend alone groups
+screen events at gaps over 15 minutes. After grouping, only sessions with at
+least 900 active seconds qualify, including exactly 15 minutes. Idle gaps do
+not count toward this minimum. Short fragments remain in the raw timeline and
+daily totals; their existing descriptions are not rewritten or deleted.
+IDs use the UTC start instant and remain stable while a workflow extends.
+The snapshot digest tracks both the source timeline and segmentation rules.
+The frontend summarizes visible blocks inside these supplied boundaries instead
+of regrouping or applying another minimum after category filtering.
+Day cache schema version 12 invalidates older responses so historical days and
+external description generators consume the same qualified workflow list.
+
+The external generator saves this snapshot and reads the document/fingerprint
+pair from `GET /api/journal/document`. It submits validated descriptions through
+the existing document PUT with that fingerprint; it does not write journal files
+directly. Only the generated callout is replaced in the prepared document.
+Generated lines may carry a trailing `<!-- kina:workflow:<16 hex characters> -->`
+identity comment. The frontend uses this identity for new descriptions and keeps
+the legacy clock-range matching only for historical lines without an identity.
+If a workflow disappears, its generated description is not moved to another card.
+Legacy descriptions must overlap a remaining workflow or share its start minute;
+the nearest unrelated workflow is never used as a fallback.
+
 KinaWatch displays timestamped generated descriptions beside their workflow
 segments. The optional external generator combines Computer Use / Computer
 History observations with the ActivityWatch timeline and must preserve the

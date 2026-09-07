@@ -2,6 +2,7 @@ import type { ScreenSession } from "./sessions";
 import { fmtClock } from "./format";
 
 export interface KinaSummaryEntry {
+  workflowId?: string;
   startTime: string;
   endTime: string;
   text: string;
@@ -53,10 +54,12 @@ export function parseKinaSummary(markdown: string): KinaSummaryEntry[] {
     if (!summaryMatch?.groups) continue;
     const rangeMatch = TIME_RANGE_RE.exec(summaryMatch.groups.range.trim());
     if (!rangeMatch?.groups) continue;
+    const identity = /\s*<!-- kina:workflow:([a-f0-9]{16}) -->\s*$/.exec(summaryMatch.groups.text);
     entries.push({
+      workflowId: identity?.[1],
       startTime: `${rangeMatch.groups.start}:${rangeMatch.groups.startMinute}`,
       endTime: `${rangeMatch.groups.end}:${rangeMatch.groups.endMinute}`,
-      text: summaryMatch.groups.text.trim(),
+      text: summaryMatch.groups.text.replace(/\s*<!-- kina:workflow:[a-f0-9]{16} -->\s*$/, "").trim(),
       approximate: Boolean(rangeMatch.groups.approximate),
     });
   }
@@ -82,8 +85,12 @@ export function assignKinaSummaryToSessions(
     let bestOverlap = -1;
     let bestDistance = Number.POSITIVE_INFINITY;
     intervals.forEach((sessionInterval, index) => {
+      if (entry.workflowId && sessions[index].workflowId !== entry.workflowId) return;
       const overlap = overlapMinutes(entryInterval, sessionInterval);
       const distance = startDistance(entryInterval[0], sessionInterval[0]);
+      // A removed short workflow must not donate its legacy description to
+      // the nearest remaining one. Same-start matching retains minute rounding.
+      if (!entry.workflowId && overlap === 0 && distance !== 0) return;
       if (
         overlap > bestOverlap ||
         (overlap === bestOverlap && distance < bestDistance)

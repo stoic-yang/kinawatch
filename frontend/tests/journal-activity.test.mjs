@@ -14,7 +14,7 @@ const { buildJournalWorkflow } = await import(pathToFileURL(join(directory, "jou
 const start = Date.parse("2026-09-04T06:00:00+08:00");
 const clock = seconds => new Date(start + seconds * 1000).toISOString();
 const block = (from, to, app = "Editor", seconds = to - from, category = "work") => ({ kind: "screen", start: clock(from), end: clock(to), duration_seconds: seconds, app, category, category_label: category, title: "Synthetic", project: "", event_refs: [] });
-const day = timeline => ({ range: { start: clock(0), end: clock(86400) }, timeline, journal: { workflow_notes: [], activity_summary_markdown: "" } });
+const day = timeline => ({ workflows: { sessions: timeline.filter(block => block.kind === "screen").map((block, index) => ({ id: index.toString(16).padStart(16, "0"), start: block.start, end: block.end })) }, range: { start: clock(0), end: clock(86400) }, timeline, journal: { workflow_notes: [], activity_summary_markdown: "" } });
 const sum = sessions => sessions.reduce((total, item) => total + item.seconds, 0);
 
 test("long use splits on half-hour boundaries, preserving source and precise totals", () => {
