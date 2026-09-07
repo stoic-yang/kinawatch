@@ -63,15 +63,43 @@ class PersonalHealthTests(unittest.TestCase):
         self.assertEqual(result[0]["sleep"]["basis"], "asleep")
         self.assertEqual(result[0]["sleep"]["minutes"], 460)
 
-    def test_steps_take_hourly_max_and_use_phone_when_band_absent(self):
+    def test_steps_take_daily_max_without_combining_different_source_hours(self):
         raw = steps("2026-09-01 10:00:00", "2026-09-01 11:00:00", 100)
         raw += steps("2026-09-01 10:00:00", "2026-09-01 11:00:00", 80, "Band")
         raw += steps("2026-09-01 11:00:00", "2026-09-01 12:00:00", 50)
         raw += steps("2026-09-01 12:00:00", "2026-09-01 13:00:00", 70, "Band")
         result = parse_export(archive(raw + raw), "Asia/Shanghai")["days"][0]
-        self.assertEqual(result["steps"]["count"], 220)
+        self.assertEqual(result["steps"]["count"], 150)
+        self.assertEqual(result["steps"]["method"], "daily_source_max")
         self.assertEqual(result["steps"]["sources"], {"Phone": 150, "Band": 150})
         self.assertIsNone(result["sleep"])
+
+    def test_daily_step_source_can_change_and_zero_is_a_record(self):
+        raw = steps("2026-09-01 10:00:00", "2026-09-01 11:00:00", 500)
+        raw += steps("2026-09-01 12:00:00", "2026-09-01 13:00:00", 800, "Band")
+        raw += steps("2026-09-02 10:00:00", "2026-09-02 11:00:00", 900)
+        raw += steps("2026-09-02 12:00:00", "2026-09-02 13:00:00", 600, "Band")
+        raw += steps("2026-09-03 10:00:00", "2026-09-03 11:00:00", 0)
+        result = parse_export(archive(raw), "Asia/Shanghai")
+        self.assertEqual([day["steps"]["count"] for day in result["days"]], [800, 900, 0])
+
+    def test_legacy_snapshot_uses_daily_max_without_rewriting_import(self):
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root) / "snapshot.json"
+            stored = {"version": 1, "revision": "original", "available": True,
+                      "days": [{"date": "2026-09-01", "sleep": None,
+                                "steps": {"count": 220, "method": "hourly_max_estimate",
+                                          "sources": {"Phone": 150, "Band": 140}}},
+                               {"date": "2026-09-02", "sleep": {"minutes": 480}, "steps": None}]}
+            path.write_text(json.dumps(stored), encoding="utf-8")
+            original = path.read_bytes()
+            store = PersonalHealthStore("Asia/Shanghai", path)
+            result = store.read()
+            self.assertEqual(result["days"][0]["steps"], {"count": 150, "method": "daily_source_max", "sources": {"Phone": 150, "Band": 140}})
+            self.assertEqual(result["days"][1], stored["days"][1])
+            self.assertEqual(result["revision"], "original")
+            self.assertEqual(store.read(), result)
+            self.assertEqual(path.read_bytes(), original)
 
     def test_steps_split_midnight_and_invalid_values_are_not_summed(self):
         raw = steps("2026-09-01 23:30:00", "2026-09-02 00:30:00", 120)

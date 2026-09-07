@@ -7,7 +7,7 @@ export interface SleepRecord {
 }
 export interface HealthDay {
   date: string; sleep: SleepRecord | null;
-  steps: { count: number; method: "hourly_max_estimate"; sources: Record<string, number> } | null;
+  steps: { count: number; method: "daily_source_max"; sources: Record<string, number> } | null;
 }
 export interface HealthSnapshot {
   version: number; revision: string; available: boolean; timezone: string;

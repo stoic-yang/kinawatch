@@ -35,23 +35,31 @@ separated by at most 90 minutes into one session for display, without adding
 the intervening gap to the duration. Assign each session to its ending date.
 The longest session supplies the main interval; other sessions are shown as
 additional sleep. Daily duration includes all selected sessions. In-bed-only
-data is explicitly labeled an estimate and must not be presented as measured
-time asleep. Missing days remain unknown and are excluded from means.
+data retains its `in_bed` basis and must not be interpreted as measured time
+asleep. Missing days remain unknown and are excluded from means.
 
 **Steps:** remove identical source/device/interval/value records. Apportion
-interval counts across natural hours by their elapsed duration. Within each
-hour, take the largest source total, then sum those hourly values for the day.
-This combines phone-only and band-only hours without summing both devices in
-overlapping hours. It is an approximation: separate activity from different
-devices within one hour can be undercounted, and the result is not guaranteed
-to match Apple's source-priority aggregation. Retain per-source daily totals
-for comparison. Exclude the incomplete export day from the daily mean.
+interval counts across natural hours by their elapsed duration, then sum them
+into each source's natural-day total. Use the largest daily source total as
+the day's count (`daily_source_max`), including on days with just one source.
+Do not combine phone-only and band-only periods. This conservative rule can
+omit activity captured only by the other device; it is not Apple's
+source-priority aggregation. Retain source totals in the snapshot, while the
+UI displays a single count. Exclude the incomplete export day from the mean.
+
+Version 1 snapshots using `hourly_max_estimate` already contain daily source
+totals. Reads derive the daily maximum from those totals in memory, preserving
+the stored file and import revision. Existing imports therefore use the same
+rule as new imports without requiring another export.
 
 The UI provides 7/30-day windows, a themed calendar picker, period navigation,
-missing-data markers, and an entry back to the selected day's journal. Controls
+missing-data markers, and shared date selection with the journal. Controls
 share the title row. The five data regions sit in a centered, open layout with
 no card outlines, more whitespace, subtle separators and bounded chart sizes.
-Sleep duration has the strongest visual emphasis. Short desktop windows use
+The overview uses matching label/value/average rows for sleep and steps;
+the main sleep interval follows below. The sleep overview has no journal link,
+duplicate date or coverage badge, and device subtotals are hidden.
+Short desktop windows use
 tighter spacing so all five regions remain visible at 1280 by 720.
 The on-page explanation footer has been removed; the calculation contract
 remains documented here. Narrow layouts wrap and scroll naturally.

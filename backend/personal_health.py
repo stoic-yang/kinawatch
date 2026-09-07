@@ -50,6 +50,11 @@ def _merge(intervals: list[tuple[datetime, datetime]]) -> list[tuple[datetime, d
     return result
 
 
+def _step_summary(sources: dict[str, float]) -> dict[str, Any]:
+    totals = {source: round(count) for source, count in sorted(sources.items())}
+    return {"count": max(totals.values()), "method": "daily_source_max", "sources": totals}
+
+
 def parse_export(data: bytes, timezone_name: str) -> dict[str, Any]:
     """Stream the main XML. CDA is an alternate representation, never another source."""
     if not data or len(data) > MAX_IMPORT_BYTES:
@@ -168,17 +173,15 @@ def parse_export(data: bytes, timezone_name: str) -> dict[str, Any]:
             "source": source, "basis": basis,
             "sessions": [{"start": a.isoformat(), "end": b.isoformat(), "minutes": round(m, 1)} for a, b, m in sessions],
         }
-    by_day: dict = defaultdict(lambda: {"count": 0.0, "sources": defaultdict(float)})
+    by_day: dict = defaultdict(lambda: defaultdict(float))
     for hour, sources in hours.items():
         if hour >= exported_at:
             continue
         daily = by_day[hour.date().isoformat()]
-        daily["count"] += max(sources.values())
         for source, count in sources.items():
-            daily["sources"][source_labels[source]] += count
-    for day, values in by_day.items():
-        day_for(day)["steps"] = {"count": round(values["count"]), "method": "hourly_max_estimate",
-                                 "sources": {key: round(value) for key, value in sorted(values["sources"].items())}}
+            daily[source_labels[source]] += count
+    for day, sources in by_day.items():
+        day_for(day)["steps"] = _step_summary(sources)
     return {"version": 1, "revision": hashlib.sha256(data).hexdigest(), "available": True,
             "exported_at": exported_at.isoformat(), "timezone": timezone_name,
             "imported_at": datetime.now(zone).isoformat(), "record_counts": counts,
@@ -199,6 +202,12 @@ class PersonalHealthStore:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
             if payload.get("version") != 1:
                 raise ValueError("健康数据版本不受支持，请重新导入。")
+            # Older snapshots retain daily source totals. Apply the current
+            # rule in memory; a read never rewrites the user's stored import.
+            for day in payload["days"]:
+                steps = day.get("steps")
+                if steps and steps.get("method") == "hourly_max_estimate":
+                    day["steps"] = _step_summary(steps["sources"])
             return payload
 
     def import_archive(self, data: bytes, expected_revision: str) -> dict:
