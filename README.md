@@ -19,7 +19,7 @@ ActivityWatch。它通过本机只读 REST API 获取事件，并保持自己的
 - 日记：Markdown 实时显示与安静的自动保存，工作流竖向时间线和 Kina 总结分栏参考。
 - 时间线：缩放、活动详情与独立工作流描述编辑，长描述不会撑高活动列表。
 - 节律：近七天、本周、近一年和自然年的活动分布与日期跳转。
-- 信念：独立于日期的 Markdown 文稿，正文可直接编辑，支持目录、显式保存和草稿恢复。
+- 信念：独立于日期的 Markdown 文稿，正文可直接编辑，支持目录、自动保存和草稿恢复。
 - 可收起侧栏，以及石墨、素白、钴蓝、陶土、曜石五套配色。
 - 通过 ActivityWatch REST API 自动发现本机窗口与 AFK buckets。
 - 保留 AFK 过滤，同时可把明确处于前台播放状态的媒体时间计入屏幕时间；
@@ -75,7 +75,7 @@ cp config/kinawatch.example.json config/kinawatch.local.json
    `activitywatch.media_activity.enabled` 改为 `true`。默认规则只匹配前台
    Google Chrome 窗口中的 `Audio playing` 标记，不会关闭 AFK 过滤。
 4. 完成只读健康检查后，把 `journal_write_enabled` 改为 `true`，即可在页面中
-   编辑日记正文并自动保存，或显式保存工作流描述与信念。公开模板仍保持只读默认值。
+   编辑日记和信念正文并自动保存，或显式保存工作流描述。公开模板仍保持只读默认值。
 5. 把 `activity_edit_enabled` 改为 `true`，即可点击时间线块进行手动校正。
    该开关不会授权写入 ActivityWatch，只会启用 KinaWatch 自己的校正文件。
 
@@ -93,8 +93,8 @@ python3 -m backend.server
 
 ### Journal storage
 
-默认配置 `journal.provider: "local"`。启用写入后，日记正文在输入暂停后保存，
-信念和工作流描述通过保存按钮更新；首次保存才创建对应文件，启动和浏览不会创建记录。
+默认配置 `journal.provider: "local"`。启用写入后，日记和信念正文在输入暂停后保存，
+工作流描述通过保存按钮更新；首次保存才创建对应文件，启动和浏览不会创建记录。
 信念默认位于 `Review/我的人生信念.md`，新安装从空白开始。默认存储位置为：
 
 - macOS：`~/Library/Application Support/KinaWatch/journal`
@@ -236,8 +236,8 @@ Gate 1 只读取历史日记与 ActivityWatch 数据，不应拿真实日记执�
 - 不修改 ActivityWatch，不复制或迁移其 SQLite 数据库。
 - 活动修改只写入 KinaWatch 校正层，绑定源事件指纹；源事件变化时拒绝静默套用。
   当前不允许修改正在采集的事件，也不允许新增 ActivityWatch 事件。
-- 不持续扫描本地存储或 vault，不批量迁移日记。仅日记正文在用户输入后自动保存；
-  工作流描述、信念与活动校正均要求显式保存。
+- 不持续扫描本地存储或 vault，不批量迁移日记。日记和信念正文在用户输入后自动保存；
+  工作流描述与活动校正均要求显式保存。
 - 写入白名单仅包含所选日期的一条工作流描述，或 `我的总结`、`今日产出`、
   `明天的计划`、`自由记录` 中的一项；周/月复盘每次只允许更新固定周期文件中的
   `自由记录`；常驻笔记每次只允许整体替换配置中的单一相对 Markdown 文件，

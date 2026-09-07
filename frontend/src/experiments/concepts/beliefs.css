@@ -6,8 +6,6 @@
 .beliefs-page button { cursor: pointer; }
 .beliefs-actions button, .beliefs-error button { min-height: 34px; padding: 7px 13px; border: 1px solid var(--kw-ui-line); border-radius: var(--kw-ui-control-radius); background: var(--kw-ui-control); color: var(--kw-ui-ink); font: inherit; font-size: 12px; }
 .beliefs-actions button:hover:not(:disabled), .beliefs-error button:hover { background: var(--kw-ui-control-hover); border-color: var(--kw-ui-line-strong); }
-.beliefs-actions .beliefs-save { background: var(--kw-ui-accent); color: var(--kw-ui-on-accent); border-color: var(--kw-ui-accent); }
-.beliefs-actions .beliefs-save:hover:not(:disabled) { background: var(--kw-ui-accent-strong); }
 .beliefs-actions button:disabled { opacity: .5; cursor: default; }
 .beliefs-layout { display: grid; gap: 28px; }
 .beliefs-layout.has-outline { grid-template-columns: minmax(0, 1fr) 180px; }

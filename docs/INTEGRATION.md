@@ -182,10 +182,13 @@ include the body, file fingerprint, provider, path, existence, properties flag,
 write capability, and the stable Obsidian open URI when applicable. The JSON
 request limit is 16 MiB, shared with the daily document endpoint.
 
-The Journal concept's beliefs module starts in read mode and saves only on an
-explicit button press. Unsaved drafts are retained in browser-local storage,
-including their original file fingerprint. External changes require comparison
-and explicit resolution. Reading never creates the file or imports other notes;
+The beliefs body is directly editable and autosaves about 700 ms after user input
+pauses when writes are enabled. Saves are serialized; typing during a request is
+retained and saved against the returned fingerprint. Unsynced drafts stay in
+browser-local storage, including their original file fingerprint and any
+unconfirmed request. Failures pause automatic writes; retry reads the file before
+reconciling an uncertain response. The daily and beliefs editors share this logic.
+External changes require comparison and explicit resolution. Reading never creates the file or imports other notes;
 saving changes only this note's body, preserving properties and other files.
 Both providers use the same configuration gate, confined path, per-note lock,
 fingerprint check and atomic replacement as daily document writes. Beliefs saves

@@ -31,8 +31,8 @@ database locations, or exploit details in that issue.
   existing YAML properties and BOM. Standing-note paths are configuration-owned, relative, and
   never accepted from a browser request. Both providers use optimistic
   fingerprints, per-note locking, atomic replacement, and conflict rejection.
-- The daily document editor saves after user input pauses when writes are
-  enabled; opening a page never creates a note. Beliefs and workflow descriptions
+- The daily document and beliefs editors save after user input pauses when writes
+  are enabled; opening a page never creates a note. Workflow descriptions
   require explicit saves. Unsaved drafts remain in local browser storage, and
   an external file change requires a deliberate conflict-resolution choice.
 - ActivityWatch data and local configuration are read-only inputs.

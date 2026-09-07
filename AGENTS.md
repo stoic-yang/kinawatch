@@ -47,7 +47,9 @@ needed.
   after user editing, with serialized saves, retained drafts and conflict checks.
 - The beliefs endpoint may update only the body of `journal.beliefs_note_path`
   (default `Review/我的人生信念.md`), preserving properties and requiring an
-  explicit save. Reading never creates or imports a note.
+  enabled write configuration. Like the daily document editor, it may autosave
+  after user editing with serialized saves, retained drafts and conflict checks.
+  Reading never creates or imports a note.
 - Personal health imports require an explicit ZIP selection and matching
   snapshot revision. Retain only sleep and steps summaries under the platform
   user-data directory; never retain the archive, import other health metrics,
@@ -66,7 +68,7 @@ needed.
   generated, treated as product state, or bulk-removed from historical notes.
 - Keep optimistic file fingerprints, per-note locks, same-directory temporary
   files, atomic replacement, and conflict rejection on every write path.
-- Except for the daily document editor described above, never autosave or
+- Except for the daily document and beliefs editors described above, never autosave or
   background-write. Never bulk-migrate or delete structured fields.
 - Do not write tests against real notes. Use temporary files and repository
   fixtures only.

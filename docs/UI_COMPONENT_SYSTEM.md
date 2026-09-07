@@ -10,7 +10,7 @@
 - `shared.tsx` / `sidebar-collapse.css`：各页共用的侧栏收起状态、图标导航和窄屏布局。
 - `HealthPage.tsx` / `personalHealth.ts` / `health.css`：健康页和日记的当日摘要，共用一份导入快照及选中日期；统计口径见 `PERSONAL_HEALTH.md`。
 - `components/DatePicker.tsx` / `date-picker.css`：健康页使用统一字体与语义配色的日历弹层，复用 `lib/calendar.ts` 的周一开头月历；支持选中日期、未来禁用、翻月、今天、方向键、Home/End、PageUp/PageDown（Shift 按年）、Escape 和外部点击关闭。
-- `BeliefsPage.tsx` / `beliefs.css`：与日期无关的信念文稿、直接编辑、目录、显式保存和文件版本对照。
+- `BeliefsPage.tsx` / `beliefs.css`：与日期无关的信念文稿、直接编辑、目录、自动保存和文件版本对照。
 - `rhythm-workspace.css` / `annual-rhythm.css`：各自负责图表布局，颜色使用共享语义变量。小时热力图与年度热力图共用同一明暗方向。
 - `JournalTimeline.tsx` / `journal-timeline.css`：日记参考栏的竖向时间轴；`journalTimelineModel.ts` 负责真实时间比例、缩放边界、动态刻度与短活动命中。
 - `SessionList.tsx` / `session-description-dialog.css`：工作流描述的紧凑预览、完整阅读与显式保存浮层；`descriptionLayout="below"` 的其他布局继续使用原有行内编辑。
@@ -43,7 +43,7 @@
 
 `?palette=graphite|porcelain|cobalt|clay|charcoal` 可直接预览指定配色；用户切换时保存至 `kinawatch.appearance.palette`，刷新与页面导航后保留选择。旧参数与已保存的 `sea` / `sand` / `iris` / `night` 分别映射到钴蓝 / 陶土 / 素白 / 曜石。切换只改变显示属性，不重新挂载编辑器。
 
-信念入口为 `#beliefs`，读取配置中固定的 `journal.beliefs_note_path`，默认 `Review/我的人生信念.md`。在写入启用时，正文直接使用日记同款 Markdown 编辑器，无需进入编辑模式，也不提供 Obsidian 跳转入口。标题生成右侧目录；窄屏目录移至正文上方且默认折叠。与页面同名的开头 H1 不重复显示，其原始前缀在保存时保留。有改动时显示「撤销修改」「保存」，点击「保存」才更新文件；读取与输入都不写入文件，保存后仍可继续直接编辑。草稿仅保存在本机 `kinawatch.beliefs.draft.v1`，页面切换或刷新可恢复；后台读取不得覆盖开始输入后的草稿。文件版本变化时保留草稿，核对后再明确选择版本。YAML 属性保持原样，日记、常驻笔记和来源笔记不参与更新。
+信念入口为 `#beliefs`，读取配置中固定的 `journal.beliefs_note_path`，默认 `Review/我的人生信念.md`。在写入启用时，正文直接使用日记同款 Markdown 编辑器，无需进入编辑模式，也不提供 Obsidian 跳转入口。标题生成右侧目录；窄屏目录移至正文上方且默认折叠。与页面同名的开头 H1 不重复显示，其原始前缀在保存时保留。输入暂停约 700ms 后自动保存，不显示常驻保存按钮或状态；读取不写文件，保存期间仍可继续编辑。未同步草稿保存在本机 `kinawatch.beliefs.draft.v1`，兼容旧编辑器留下的草稿，页面切换或刷新可恢复并继续同步；后台读取与较早的保存响应不得覆盖新输入。信念与日记复用 `documentAutosave.ts` 的串行保存、失败恢复与冲突处理；网络失败时先重读确认文件版本再重试。文件版本变化时保留草稿，核对后再明确选择版本。YAML 属性保持原样，日记、常驻笔记和来源笔记不参与更新。
 
 正式构建：`npm run build --prefix frontend`，产物在 `dist/`，由 Python 后端直接托管。主入口固定使用 Journal，不依赖端口或预览参数。
 
