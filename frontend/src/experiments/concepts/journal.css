@@ -135,36 +135,37 @@
 
 .concept-journal .concept-content { min-height: 100vh; }
 
-/* Separate reference panels frame a quiet writing surface. */
+/* A continuous writing workspace with a timeline and day inspector. */
 
 .journal-concept .journal-writing-page {
   width: 100%;
   min-height: 100dvh;
-  padding: 24px;
+  padding: 0;
   container: journal-page / inline-size;
 }
 
 .journal-concept .journal-writing-layout {
-  --journal-rail-width: clamp(216px, 17vw, 244px);
-  --journal-day-sidebar-width: 224px;
+  --journal-rail-width: 184px;
+  --journal-day-sidebar-width: 252px;
   --journal-summary-width: clamp(280px, 23vw, 332px);
   display: grid;
   grid-template-columns: var(--journal-rail-width) minmax(0, 1fr) var(--journal-day-sidebar-width);
   align-items: start;
-  gap: 20px;
-  min-height: calc(100dvh - 48px);
+  gap: 0;
+  min-height: 100dvh;
 }
 
 .journal-concept .journal-day-sidebar {
   position: sticky;
-  top: 24px;
+  top: 0;
   min-width: 0;
   margin: 0;
-  padding: 16px 14px;
+  padding: 28px 20px;
+  height: 100dvh;
 }
 
 .journal-concept .journal-day-sidebar-content {
-  max-height: calc(100dvh - 80px);
+  max-height: calc(100dvh - 56px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -177,16 +178,14 @@
 
 .journal-concept .journal-context {
   position: sticky;
-  top: 24px;
+  top: 0;
   min-width: 0;
-  padding: 22px 18px;
-  border: 1px solid var(--journal-rule);
-  border-radius: 10px;
-  background: var(--journal-paper-soft);
+  padding: 34px 20px;
+  height: 100dvh;
 }
 
 .journal-concept .journal-context-content {
-  max-height: calc(100dvh - 94px);
+  max-height: calc(100dvh - 68px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -197,13 +196,13 @@
   scrollbar-color: var(--journal-rule-strong) transparent;
 }
 
-.journal-concept .journal-mini-timeline > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 0 16px; padding-bottom: 14px; border-bottom: 1px solid var(--journal-rule); }
+.journal-concept .journal-mini-timeline > header { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin: 0 0 24px; }
 .journal-concept .journal-mini-timeline h2 { margin: 0; color: var(--journal-ink); font-size: 13px; font-weight: 650; line-height: 22px; white-space: nowrap; }
 
 /* Loading belongs to the activity panel, without moving the writing surface
    or the calendar on every date change. Errors keep their retry action here. */
 .journal-concept .journal-activity-panel { position: relative; }
-.journal-concept .journal-activity-status { position: absolute; top: 70px; inset-inline: 0; }
+.journal-concept .journal-activity-status { position: absolute; top: 90px; inset-inline: 0; }
 .journal-concept .journal-activity-status:empty { display: none; }
 .journal-concept .journal-activity-status .loading { margin: 0; padding: 18px 0; font-size: 11px; }
 .journal-concept .journal-activity-status .error-card { margin: 0; padding: 12px; background: var(--journal-paper-soft); font-size: 12px; }
@@ -219,11 +218,13 @@
 
 .journal-concept .journal-mini-total {
   margin: 0;
-  color: var(--journal-muted);
-  font-size: 11px;
+  color: var(--journal-ink);
+  font-size: 19px;
+  font-weight: 550;
+  letter-spacing: -.025em;
   line-height: 1.6;
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  text-align: left;
   white-space: nowrap;
 }
 
@@ -264,11 +265,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: calc(100dvh - 48px);
-  padding: 36px clamp(24px, 2.5vw, 48px) 40px;
-  border: 1px solid var(--journal-rule);
-  border-radius: 10px;
-  background: var(--journal-paper);
+  min-height: 100dvh;
+  padding: 58px clamp(32px, 4vw, 72px) 56px;
 }
 
 .journal-concept .journal-paper-header {
@@ -278,10 +276,10 @@
   flex-wrap: wrap;
   gap: 12px;
   width: 100%;
-  max-width: 720px;
-  margin: 0 auto 24px;
-  padding-bottom: 22px;
-  border-bottom: 1px solid var(--journal-rule);
+  max-width: 760px;
+  margin: 0 auto 38px;
+  padding-bottom: 0;
+  border: 0;
 }
 
 .journal-concept .journal-paper-header > div { min-width: 0; }
@@ -291,7 +289,7 @@
 .journal-concept .journal-paper-header > div > span { display: block; margin-top: 9px; color: var(--journal-muted); font-size: 11px; white-space: nowrap; }
 
 .journal-concept .journal-entry { display: flex; flex-direction: column; flex: 1; min-width: 0; width: 100%; }
-.journal-concept .journal-entry > .markdown-document-editor { max-width: 720px; }
+.journal-concept .journal-entry > .markdown-document-editor { max-width: 760px; font-size: 16px; line-height: 2; }
 
 .journal-concept .journal-document-error {
   display: flex;
@@ -387,7 +385,7 @@
 
 @container journal-page (max-width: 1040px) {
   .journal-concept .journal-writing-layout,
-  .journal-concept .journal-writing-layout.has-kina-summary { grid-template-columns: 196px minmax(0, 1fr) var(--journal-day-sidebar-width); }
+  .journal-concept .journal-writing-layout.has-kina-summary { grid-template-columns: 160px minmax(0, 1fr) var(--journal-day-sidebar-width); }
   .journal-concept .journal-manuscript { padding-inline: 26px; }
   .journal-concept .journal-kina-summary { grid-area: 2 / 2; position: static; }
   .journal-concept .journal-kina-content { max-height: none; overflow: visible; }
@@ -396,14 +394,20 @@
 @container journal-page (max-width: 900px) {
   .journal-concept .journal-writing-layout { grid-template-columns: minmax(0, 1fr) var(--journal-day-sidebar-width); }
   .journal-concept .journal-manuscript { grid-area: 1 / 1; }
-  .journal-concept .journal-context { grid-area: 2 / 1; position: static; }
+  .journal-concept .journal-context { grid-area: 2 / 1; position: static; height: auto; }
+  .journal-concept .journal-context-content { max-height: none; overflow: visible; }
+  .journal-concept .journal-mini-timeline > header { flex-direction: row; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+  .journal-concept .journal-mini-total { font-size: 15px; }
+  .journal-concept .journal-mini-total-caption { display: inline; margin-left: 6px; }
+  .journal-concept .journal-vertical-timeline { --timeline-track-width: calc(100% - var(--timeline-axis-width) - 8px); height: 360px; }
+  .journal-concept .journal-context:has(.journal-outline) .journal-vertical-timeline { height: 360px; }
   .journal-concept .journal-day-sidebar { grid-area: 1 / 2 / 3 / 3; }
 }
 
 @container journal-page (max-width: 660px) {
   .journal-concept .journal-writing-layout,
   .journal-concept .journal-writing-layout.has-kina-summary { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-  .journal-concept .journal-day-sidebar { grid-area: 1 / 1; position: static; }
+  .journal-concept .journal-day-sidebar { grid-area: 1 / 1; position: static; height: auto; padding: 16px 20px; }
   .journal-concept .journal-day-sidebar .sidebar { max-width: none; }
   .journal-concept .journal-day-sidebar-content { max-height: none; overflow: visible; }
   .journal-concept .journal-manuscript { grid-area: 2 / 1; min-height: min(640px, calc(100dvh - 150px)); padding: 24px; }

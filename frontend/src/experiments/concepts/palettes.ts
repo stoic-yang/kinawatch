@@ -1,10 +1,10 @@
 /** Semantic colors for the Journal shell, including overlays outside the shell. */
 export const PALETTES = [
   { id: "graphite", name: "石墨", description: "中性灰 · 清爽克制", dark: false, colors: {
-    canvas: "#f3f4f5", surface: "#fcfcfd", "surface-subtle": "#f6f7f8", rail: "#e9ebee",
-    control: "#eef0f3", "control-hover": "#e2e6ec", "control-active": "#dce2e9",
-    line: "#dce0e5", "line-strong": "#bbc4d0", ink: "#242b36", muted: "#596575", faint: "#5f6978",
-    accent: "#4e617b", "accent-strong": "#344660", "on-accent": "#ffffff",
+    canvas: "#ffffff", surface: "#ffffff", "surface-subtle": "#fafafb", rail: "#f5f5f7",
+    control: "#f1f2f4", "control-hover": "#e9ebef", "control-active": "#eaf0fc",
+    line: "#e7e8ec", "line-strong": "#c9ccd3", ink: "#202126", muted: "#656973", faint: "#858a94",
+    accent: "#3568d4", "accent-strong": "#2454bb", "on-accent": "#ffffff",
     "heat-0": "#edf0f4", "heat-1": "#cbd5e1", "heat-2": "#9caec3", "heat-3": "#7188a4", "heat-4": "#455f7e",
   } },
   { id: "porcelain", name: "素白", description: "纯白与黑 · 留白清晰", dark: false, colors: {
