@@ -45,6 +45,8 @@
 
 信念入口为 `#beliefs`，读取配置中固定的 `journal.beliefs_note_path`，默认 `Review/我的人生信念.md`。在写入启用时，正文直接使用日记同款 Markdown 编辑器，无需进入编辑模式，也不提供 Obsidian 跳转入口。标题生成右侧目录；窄屏目录移至正文上方且默认折叠。与页面同名的开头 H1 不重复显示，其原始前缀在保存时保留。输入暂停约 700ms 后自动保存，不显示常驻保存按钮或状态；读取不写文件，保存期间仍可继续编辑。未同步草稿保存在本机 `kinawatch.beliefs.draft.v1`，兼容旧编辑器留下的草稿，页面切换或刷新可恢复并继续同步；后台读取与较早的保存响应不得覆盖新输入。信念与日记复用 `documentAutosave.ts` 的串行保存、失败恢复与冲突处理；网络失败时先重读确认文件版本再重试。文件版本变化时保留草稿，核对后再明确选择版本。YAML 属性保持原样，日记、常驻笔记和来源笔记不参与更新。
 
+信念页仅保留页面标题、正文和大纲，移除标题说明、正文顶部提醒与更新时间、桌面大纲标题及对应分隔线。窄屏仍以「大纲」按钮展开目录，保留标题跳转。
+
 正式构建：`npm run build --prefix frontend`，产物在 `dist/`，由 Python 后端直接托管。主入口固定使用 Journal，不依赖端口或预览参数。
 
 开发概念构建：`npm run build --prefix frontend -- --config vite.concepts.config.ts`，产物在被忽略的 `output/playwright/ui-concepts/dist`。

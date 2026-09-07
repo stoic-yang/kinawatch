@@ -366,7 +366,7 @@
 .theme-grove.concept-journal .sidebar-independent .sidebar-section-toggle { font-weight: 550; }
 .theme-grove.concept-journal .grove-calendar :is(.filter-row, .sidebar-app-row) { padding: 8px 4px; }
 .theme-grove.concept-journal .concept-sidebar-appearance { border-top: 0; padding-top: 12px; }
-.theme-grove.concept-journal :is(.journal-mini-timeline > header, .journal-paper-header, .journal-kina-content > h2, .journal-reference-context, .journal-outline, .beliefs-paper-meta) { border-color: var(--kw-ui-separator); }
+.theme-grove.concept-journal :is(.journal-mini-timeline > header, .journal-paper-header, .journal-kina-content > h2, .journal-reference-context, .journal-outline) { border-color: var(--kw-ui-separator); }
 .theme-grove.concept-journal .journal-paper-header > div > span { margin-top: 12px; font-size: 13px; color: var(--kw-ui-faint); }
 .theme-grove.concept-journal .journal-kina-section > h3 { font-size: 12px; font-weight: 500; }
 .theme-grove.concept-journal .journal-kina-summary .md-list-line { margin-bottom: 12px; }
