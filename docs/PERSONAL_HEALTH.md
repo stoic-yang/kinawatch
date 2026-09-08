@@ -83,6 +83,8 @@ ZIP import action are under the native “数据来源” disclosure. Source err
 waiting-for-sync instructions remain visible, and the initial empty state still
 offers an import action. These presentation changes preserve sleep/steps
 calculations, snapshot revisions, and the diary sidebar summary.
+The update and import buttons use the same neutral surface, text, border, and
+height as the date control. Loading keeps the button width and uses muted text.
 
 ## API
 

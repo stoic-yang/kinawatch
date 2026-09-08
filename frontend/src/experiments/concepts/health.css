@@ -8,8 +8,10 @@
 .health-page button { font-family: inherit; cursor: pointer; }
 .health-page button:disabled { cursor: default; opacity: .45; }
 .health-page button:focus-visible, .health-page input:focus-visible, .health-source-details summary:focus-visible { outline: 2px solid var(--kw-ui-accent); outline-offset: 3px; }
-.health-import, .health-error button { flex-shrink: 0; border: 1px solid var(--kw-ui-line); border-radius: var(--kw-ui-control-radius); padding: 8px 12px; min-height: 34px; color: var(--kw-ui-ink); background: var(--kw-ui-surface); font-size: 12px; }
-.health-import:hover:not(:disabled) { background: var(--kw-ui-control-hover); }
+.health-import, .health-error button { flex-shrink: 0; border: 1px solid var(--kw-ui-line); border-radius: var(--kw-ui-control-radius); padding: 8px 12px; min-height: var(--kw-ui-control-height); color: var(--kw-ui-ink); background: var(--kw-ui-surface); box-shadow: none; font-size: 12px; }
+.health-import { min-width: calc(6em + 26px); padding-block: 5px; }
+.health-import:hover:not(:disabled) { border-color: var(--kw-ui-line-strong); background: var(--kw-ui-control-hover); }
+.health-page .health-import:disabled { color: var(--kw-ui-muted); opacity: 1; }
 .health-period-nav { display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--kw-ui-separator); border-radius: var(--kw-ui-group-radius); background: var(--kw-ui-surface-subtle); }
 .health-period-nav > button { width: 26px; height: 26px; padding: 0; border: 0; border-radius: var(--kw-ui-control-radius); background: transparent; color: var(--kw-ui-muted); font-size: 20px; line-height: 1; }
 .health-period-nav > button:hover:not(:disabled) { background: var(--kw-ui-control-hover); color: var(--kw-ui-ink); }

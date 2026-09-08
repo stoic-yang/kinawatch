@@ -227,7 +227,7 @@
 .theme-grove.concept-page .sidebar :is(.filter-row, .sidebar-app-row):hover { background: var(--kw-ui-control-hover); }
 
 /* Standard controls */
-.theme-grove.concept-page :is(.health-import, .health-error button, .beliefs-error button, .beliefs-actions button),
+.theme-grove.concept-page :is(.health-error button, .beliefs-error button, .beliefs-actions button),
 .theme-grove.concept-page :is(.concept-rhythm-toggle, .concept-timeline-toggle, .concept-focus-exit),
 .theme-grove.concept-page .concept-timeline .ribbon-view-actions button,
 .theme-grove.concept-page .kw-annual-year-controls > button,
