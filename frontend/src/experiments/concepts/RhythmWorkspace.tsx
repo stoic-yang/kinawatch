@@ -83,6 +83,19 @@ function NoteMark() {
   return <svg className="kw-rhythm-note-mark" viewBox="0 0 16 16" width="12" height="12" fill="none" aria-hidden="true"><path d="M4 2.5h6l2 2v9H4zM9.5 2.5v3H12M6 8h4m-4 2h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
+function DeviceBars({ devices, peakSeconds }: { devices: RhythmDevice[]; peakSeconds: number }) {
+  return <span className="kw-rhythm-device-bars" data-devices="ready">
+    {devices.map(device => {
+      const missing = device.observed_seconds === null && device.active_seconds === 0;
+      return <span className="kw-rhythm-device-bar" key={device.device} data-device={device.device} data-missing={missing || undefined}>
+        <span className="kw-rhythm-device-name">{device.label}</span>
+        <span className="kw-rhythm-device-track" aria-hidden="true"><i data-seconds={device.active_seconds} style={{ width: `${peakSeconds ? device.active_seconds / peakSeconds * 100 : 0}%` }}/></span>
+        <span className="kw-rhythm-device-value">{missing ? "—" : fmtDuration(device.active_seconds)}</span>
+      </span>;
+    })}
+  </span>;
+}
+
 function distributionLabel(row: RhythmRow): string | null {
   if (row.distribution === "not-provided") return "未提供分布";
   if (row.distribution === "missing") return row.state === "missing" ? "未返回当天数据" : "分布数据缺失";
@@ -175,6 +188,7 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
   const totalSeconds = complete ? arrivedRows.reduce((sum, row) => sum + row.seconds!, 0) : null;
   const activeDays = complete ? arrivedRows.filter((row) => row.seconds! > 0).length : null;
   const peakSeconds = rows.reduce((peak, row) => row.seconds === null ? peak : Math.max(peak, row.seconds), 0);
+  const devicePeakSeconds = rows.reduce((peak, row) => Math.max(peak, ...(row.devices ?? []).map(device => device.active_seconds)), 0);
   const missingDays = rows.filter((row) => row.state === "missing").length;
   const partialDays = rows.filter((row) => row.state === "partial").length;
   const loading = !current || current.status === "loading";
@@ -185,7 +199,7 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
   const tooltipSeconds = tooltipRow?.hours?.[activeTooltip?.hour ?? 0];
 
   const heading = <header className={`kw-rhythm-card-header${variant === "overview" ? " kw-page-heading" : ""}`}>
-    <div className="kw-rhythm-heading"><h1 className={variant === "overview" ? "kw-page-title" : undefined}>{variant === "overview" ? "节律" : "七日节律"}</h1><p className="kw-rhythm-range-title"><time dateTime={rangeStart}>{longDate(rangeStart)}</time><span aria-hidden="true">—</span><time dateTime={rangeEnd}>{longDate(rangeEnd)}</time></p><div className="kw-rhythm-device-legend" role="group" aria-label="设备颜色">{[["mac", "Mac"], ["ipad", "iPad"], ["iphone", "iPhone"]].map(([device, label]) => <span key={device} data-device={device}><i aria-hidden="true"/>{label}</span>)}</div></div>
+    <div className="kw-rhythm-heading"><h1 className={variant === "overview" ? "kw-page-title" : undefined}>{variant === "overview" ? "节律" : "七日节律"}</h1><p className="kw-rhythm-range-title"><time dateTime={rangeStart}>{longDate(rangeStart)}</time><span aria-hidden="true">—</span><time dateTime={rangeEnd}>{longDate(rangeEnd)}</time></p></div>
     <div className="kw-rhythm-header-actions">
       <div className="kw-rhythm-stats" aria-live="polite">
         <span className="kw-rhythm-stat kw-metric-pill"><strong className="kw-rhythm-total-value" data-complete={complete} data-seconds={totalSeconds ?? undefined}>{totalSeconds === null ? "—" : fmtDuration(totalSeconds)}</strong><small>活动时间</small></span>
@@ -232,7 +246,13 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
                 if (cell) { cell.scrollIntoView({ block: "nearest", inline: "nearest" }); if (pendingInspection.current !== null) cancelAnimationFrame(pendingInspection.current); pendingInspection.current = requestAnimationFrame(() => inspectCell(row.date, next, cell)); }
               }}>
               <span className="kw-rhythm-date-cell"><span className="kw-rhythm-date-line"><time dateTime={row.date}>{shortDate(row.date)}</time>{row.hasNote && <NoteMark />}</span><span className="kw-rhythm-day-meta"><span className={today ? "kw-rhythm-today" : undefined}>{today ? "今天" : `周${weekdayShort(row.date)}`}</span>{row.state === "partial" ? <em>不完整</em> : selected ? <b>已选</b> : null}</span></span>
-              <span className="kw-rhythm-total-cell" onMouseEnter={event => inspectCell(row.date, null, event.currentTarget)}><strong data-seconds={row.seconds ?? undefined}>{row.seconds === null ? "—" : fmtDuration(row.seconds)}</strong>{ratio === null ? <small>{STATE_LABELS[row.state]}</small> : row.state === "partial" ? <small className="kw-rhythm-partial-total">仅已记录</small> : <span className="kw-rhythm-day-bar" aria-hidden="true" data-devices={row.devices ? "ready" : "unavailable"}>{row.devices ? row.devices.filter(device => device.active_seconds > 0).map(device => <i key={device.device} data-device={device.device} data-seconds={device.active_seconds} style={{ width: `${peakSeconds ? device.active_seconds / peakSeconds * 100 : 0}%` }}/>) : <i style={{ width: `${ratio}%` }}/>}</span>}</span>
+              <span className="kw-rhythm-total-cell" onMouseEnter={event => inspectCell(row.date, null, event.currentTarget)}>
+                <strong data-seconds={row.seconds ?? undefined}>{row.seconds === null ? "—" : fmtDuration(row.seconds)}</strong>
+                {row.state === "partial" ? <small className="kw-rhythm-partial-total">仅已记录</small>
+                  : row.devices ? <DeviceBars devices={row.devices} peakSeconds={devicePeakSeconds}/>
+                  : ratio === null ? <small>{STATE_LABELS[row.state]}</small>
+                  : <span className="kw-rhythm-day-bar" aria-hidden="true" data-devices="unavailable"><i style={{ width: `${ratio}%` }}/></span>}
+              </span>
               <span className={`kw-rhythm-hours ${row.hours ? "" : "is-unavailable"}`}>
                 <span className="kw-rhythm-cells" aria-hidden="true">{hours.map(hour => {
                   const seconds = row.hours?.[hour.index];
@@ -256,10 +276,10 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
         <strong>{tooltipHour.from.nextDay ? "次日 " : ""}{tooltipHour.from.clock}–{tooltipHour.to.nextDay && !tooltipHour.from.nextDay ? "次日 " : ""}{tooltipHour.to.clock}</strong>
         <span>{tooltipSeconds === undefined ? distributionLabel(tooltipRow) : `活动时间 ${fmtDuration(tooltipSeconds)}`}</span>
       </> : <>
-        <strong>设备活动时间</strong>
+        <strong>设备原始时长</strong>
         {tooltipRow.devices ? <>
           <div className="kw-rhythm-device-times">{tooltipRow.devices.map(device => <div key={device.device} data-device={device.device}><span><i aria-hidden="true"/>{device.label}</span><b>{device.observed_seconds === null ? "暂无同步记录" : fmtDuration(device.observed_seconds)}</b></div>)}</div>
-          {tooltipRow.devices.some(device => device.observed_seconds !== null && Math.abs(device.observed_seconds - device.active_seconds) > .05) && <span className="kw-rhythm-device-accounting">设备重叠时段均分计入活动条，原始时长相加可能超过总量。</span>}
+          {tooltipRow.devices.some(device => device.observed_seconds !== null && Math.abs(device.observed_seconds - device.active_seconds) > .05) && <span className="kw-rhythm-device-accounting">表内时长已均分设备重叠时段；这里显示原始时长，相加可能超过总量。</span>}
         </> : <span>设备分布暂未提供</span>}
       </>}
       {tooltipRow.issues.length > 0 && <small>{tooltipRow.issues.join(" · ")}</small>}

@@ -4,7 +4,7 @@
   --kw-rhythm-line: var(--kw-ui-line, #e2e8db);
   --kw-rhythm-green: var(--kw-ui-accent, #466b39);
   --kw-rhythm-date-width: 100px;
-  --kw-rhythm-total-width: 116px;
+  --kw-rhythm-total-width: 240px;
   --kw-rhythm-hour-width: 30px;
   width: 100%;
   max-width: 1440px;
@@ -77,7 +77,7 @@
 .kw-rhythm .kw-rhythm-total-cell>small { color: var(--kw-ui-muted, #8c9a80); font-size: 11px; line-height: 1.15; }
 .kw-rhythm .kw-rhythm-total-cell>.kw-rhythm-partial-total { color: var(--kw-ui-warning, #927843); }
 .kw-rhythm .kw-rhythm-day-bar { display: flex; width: 100%; height: 4px; border-radius: 2px; background: var(--kw-ui-control, #e7ede0); overflow: hidden; }
-.kw-rhythm .kw-rhythm-day-bar>i { display: block; height: 100%; flex: none; background: var(--kw-device-color, var(--kw-ui-line-strong)); }
+.kw-rhythm .kw-rhythm-day-bar>i { display: block; height: 100%; background: var(--kw-ui-line-strong); }
 @media (max-width: 1080px) {
   .kw-rhythm .kw-rhythm-card-header { grid-template-columns: minmax(170px,1fr) auto; gap: 12px; }
 }
@@ -89,7 +89,7 @@
   .kw-rhythm .kw-rhythm-range-switch button { min-height: 26px; padding: 4px 9px; font-size: 11px; }
   .kw-rhythm .kw-rhythm-scroll-hint { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--kw-ui-line, #e8eddf); background: var(--kw-ui-surface-subtle, #fafcf7); color: var(--kw-ui-muted, #829275); font-size: 11px; }
   .kw-rhythm .kw-rhythm-scroll-hint>span { font-size: 13px; }
-  .kw-rhythm { --kw-rhythm-date-width: 82px; --kw-rhythm-total-width: 106px; }
+  .kw-rhythm { --kw-rhythm-date-width: 82px; --kw-rhythm-total-width: 214px; }
   .kw-rhythm .kw-rhythm-axis-date { padding: 0 12px; font-size: 11px; }
   .kw-rhythm .kw-rhythm-axis-total { left: var(--kw-rhythm-date-width); padding: 0 10px; font-size: 11px; }
   .kw-rhythm .kw-rhythm-row { min-height: 44px; }
@@ -123,10 +123,18 @@
 :is(.kw-rhythm, .kw-rhythm-tooltip) [data-device="iphone"] { --kw-device-color: light-dark(#37998c, #6ec1b4); }
 :is(.kw-rhythm, .kw-rhythm-tooltip) [data-device="other"] { --kw-device-color: var(--kw-ui-muted); }
 :is(.kw-rhythm, .kw-rhythm-tooltip) [data-device="offline"] { --kw-device-color: var(--kw-ui-warning); }
-.kw-rhythm-device-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 9px; color: var(--kw-ui-muted); font-size: 11px; }
-.kw-rhythm-device-legend > span, .kw-rhythm-device-times > div > span { display: inline-flex; align-items: center; gap: 5px; }
-.kw-rhythm-device-legend i, .kw-rhythm-device-times i { width: 7px; height: 7px; flex: none; border-radius: 2px; background: var(--kw-device-color); }
+.kw-rhythm-device-times > div > span { display: inline-flex; align-items: center; gap: 5px; }
+.kw-rhythm-device-times i { width: 7px; height: 7px; flex: none; border-radius: 2px; background: var(--kw-device-color); }
 .kw-rhythm-device-times { display: grid; gap: 7px; margin: 5px 0; }
 .kw-rhythm-device-times > div { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
 .kw-rhythm-device-times b { font-weight: 500; font-variant-numeric: tabular-nums; }
 .kw-rhythm-tooltip .kw-rhythm-device-accounting { max-width: 250px; color: var(--kw-ui-muted); font-size: 11px; }
+
+.kw-rhythm .kw-rhythm-device-bars { display: grid; gap: 3px; }
+.kw-rhythm .kw-rhythm-device-bar { display: grid; grid-template-columns: 43px minmax(24px, 1fr) 66px; align-items: center; gap: 7px; min-height: 14px; font-size: 11px; line-height: 1.25; }
+.kw-rhythm .kw-rhythm-device-name { color: var(--kw-ui-muted); white-space: nowrap; }
+.kw-rhythm .kw-rhythm-device-track { height: 6px; overflow: hidden; border-radius: 2px; background: color-mix(in srgb, var(--kw-device-color) 10%, var(--kw-row-surface)); }
+.kw-rhythm .kw-rhythm-device-track > i { display: block; height: 100%; border-radius: inherit; background: var(--kw-device-color); }
+.kw-rhythm .kw-rhythm-device-value { color: var(--kw-ui-ink); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kw-rhythm .kw-rhythm-device-bar[data-missing] .kw-rhythm-device-track { background: transparent; border: 1px dashed var(--kw-ui-line-strong); }
+.kw-rhythm .kw-rhythm-device-bar[data-missing] .kw-rhythm-device-value { color: var(--kw-ui-muted); }
