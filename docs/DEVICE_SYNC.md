@@ -29,7 +29,9 @@ shortcuts sign --mode anyone --input /tmp/health-unsigned.shortcut --output /tmp
 
 `--fixture --mi-fitness` 跳过打开 App 和等待，只用合成数据验证相同的日期检查及
 通知文案分支。2026-09-08 在 macOS 原生 Shortcuts 分别验证有今日记录和仅有旧记录
-的两条分支；iPhone 打开小米 App、设备同步耗时及后台继续执行仍待真机验证。
+的两条分支。同日用户在 iPhone 实测成功打开小米 App 并继续导出；Mac 收到新文件，
+健康接口已导入此前缺失的当日睡眠记录。本次端到端流程通过，20 秒仍只是本机
+验证过的同步缓冲，不能保证每次设备重连、健康写入与 iCloud 传输都能及时完成。
 
 ### 安装与导入
 
