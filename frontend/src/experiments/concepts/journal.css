@@ -1,24 +1,3 @@
-/* Grove palette, limited to the Journal concept. */
-.theme-grove.concept-page.concept-journal {
-  --journal-canvas: #f4f6f0;
-  --journal-paper: #ffffff;
-  --journal-paper-soft: #fcfdf9;
-  --journal-panel: #e9eee3;
-  --journal-soft: #eaf2e4;
-  --journal-track: #eaf0e5;
-  --journal-ink: #213a2b;
-  --journal-muted: #596b5a;
-  --journal-accent: #416844;
-  --journal-accent-strong: #2e562c;
-  --journal-decoration: #708070;
-  --journal-rule: #e2e8de;
-  --journal-rule-strong: #c4d0bb;
-  --journal-shadow-near: #2f442b04;
-  --journal-shadow-far: #2f442b0a;
-  --journal-shadow-paper: #2f442b05;
-  --canvas: var(--journal-canvas);
-}
-
 /* Shared writers retain their behavior and geometry, with Journal colors. */
 .concept-journal .journal-concept :is(.concept-edit-note, .review-field-action, .session-note-add, .session-note-edit, .session-kina-note-edit, .concept-more) {
   color: var(--journal-accent);
@@ -266,7 +245,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 100dvh;
-  padding: 58px clamp(32px, 4vw, 72px) 56px;
+  padding: 48px clamp(28px, 3vw, 56px) 48px;
 }
 
 .journal-concept .journal-paper-header {
@@ -276,7 +255,7 @@
   flex-wrap: wrap;
   gap: 12px;
   width: 100%;
-  max-width: 760px;
+  max-width: var(--kw-ui-reading-width);
   margin: 0 auto 38px;
   padding-bottom: 0;
   border: 0;
@@ -289,7 +268,7 @@
 .journal-concept .journal-paper-header > div > span { display: block; margin-top: 9px; color: var(--journal-muted); font-size: 11px; white-space: nowrap; }
 
 .journal-concept .journal-entry { display: flex; flex-direction: column; flex: 1; min-width: 0; width: 100%; }
-.journal-concept .journal-entry > .markdown-document-editor { max-width: 760px; font-size: 16px; line-height: 2; }
+.journal-concept .journal-entry > .markdown-document-editor { max-width: var(--kw-ui-reading-width); font-size: var(--kw-ui-document-size); line-height: var(--kw-ui-document-leading); }
 
 .journal-concept .journal-document-error {
   display: flex;

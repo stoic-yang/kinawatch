@@ -177,7 +177,7 @@ export function ConceptFrame({concept, app, nav, active, onNavigate, children, f
       </header>}
       {!timelinePageId && timeline}
       <main className="concept-content">{(concept !== "journal" || !["journal", "beliefs", "health"].includes(active) || rhythmOpen) && <>{app.status}{app.warnings}</>}
-        <section id="concept-rhythm-workspace" className="concept-rhythm-workspace" hidden={!rhythmOpen} aria-label={concept === "journal" ? "节律空间" : "七日节律空间"}>
+        <section id="concept-rhythm-workspace" className={`concept-rhythm-workspace${concept === "journal" ? " kw-page" : ""}`} hidden={!rhythmOpen} aria-label={concept === "journal" ? "节律空间" : "七日节律空间"}>
           {!rhythmInNavigation && <button type="button" className="concept-rhythm-return" onClick={() => showRhythm(false)}>← 返回{nav.find(item => item.id === active)?.label ?? selected.name}</button>}
           <RhythmWorkspace variant={concept === "journal" ? "overview" : "week"} currentDate={app.currentDate} selectedDate={app.date} dayMode={app.dayMode} dayStartClock={app.dayStartClock} timezone={app.timezone} visible={rhythmOpen}
             onSelect={date => {if(date !== app.date)app.selectDate(date);if(timelinePageId)navigate(timelinePageId);else {setTimelineOpen(true);window.scrollTo({top:0,behavior:"instant"});}}} />

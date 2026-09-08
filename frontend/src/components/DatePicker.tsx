@@ -24,11 +24,12 @@ export function DatePicker({ date, maxDate, onSelect, label = "选择日期", ac
     if (!open) return;
     const position = () => {
       if (!trigger.current || !panel.current) return;
+      const viewportWidth = document.documentElement.clientWidth;
       const anchor = trigger.current.getBoundingClientRect();
       const bounds = panel.current.getBoundingClientRect();
       const top = anchor.bottom + 8 + bounds.height <= innerHeight - 12 ? anchor.bottom + 8 : anchor.top - bounds.height - 8;
       panel.current.style.top = `${Math.max(12, Math.min(top, innerHeight - bounds.height - 12))}px`;
-      panel.current.style.left = `${Math.max(12, Math.min(anchor.right - bounds.width, innerWidth - bounds.width - 12))}px`;
+      panel.current.style.left = `${Math.max(12, Math.min(anchor.right - bounds.width, viewportWidth - bounds.width - 12))}px`;
     };
     position();
     window.addEventListener("resize", position);

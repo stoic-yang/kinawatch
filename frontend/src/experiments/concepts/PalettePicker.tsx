@@ -1,15 +1,16 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { applyPalette, currentPalette, PALETTES } from "./palettes";
 import "./palette-picker.css";
 
 function positionAppearance(trigger: HTMLButtonElement | null, panel: HTMLDivElement | null) {
   if (!trigger || !panel?.matches(":popover-open")) return;
+  const viewportWidth = document.documentElement.clientWidth;
   const anchor = trigger.getBoundingClientRect();
   const bounds = panel.getBoundingClientRect();
   const top = anchor.bottom + 10 + bounds.height <= window.innerHeight - 12
     ? anchor.bottom + 10 : anchor.top - bounds.height - 10;
   panel.style.top = `${Math.max(12, Math.min(top, window.innerHeight - bounds.height - 12))}px`;
-  panel.style.left = `${Math.max(12, Math.min(anchor.left, window.innerWidth - bounds.width - 12))}px`;
+  panel.style.left = `${Math.max(12, Math.min(anchor.left, viewportWidth - bounds.width - 12))}px`;
 }
 
 export function PalettePicker({ showLabel = false }: { showLabel?: boolean }) {
@@ -48,7 +49,7 @@ export function PalettePicker({ showLabel = false }: { showLabel?: boolean }) {
             applyPalette(item.id, true);
             setSelected(item.id);
           }}/>
-          <span className="kw-palette-swatch" aria-hidden="true" style={{ background: item.colors.canvas, borderColor: item.colors.line }}>
+          <span className="kw-palette-swatch" aria-hidden="true" style={{ background: item.colors.canvas, borderColor: item.colors.line, "--swatch-ink": item.colors.ink } as CSSProperties}>
             <i style={{ background: item.colors.rail }}/><i style={{ background: item.colors.surface }}/><i style={{ background: item.colors.accent }}/>
           </span>
           <span className="kw-palette-copy"><strong>{item.name}</strong><small>{item.description}</small></span>

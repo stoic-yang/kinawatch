@@ -1,45 +1,54 @@
-/** Semantic colors for the Journal shell, including overlays outside the shell. */
+/** Complete semantic palettes shared by pages, charts, and top-layer content. */
+type PaletteColors = Record<
+  "canvas" | "surface" | "surface-subtle" | "rail" | "control" | "control-hover" |
+  "control-active" | "line" | "line-strong" | "ink" | "muted" | "faint" |
+  "accent" | "accent-strong" | "on-accent" | "chart" |
+  "heat-0" | "heat-1" | "heat-2" | "heat-3" | "heat-4", string>;
+
 export const PALETTES = [
-  { id: "graphite", name: "石墨", description: "中性灰 · 清爽克制", dark: false, colors: {
+  { id: "graphite", name: "石墨", description: "浅灰 · 清蓝", dark: false, colors: {
     canvas: "#ffffff", surface: "#ffffff", "surface-subtle": "#fafafb", rail: "#f5f5f7",
     control: "#f1f2f4", "control-hover": "#e9ebef", "control-active": "#eaf0fc",
-    line: "#e7e8ec", "line-strong": "#c9ccd3", ink: "#202126", muted: "#656973", faint: "#858a94",
-    accent: "#3568d4", "accent-strong": "#2454bb", "on-accent": "#ffffff",
+    line: "#e7e8ec", "line-strong": "#c9ccd3", ink: "#202126", muted: "#606570", faint: "#686e79",
+    accent: "#3568d4", "accent-strong": "#2454bb", "on-accent": "#ffffff", chart: "#a9bde8",
     "heat-0": "#edf0f4", "heat-1": "#cbd5e1", "heat-2": "#9caec3", "heat-3": "#7188a4", "heat-4": "#455f7e",
   } },
-  { id: "porcelain", name: "素白", description: "纯白与黑 · 留白清晰", dark: false, colors: {
-    canvas: "#f7f7f7", surface: "#ffffff", "surface-subtle": "#fafafa", rail: "#f0f0f0",
-    control: "#f3f3f3", "control-hover": "#e8e8e8", "control-active": "#e2e2e2",
-    line: "#e5e5e5", "line-strong": "#c6c6c6", ink: "#242424", muted: "#626262", faint: "#717171",
-    accent: "#454545", "accent-strong": "#202020", "on-accent": "#ffffff",
-    "heat-0": "#f0f0f0", "heat-1": "#d4d4d4", "heat-2": "#a4a4a4", "heat-3": "#747474", "heat-4": "#3f3f3f",
+  { id: "parchment", name: "沙纸", description: "暖纸 · 茶褐", dark: false, colors: {
+    canvas: "#f8f5ee", surface: "#fffdf8", "surface-subtle": "#f5f1e8", rail: "#eee8dd",
+    control: "#f0eadf", "control-hover": "#e8dfd0", "control-active": "#eadcc3",
+    line: "#e6dfd2", "line-strong": "#c9bdab", ink: "#352f27", muted: "#6e6456", faint: "#706454",
+    accent: "#89632e", "accent-strong": "#704e22", "on-accent": "#fffdf8", chart: "#c9ae7d",
+    "heat-0": "#f0e9dc", "heat-1": "#e1cfa9", "heat-2": "#c9ac76", "heat-3": "#ab864e", "heat-4": "#82602e",
   } },
-  { id: "cobalt", name: "钴蓝", description: "中性白 · 一点明亮的蓝", dark: false, colors: {
-    canvas: "#f5f6f8", surface: "#ffffff", "surface-subtle": "#f8f9fb", rail: "#eceef3",
-    control: "#f0f2f7", "control-hover": "#e5e9f3", "control-active": "#dfe6fa",
-    line: "#dfe3eb", "line-strong": "#bec9df", ink: "#222b3b", muted: "#5b677c", faint: "#667188",
-    accent: "#345ac9", "accent-strong": "#2447ad", "on-accent": "#ffffff",
-    "heat-0": "#edf0f7", "heat-1": "#ced9f4", "heat-2": "#9db2e9", "heat-3": "#6a88d8", "heat-4": "#3b5ec1",
+  { id: "pine", name: "松青", description: "雾白 · 松绿", dark: false, colors: {
+    canvas: "#f3f7f4", surface: "#fcfefc", "surface-subtle": "#eff5f1", rail: "#e5eee8",
+    control: "#eaf2ed", "control-hover": "#dceae1", "control-active": "#d5e8de",
+    line: "#dce6df", "line-strong": "#b5cbbd", ink: "#253c32", muted: "#576e61", faint: "#596d60",
+    accent: "#326e56", "accent-strong": "#24533f", "on-accent": "#ffffff", chart: "#93bba6",
+    "heat-0": "#e8f0eb", "heat-1": "#c3dccd", "heat-2": "#92bda5", "heat-3": "#60977a", "heat-4": "#346e52",
   } },
-  { id: "clay", name: "陶土", description: "暖白底色 · 陶红点缀", dark: false, colors: {
-    canvas: "#f6f4f2", surface: "#fffefd", "surface-subtle": "#faf8f6", rail: "#eeeae6",
-    control: "#f2eeeb", "control-hover": "#e9e1db", "control-active": "#eddcd5",
-    line: "#e4ddd7", "line-strong": "#cdbbb0", ink: "#352d29", muted: "#6d5d54", faint: "#79665c",
-    accent: "#974733", "accent-strong": "#813b2b", "on-accent": "#ffffff",
-    "heat-0": "#f0eae6", "heat-1": "#e4c9bd", "heat-2": "#cc9b85", "heat-3": "#b7765d", "heat-4": "#944b36",
+  { id: "indigo", name: "暮蓝", description: "云灰 · 靛蓝", dark: false, colors: {
+    canvas: "#f5f5fa", surface: "#fefeff", "surface-subtle": "#f2f2f8", rail: "#eaeaf3",
+    control: "#ededf6", "control-hover": "#e2e2f0", "control-active": "#dfdff2",
+    line: "#e1e1ec", "line-strong": "#c1c1d8", ink: "#2c2d42", muted: "#62637c", faint: "#65667c",
+    accent: "#605da8", "accent-strong": "#494684", "on-accent": "#ffffff", chart: "#aaa8d4",
+    "heat-0": "#ececf4", "heat-1": "#d3d1e8", "heat-2": "#b0add2", "heat-3": "#8883b9", "heat-4": "#5f599b",
   } },
-  { id: "charcoal", name: "曜石", description: "炭灰与银 · 安静的深色", dark: true, colors: {
-    canvas: "#18191b", surface: "#222326", "surface-subtle": "#28292c", rail: "#1d1e20",
-    control: "#2d2f33", "control-hover": "#383b40", "control-active": "#41454b",
-    line: "#36383d", "line-strong": "#575b62", ink: "#eeeeef", muted: "#b4b6bc", faint: "#a3a7ae",
-    accent: "#c6ccd6", "accent-strong": "#edf0f5", "on-accent": "#202226",
-    "heat-0": "#2a2c30", "heat-1": "#474c55", "heat-2": "#6c7583", "heat-3": "#99a4b5", "heat-4": "#c9d2df",
+  { id: "midnight", name: "夜航", description: "深海 · 青灰", dark: true, colors: {
+    canvas: "#121a23", surface: "#19232e", "surface-subtle": "#1d2935", rail: "#101820",
+    control: "#253340", "control-hover": "#304353", "control-active": "#334b59",
+    line: "#2e3d4b", "line-strong": "#506574", ink: "#e4edf2", muted: "#a9bac7", faint: "#93a8b7",
+    accent: "#96c6cf", "accent-strong": "#bde0e6", "on-accent": "#14242c", chart: "#507e91",
+    "heat-0": "#243440", "heat-1": "#344f60", "heat-2": "#507b8c", "heat-3": "#73a7b4", "heat-4": "#a5d2d9",
   } },
-] as const;
+] as const satisfies ReadonlyArray<{id: string; name: string; description: string; dark: boolean; colors: PaletteColors}>;
 
 export type PaletteId = typeof PALETTES[number]["id"];
 const STORAGE_KEY = "kinawatch.appearance.palette";
-const LEGACY_PALETTES: Record<string, PaletteId> = { sea: "cobalt", sand: "clay", iris: "porcelain", night: "charcoal" };
+const LEGACY_PALETTES: Record<string, PaletteId> = {
+  porcelain: "parchment", cobalt: "indigo", clay: "parchment", charcoal: "midnight",
+  sea: "pine", sand: "parchment", iris: "indigo", night: "midnight",
+};
 function resolvePalette(id: string | null) {
   return PALETTES.find(palette => palette.id === id)?.id ?? LEGACY_PALETTES[id ?? ""];
 }

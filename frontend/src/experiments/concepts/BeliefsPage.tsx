@@ -29,9 +29,9 @@ export function BeliefsPage({ active }: { active: boolean }) {
   const editable = Boolean(note?.write_enabled);
   function change(value: string) { beliefsDocument.change(titlePrefix + value); }
 
-  return <section className="beliefs-page" hidden={!active} aria-label="我的人生信念">
-    <header className="beliefs-heading">
-      <h1>我的人生信念</h1>
+  return <section className="beliefs-page kw-page" hidden={!active} aria-label="我的人生信念">
+    <header className="beliefs-heading kw-page-heading">
+      <h1 className="kw-page-title">我的人生信念</h1>
     </header>
     {loading && !note && <p className="beliefs-loading" role="status">正在读取信念…</p>}
     {error && <div className="beliefs-error" role="alert"><p>{error}</p>{conflict ? <button type="button" disabled={saving} onClick={() => void beliefsDocument.inspectConflict()}>核对文件版本</button> : <button type="button" disabled={saving} onClick={() => void beliefsDocument.retry()}>{beliefsDocument.dirty ? "重试保存" : "重新读取"}</button>}</div>}

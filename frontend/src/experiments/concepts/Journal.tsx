@@ -1,4 +1,5 @@
 import { cloneElement, isValidElement, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { DatePicker } from "../../components/DatePicker";
 import { fmtClock } from "../../lib/format";
 import { ConceptFrame, SessionNotes } from "./shared";
 import type { ConceptProps } from "./types";
@@ -80,7 +81,7 @@ export function Journal(app: ConceptProps) {
 
             <article className="journal-manuscript kw-card" id="journal-body" data-dirty={session.dirty} data-save-state={documentState.status}>
               <header className="journal-paper-header">
-                <div><h1><time dateTime={app.date}>{app.year}年{app.dateLabel}</time></h1><span>{weekday} · 第 {app.weekNumber} 周</span></div>
+                <div><h1 className="kw-document-title"><time dateTime={app.date}>{app.year}年{app.dateLabel}</time></h1><span>{weekday} · 第 {app.weekNumber} 周</span></div>
               </header>
               <div className="journal-entry" onBlur={event => {
                 if (!event.currentTarget.contains(event.relatedTarget as Node | null)) void session.flush();
@@ -114,9 +115,10 @@ export function Journal(app: ConceptProps) {
           </div>
         </section>
 
-        <section className="journal-reference-page" hidden={page !== "reference"} aria-label="时间线">
-          <header className="journal-reference-heading">
-            <div className="journal-reference-title"><h1><time dateTime={app.date}>{app.dateLabel}</time></h1><span>{app.year}年 · 第 {app.weekNumber} 周 · {weekday}</span></div>
+        <section className="journal-reference-page kw-page" hidden={page !== "reference"} aria-label="时间线">
+          <header className="journal-reference-heading kw-page-heading">
+            <div className="journal-reference-title"><h1 className="kw-page-title"><time dateTime={app.date}>{app.dateLabel}</time></h1><span>{app.year}年 · 第 {app.weekNumber} 周 · {weekday}</span></div>
+            <DatePicker date={app.date} maxDate={app.currentDate} active={page === "reference"} label="时间线日期" onSelect={app.selectDate}/>
           </header>
           {timeline}
           <div className="journal-reference-desk kw-card">

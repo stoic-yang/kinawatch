@@ -66,13 +66,13 @@ export function HealthPage({ active, app, state }: { active: boolean; app: Conce
     setEnd(next); app.selectDate(next);
   }
   const importButton = <button type="button" className="health-import" disabled={importing || !snapshot} onClick={() => input.current?.click()}>{importing ? "正在导入…" : snapshot?.available ? "更新健康数据" : "导入健康数据"}</button>;
-  return <section className="health-page" hidden={!active} aria-label="健康">
+  return <section className="health-page kw-page" hidden={!active} aria-label="健康">
     <input ref={input} type="file" accept=".zip,application/zip" hidden aria-label="选择 Apple 健康导出文件" onChange={event => {
       const file = event.target.files?.[0]; event.target.value = "";
       if (file) void state.importFile(file);
     }}/>
-    <header className="health-heading">
-      <div className="health-title-group"><h1>健康</h1>{snapshot?.available && <div className="kw-segmented-control" aria-label="健康查看范围">{[7, 30].map(value => <button type="button" key={value} aria-pressed={span === value} className={span === value ? "is-active" : ""} onClick={() => setSpan(value)}>近 {value} 天</button>)}</div>}</div>
+    <header className="health-heading kw-page-heading">
+      <div className="health-title-group"><h1 className="kw-page-title">健康</h1>{snapshot?.available && <div className="kw-segmented-control" aria-label="健康查看范围">{[7, 30].map(value => <button type="button" key={value} aria-pressed={span === value} className={span === value ? "is-active" : ""} onClick={() => setSpan(value)}>近 {value} 天</button>)}</div>}</div>
       <div className="health-heading-actions">{snapshot?.available && <>
         <div className="health-period-nav"><button type="button" aria-label="上一个健康周期" onClick={() => goPeriod(-1)}>‹</button><span>{shortDate(days[0].date)} — {shortDate(end)}</span><button type="button" aria-label="下一个健康周期" disabled={end >= app.currentDate} onClick={() => goPeriod(1)}>›</button></div>
         <DatePicker date={app.date} maxDate={app.currentDate} active={active} label="健康记录日期" onSelect={date => { setEnd(date); app.selectDate(date); }}/>

@@ -181,21 +181,24 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
   const tooltipHour = activeTooltip ? hours[activeTooltip.hour] : null;
   const tooltipSeconds = tooltipRow?.hours?.[activeTooltip?.hour ?? 0];
 
+  const heading = <header className={`kw-rhythm-card-header${variant === "overview" ? " kw-page-heading" : ""}`}>
+    <div className="kw-rhythm-heading"><h1 className={variant === "overview" ? "kw-page-title" : undefined}>{variant === "overview" ? "节律" : "七日节律"}</h1><p className="kw-rhythm-range-title"><time dateTime={rangeStart}>{longDate(rangeStart)}</time><span aria-hidden="true">—</span><time dateTime={rangeEnd}>{longDate(rangeEnd)}</time></p></div>
+    <div className="kw-rhythm-header-actions">
+      <div className="kw-rhythm-stats" aria-live="polite">
+        <span className="kw-rhythm-stat kw-metric-pill"><strong className="kw-rhythm-total-value" data-complete={complete} data-seconds={totalSeconds ?? undefined}>{totalSeconds === null ? "—" : fmtDuration(totalSeconds)}</strong><small>活动时间</small></span>
+        <span className="kw-rhythm-stat kw-metric-pill"><strong className="kw-rhythm-active-days-value" data-complete={complete} data-count={activeDays ?? undefined}>{activeDays === null ? "—" : `${activeDays}天`}</strong><small>有活动日</small></span>
+      </div>
+      <div className="kw-rhythm-range-switch kw-segmented-control" role="group" aria-label="节律日期范围">
+        <button type="button" aria-pressed={rangeMode === "recent"} onClick={() => setRangeMode("recent")}>近 7 天</button>
+        <button type="button" aria-pressed={rangeMode === "week"} onClick={() => setRangeMode("week")}>本周</button>
+      </div>
+    </div>
+  </header>;
+
   return <section className="kw-rhythm" hidden={!visible} aria-label={variant === "overview" ? "活动节律" : "七日活动节律"} data-variant={variant} data-range={rangeMode} data-request-key={requestKey} data-status={current?.status ?? "loading"}>
+    {variant === "overview" && heading}
     <div className="kw-rhythm-board kw-card">
-      <header className="kw-rhythm-card-header">
-        <div className="kw-rhythm-heading"><h1>{variant === "overview" ? "节律" : "七日节律"}</h1><p className="kw-rhythm-range-title"><time dateTime={rangeStart}>{longDate(rangeStart)}</time><span aria-hidden="true">—</span><time dateTime={rangeEnd}>{longDate(rangeEnd)}</time></p></div>
-        <div className="kw-rhythm-header-actions">
-          <div className="kw-rhythm-stats" aria-live="polite">
-            <span className="kw-rhythm-stat kw-metric-pill"><strong className="kw-rhythm-total-value" data-complete={complete} data-seconds={totalSeconds ?? undefined}>{totalSeconds === null ? "—" : fmtDuration(totalSeconds)}</strong><small>活动时间</small></span>
-            <span className="kw-rhythm-stat kw-metric-pill"><strong className="kw-rhythm-active-days-value" data-complete={complete} data-count={activeDays ?? undefined}>{activeDays === null ? "—" : `${activeDays}天`}</strong><small>有活动日</small></span>
-          </div>
-          <div className="kw-rhythm-range-switch kw-segmented-control" role="group" aria-label="节律日期范围">
-            <button type="button" aria-pressed={rangeMode === "recent"} onClick={() => setRangeMode("recent")}>近七天</button>
-            <button type="button" aria-pressed={rangeMode === "week"} onClick={() => setRangeMode("week")}>本周</button>
-          </div>
-        </div>
-      </header>
+      {variant !== "overview" && heading}
       {current?.status === "error" && <div className="kw-rhythm-notice is-error" role="alert"><span>暂时无法读取节律。{current.message}</span><button type="button" onClick={() => setRetry((value) => value + 1)}>重试</button></div>}
       {current?.status === "ready" && (missingDays > 0 || partialDays > 0) && <p className="kw-rhythm-notice" role="status">{[missingDays ? `${missingDays} 天未返回数据` : "", partialDays ? `${partialDays} 天数据不完整` : ""].filter(Boolean).join("，")}；暂不展示完整合计。</p>}
       {variant !== "overview" && <p className="kw-rhythm-scroll-hint">左右滑动查看完整 24 小时 <span aria-hidden="true">↔</span></p>}

@@ -1,6 +1,5 @@
-.beliefs-page { max-width: 1348px; margin: 0 auto; padding: 28px 32px 48px; }
-.beliefs-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
-.beliefs-heading h1 { margin: 0; color: var(--kw-ui-ink); font-size: 26px; letter-spacing: -.6px; font-weight: 600; }
+.beliefs-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.beliefs-heading h1 { margin: 0; color: var(--kw-ui-ink); }
 .beliefs-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .beliefs-page button { cursor: pointer; }
 .beliefs-actions button, .beliefs-error button { min-height: 34px; padding: 7px 13px; border: 1px solid var(--kw-ui-line); border-radius: var(--kw-ui-control-radius); background: var(--kw-ui-control); color: var(--kw-ui-ink); font: inherit; font-size: 12px; }
@@ -8,8 +7,8 @@
 .beliefs-actions button:disabled { opacity: .5; cursor: default; }
 .beliefs-layout { display: grid; gap: 28px; }
 .beliefs-layout.has-outline { grid-template-columns: minmax(0, 1fr) 180px; }
-.beliefs-paper { min-height: 580px; padding: 32px clamp(24px, 4vw, 60px) 48px; }
-.beliefs-paper .markdown-document-editor { font-size: 15px; line-height: 1.95; }
+.beliefs-paper { min-height: 580px; padding: 28px clamp(24px, 3vw, 48px) 48px; }
+.beliefs-paper .markdown-document-editor { max-width: var(--kw-ui-reading-width); font-size: var(--kw-ui-document-size); line-height: var(--kw-ui-document-leading); }
 .beliefs-paper .markdown-document-editor:not([data-readonly="true"]) .cm-content { min-height: 470px; }
 .beliefs-paper .md-heading { color: var(--kw-ui-ink); }
 .beliefs-outline { align-self: start; position: sticky; top: 32px; padding-top: 26px; }
@@ -36,9 +35,7 @@
   .beliefs-outline button { width: auto; border: 0; padding: 5px 0; }
 }
 @media (max-width: 760px) {
-  .beliefs-page { padding: 24px 16px 36px; }
-  .beliefs-heading { align-items: flex-start; flex-direction: column; gap: 16px; margin-bottom: 22px; }
-  .beliefs-heading h1 { font-size: 24px; }
+  .beliefs-heading { align-items: flex-start; flex-direction: column; gap: 16px; }
   .beliefs-paper { min-height: 500px; padding: 22px 20px 32px; }
   .beliefs-empty { min-height: 340px; }
 }
