@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { fetchRange, type DayMode, type RangeDay } from "../../api";
+import { fetchRange, type DayMode, type RangeDay, type RhythmDevice } from "../../api";
 import { fmtDuration, shiftDate, startOfISOWeek, weekdayShort } from "../../lib/format";
 import { ViewportTooltip, type ViewportTooltipAnchor } from "../../components/ViewportTooltip";
+import { rhythmDevices } from "./rhythm-devices";
 import { AnnualRhythm } from "./AnnualRhythm";
 import "./rhythm-workspace.css";
 
@@ -18,6 +19,7 @@ type RhythmRow = {
   distribution: Distribution;
   seconds: number | null;
   hours: number[] | null;
+  devices: RhythmDevice[] | null;
   hasNote: boolean;
   issues: string[];
 };
@@ -105,7 +107,7 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
     to: hourClock(startMinutes, index + 1),
     startsNextDay: index > 0 && hourClock(startMinutes, index).nextDay && !hourClock(startMinutes, index - 1).nextDay,
   })), [startMinutes]);
-  const [tooltip, setTooltip] = useState<{ key: string; date: string; hour: number; anchor: ViewportTooltipAnchor } | null>(null);
+  const [tooltip, setTooltip] = useState<{ key: string; date: string; hour: number | null; anchor: ViewportTooltipAnchor } | null>(null);
   const tooltipId = useId();
   const pendingInspection = useRef<number | null>(null);
   const hideTooltip = useCallback(() => setTooltip(null), []);
@@ -115,7 +117,7 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
     setTooltip(null);
   }, []);
   useEffect(() => { dismissTooltip(); return dismissTooltip; }, [dismissTooltip, requestKey, visible]);
-  function inspectHour(date: string, hour: number, element: Element) {
+  function inspectCell(date: string, hour: number | null, element: Element) {
     if (pendingInspection.current !== null) cancelAnimationFrame(pendingInspection.current);
     pendingInspection.current = null;
     const bounds = element.getBoundingClientRect();
@@ -144,7 +146,7 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
   const rows = useMemo<RhythmRow[]>(() => {
     const records = new Map(current?.status === "ready" ? current.days.map((day) => [day.date, day]) : []);
     return dates.map((date) => {
-      const base = { date, seconds: null, hours: null, hasNote: false, issues: [] };
+      const base = { date, seconds: null, hours: null, devices: null, hasNote: false, issues: [] };
       if (date > currentDate) return { ...base, state: "future", distribution: "future" };
       if (!current || current.status === "loading") return { ...base, state: "loading", distribution: "loading" };
       if (current.status === "error") return { ...base, state: "error", distribution: "error" };
@@ -161,6 +163,7 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
         distribution: hours ? "available" : day.rhythm ? "missing" : "not-provided",
         seconds,
         hours,
+        devices: rhythmDevices(day),
         hasNote: day.overview?.review_has_content === true,
         issues: Array.isArray(day.quality?.issues) ? day.quality.issues : [],
       };
@@ -178,11 +181,11 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
 
   const activeTooltip = visible && tooltip?.key === requestKey ? tooltip : null;
   const tooltipRow = activeTooltip ? rows.find(row => row.date === activeTooltip.date) : null;
-  const tooltipHour = activeTooltip ? hours[activeTooltip.hour] : null;
+  const tooltipHour = activeTooltip?.hour != null ? hours[activeTooltip.hour] : null;
   const tooltipSeconds = tooltipRow?.hours?.[activeTooltip?.hour ?? 0];
 
   const heading = <header className={`kw-rhythm-card-header${variant === "overview" ? " kw-page-heading" : ""}`}>
-    <div className="kw-rhythm-heading"><h1 className={variant === "overview" ? "kw-page-title" : undefined}>{variant === "overview" ? "节律" : "七日节律"}</h1><p className="kw-rhythm-range-title"><time dateTime={rangeStart}>{longDate(rangeStart)}</time><span aria-hidden="true">—</span><time dateTime={rangeEnd}>{longDate(rangeEnd)}</time></p></div>
+    <div className="kw-rhythm-heading"><h1 className={variant === "overview" ? "kw-page-title" : undefined}>{variant === "overview" ? "节律" : "七日节律"}</h1><p className="kw-rhythm-range-title"><time dateTime={rangeStart}>{longDate(rangeStart)}</time><span aria-hidden="true">—</span><time dateTime={rangeEnd}>{longDate(rangeEnd)}</time></p><div className="kw-rhythm-device-legend" role="group" aria-label="设备颜色">{[["mac", "Mac"], ["ipad", "iPad"], ["iphone", "iPhone"]].map(([device, label]) => <span key={device} data-device={device}><i aria-hidden="true"/>{label}</span>)}</div></div>
     <div className="kw-rhythm-header-actions">
       <div className="kw-rhythm-stats" aria-live="polite">
         <span className="kw-rhythm-stat kw-metric-pill"><strong className="kw-rhythm-total-value" data-complete={complete} data-seconds={totalSeconds ?? undefined}>{totalSeconds === null ? "—" : fmtDuration(totalSeconds)}</strong><small>活动时间</small></span>
@@ -217,26 +220,26 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
             const note = `${longDate(row.date)}，星期${weekdayShort(row.date)}${today ? "，今天" : ""}${selected ? "，当前选中" : ""}，${STATE_LABELS[row.state]}${row.seconds === null ? "" : `，${row.state === "partial" ? "已记录" : ""}活动时间${fmtDuration(row.seconds)}`}${row.hasNote ? "，有笔记" : ""}${row.distribution === "not-provided" ? "，未提供小时分布" : ""}`;
             return <button type="button" className="kw-rhythm-row" key={row.date} data-date={row.date} data-state={row.state} data-distribution={row.distribution} data-today={today} data-selected={selected} aria-pressed={selected} aria-label={note} disabled={row.state === "future"} onClick={() => onSelect(row.date)}
               aria-describedby={activeTooltip?.date === row.date ? tooltipId : undefined} aria-keyshortcuts="ArrowLeft ArrowRight Home End"
-              onFocus={event => { const cell = event.currentTarget.querySelector('[data-hour="0"]'); if (cell) inspectHour(row.date, 0, cell); }}
+              onFocus={event => { const cell = event.currentTarget.querySelector('.kw-rhythm-total-cell'); if (cell) inspectCell(row.date, null, cell); }}
               onBlur={dismissTooltip} onMouseLeave={dismissTooltip}
               onKeyDown={event => {
                 if (event.key === "Escape") { event.preventDefault(); dismissTooltip(); return; }
                 if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
                 event.preventDefault();
-                const currentHour = activeTooltip?.date === row.date ? activeTooltip.hour : 0;
+                const currentHour = activeTooltip?.date === row.date ? activeTooltip.hour ?? -1 : -1;
                 const next = event.key === "Home" ? 0 : event.key === "End" ? 23 : Math.max(0, Math.min(23, currentHour + (event.key === "ArrowRight" ? 1 : -1)));
                 const cell = event.currentTarget.querySelector(`[data-hour="${next}"]`);
-                if (cell) { cell.scrollIntoView({ block: "nearest", inline: "nearest" }); if (pendingInspection.current !== null) cancelAnimationFrame(pendingInspection.current); pendingInspection.current = requestAnimationFrame(() => inspectHour(row.date, next, cell)); }
+                if (cell) { cell.scrollIntoView({ block: "nearest", inline: "nearest" }); if (pendingInspection.current !== null) cancelAnimationFrame(pendingInspection.current); pendingInspection.current = requestAnimationFrame(() => inspectCell(row.date, next, cell)); }
               }}>
               <span className="kw-rhythm-date-cell"><span className="kw-rhythm-date-line"><time dateTime={row.date}>{shortDate(row.date)}</time>{row.hasNote && <NoteMark />}</span><span className="kw-rhythm-day-meta"><span className={today ? "kw-rhythm-today" : undefined}>{today ? "今天" : `周${weekdayShort(row.date)}`}</span>{row.state === "partial" ? <em>不完整</em> : selected ? <b>已选</b> : null}</span></span>
-              <span className="kw-rhythm-total-cell"><strong data-seconds={row.seconds ?? undefined}>{row.seconds === null ? "—" : fmtDuration(row.seconds)}</strong>{ratio === null ? <small>{STATE_LABELS[row.state]}</small> : row.state === "partial" ? <small className="kw-rhythm-partial-total">仅已记录</small> : <span className="kw-rhythm-day-bar" aria-hidden="true"><i style={{ width: `${ratio}%` }} /></span>}</span>
+              <span className="kw-rhythm-total-cell" onMouseEnter={event => inspectCell(row.date, null, event.currentTarget)}><strong data-seconds={row.seconds ?? undefined}>{row.seconds === null ? "—" : fmtDuration(row.seconds)}</strong>{ratio === null ? <small>{STATE_LABELS[row.state]}</small> : row.state === "partial" ? <small className="kw-rhythm-partial-total">仅已记录</small> : <span className="kw-rhythm-day-bar" aria-hidden="true" data-devices={row.devices ? "ready" : "unavailable"}>{row.devices ? row.devices.filter(device => device.active_seconds > 0).map(device => <i key={device.device} data-device={device.device} data-seconds={device.active_seconds} style={{ width: `${peakSeconds ? device.active_seconds / peakSeconds * 100 : 0}%` }}/>) : <i style={{ width: `${ratio}%` }}/>}</span>}</span>
               <span className={`kw-rhythm-hours ${row.hours ? "" : "is-unavailable"}`}>
                 <span className="kw-rhythm-cells" aria-hidden="true">{hours.map(hour => {
                   const seconds = row.hours?.[hour.index];
                   return <span className="kw-rhythm-cell" key={hour.index} data-hour={hour.index} data-distribution={row.distribution} data-seconds={seconds}
                     data-next-day={hour.startsNextDay || undefined} data-highlighted={activeTooltip?.hour === hour.index || undefined}
                     data-inspected={activeTooltip?.date === row.date && activeTooltip.hour === hour.index || undefined}
-                    onMouseEnter={event => inspectHour(row.date, hour.index, event.currentTarget)}>
+                    onMouseEnter={event => inspectCell(row.date, hour.index, event.currentTarget)}>
                     <span className="kw-rhythm-cell-fill" style={seconds === undefined ? undefined : { background: heatColor(seconds) }} />
                   </span>;
                 })}</span>
@@ -247,10 +250,18 @@ export function RhythmWorkspace({ variant = "week", currentDate, selectedDate, d
         </div>
       </div>
     </div>
-    {activeTooltip && tooltipRow && tooltipHour && <ViewportTooltip id={tooltipId} className="kw-rhythm-tooltip" anchor={activeTooltip.anchor} side="above" onDismiss={hideTooltip}>
+    {activeTooltip && tooltipRow && <ViewportTooltip id={tooltipId} className="kw-rhythm-tooltip" anchor={activeTooltip.anchor} side="above" onDismiss={hideTooltip}>
       <time dateTime={tooltipRow.date}>{longDate(tooltipRow.date)}</time>
-      <strong>{tooltipHour.from.nextDay ? "次日 " : ""}{tooltipHour.from.clock}–{tooltipHour.to.nextDay && !tooltipHour.from.nextDay ? "次日 " : ""}{tooltipHour.to.clock}</strong>
-      <span>{tooltipSeconds === undefined ? distributionLabel(tooltipRow) : `活动时间 ${fmtDuration(tooltipSeconds)}`}</span>
+      {tooltipHour ? <>
+        <strong>{tooltipHour.from.nextDay ? "次日 " : ""}{tooltipHour.from.clock}–{tooltipHour.to.nextDay && !tooltipHour.from.nextDay ? "次日 " : ""}{tooltipHour.to.clock}</strong>
+        <span>{tooltipSeconds === undefined ? distributionLabel(tooltipRow) : `活动时间 ${fmtDuration(tooltipSeconds)}`}</span>
+      </> : <>
+        <strong>设备活动时间</strong>
+        {tooltipRow.devices ? <>
+          <div className="kw-rhythm-device-times">{tooltipRow.devices.map(device => <div key={device.device} data-device={device.device}><span><i aria-hidden="true"/>{device.label}</span><b>{device.observed_seconds === null ? "暂无同步记录" : fmtDuration(device.observed_seconds)}</b></div>)}</div>
+          {tooltipRow.devices.some(device => device.observed_seconds !== null && Math.abs(device.observed_seconds - device.active_seconds) > .05) && <span className="kw-rhythm-device-accounting">设备重叠时段均分计入活动条，原始时长相加可能超过总量。</span>}
+        </> : <span>设备分布暂未提供</span>}
+      </>}
       {tooltipRow.issues.length > 0 && <small>{tooltipRow.issues.join(" · ")}</small>}
     </ViewportTooltip>}
     {variant === "overview" && <AnnualRhythm currentDate={currentDate} selectedDate={selectedDate} dayMode={dayMode} visible={visible} onSelect={onSelect} />}

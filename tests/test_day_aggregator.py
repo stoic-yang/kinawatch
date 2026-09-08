@@ -13,7 +13,8 @@ from zoneinfo import ZoneInfo
 from backend.activitywatch_adapter import ActivityWatchAdapter
 from backend.cache import DayCache
 from backend.config import fingerprint_file, load_settings
-from backend.day_aggregator import DayAggregator
+from backend.day_aggregator import DayAggregator, _device_summary
+from backend.multi_device_activity import partition_devices
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -194,6 +195,8 @@ class DayAggregatorTests(unittest.TestCase):
         self.assertEqual(payload["overview"]["active_seconds"], 600)
         self.assertEqual(payload["overview"]["offline_seconds"], 4200)
         self.assertEqual(payload["overview"]["combined_nonoverlap_seconds"], 4200)
+        self.assertEqual(sum(device["active_seconds"] for device in payload["rhythm"]["devices"]), 4200)
+        self.assertEqual(next(device for device in payload["rhythm"]["devices"] if device["device"] == "offline")["active_seconds"], 3600)
         self.assertEqual(len(payload["quality"]["overlap_warnings"]), 1)
         self.assertEqual(
             payload["quality"]["overlap_warnings"][0]["overlap_seconds"],
@@ -389,6 +392,40 @@ class DayAggregatorTests(unittest.TestCase):
             {item["end"] for item in blocks},
             {"2026-07-15T01:10:00+00:00"},
         )
+
+
+
+class DeviceSummaryTests(unittest.TestCase):
+    def test_three_device_overlap_keeps_raw_and_allocated_durations_separate(self):
+        start = datetime(2026, 9, 2, tzinfo=timezone.utc)
+        def event(label, a, b):
+            return {"timestamp": (start + timedelta(seconds=a)).isoformat(),
+                    "wall_end_timestamp": (start + timedelta(seconds=b)).isoformat(),
+                    "duration_seconds": b - a, "device_id": label, "source": label,
+                    "source_type": "apple-screentime" if label != "Mac" else "activitywatch-rest"}
+        events, _, _ = partition_devices([event("Mac", 0, 600), event("iPhone", 300, 900), event("iPad", 300, 600)])
+        sources = [{"label": label, "type": "activitywatch-rest" if label == "Mac" else "apple-screentime",
+                    "duration_seconds": duration, "ok": True} for label, duration in [("Mac", 600), ("iPhone", 600), ("iPad", 300)]]
+        devices = {row["device"]: row for row in _device_summary(events, sources, 0.0)}
+        self.assertEqual(devices["mac"]["active_seconds"], 400)
+        self.assertEqual(devices["ipad"]["active_seconds"], 100)
+        self.assertEqual(devices["iphone"]["active_seconds"], 400)
+        self.assertEqual(sum(row["active_seconds"] for row in devices.values()), 900)
+        self.assertEqual(sum(row["observed_seconds"] for row in devices.values()), 1500)
+
+    def test_missing_mobile_observations_are_unknown_and_unrecognized_devices_stay_separate(self):
+        sources = [{"name": "Mac", "type": "activitywatch-rest", "ok": True, "duration_seconds": 0},
+                   {"name": "iPhone", "type": "apple-screentime", "ok": True, "coverage": "unknown", "duration_seconds": 0},
+                   {"name": "Tablet", "type": "apple-screentime", "ok": True, "duration_seconds": 20}]
+        devices = {row["device"]: row for row in _device_summary([], sources, 0.0)}
+        self.assertEqual(devices["mac"]["observed_seconds"], 0)
+        self.assertIsNone(devices["iphone"]["observed_seconds"])
+        self.assertEqual(devices["other"]["observed_seconds"], 20)
+        self.assertNotIn("ipad", devices)
+
+    def test_unavailable_mac_is_not_reported_as_zero_usage(self):
+        result = _device_summary([], [{"name": "Mac", "type": "activitywatch-rest", "ok": False}], 0.0)
+        self.assertEqual(result, [{"device": "mac", "label": "Mac", "active_seconds": 0, "observed_seconds": None}])
 
 
 if __name__ == "__main__":

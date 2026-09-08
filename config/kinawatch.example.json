@@ -14,7 +14,7 @@
   "cache_dir": "~/.cache/kinawatch",
   "journal_schema_version": 3,
   "activity_schema_version": 2,
-  "day_schema_version": 13,
+  "day_schema_version": 14,
   "health_sync": {
     "enabled": false,
     "file": "~/Library/Mobile Documents/iCloud~is~workflow~my~workflows/Documents/KinaWatch/health.json"

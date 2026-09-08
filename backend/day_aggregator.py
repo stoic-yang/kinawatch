@@ -106,6 +106,48 @@ def _compact_seconds(value: float) -> int | float:
     return int(rounded) if rounded.is_integer() else rounded
 
 
+def _device_summary(
+    events: list[dict[str, Any]],
+    sources: list[dict[str, Any]],
+    offline_seconds: float,
+) -> list[dict[str, Any]]:
+    """Keep existing equal-share accounting separate from observed device time."""
+    labels = {"mac": "Mac", "ipad": "iPad", "iphone": "iPhone", "other": "其他设备", "offline": "离线活动"}
+    totals: dict[str, float] = defaultdict(float)
+    observed: dict[str, float | None] = {}
+    intervals: dict[str, list[tuple[datetime, datetime]]] = defaultdict(list)
+
+    def device_key(source_type: str, label: str) -> str:
+        if source_type != "apple-screentime":
+            return "mac"
+        name = label.casefold()
+        return "ipad" if "ipad" in name else "iphone" if "iphone" in name else "other"
+
+    for source in sources:
+        key = device_key(str(source.get("type", "")), str(source.get("label") or source.get("name", "")))
+        known = source.get("coverage") != "unknown" and (source.get("ok") or source.get("duration_seconds", 0) > 0)
+        if known:
+            observed[key] = (observed.get(key) or 0) + float(source.get("duration_seconds", 0))
+        else:
+            observed.setdefault(key, None)
+    for event in events:
+        key = device_key(str(event.get("source_type", "")), str(event.get("source", "")))
+        totals[key] += float(event["duration_seconds"])
+        intervals[key].append(_event_interval(event))
+    # Fixtures or adapters without source summaries can still report observations.
+    for key, values in intervals.items():
+        if key not in observed:
+            observed[key] = _interval_duration(values)
+    if offline_seconds > 0:
+        totals["offline"] = offline_seconds
+        observed["offline"] = offline_seconds
+    return [
+        {"device": key, "label": label, "active_seconds": _compact_seconds(totals.get(key, 0.0)),
+         "observed_seconds": _compact_seconds(observed[key]) if observed.get(key) is not None else None}
+        for key, label in labels.items() if key in observed or key in totals
+    ]
+
+
 class DayAggregator:
     def __init__(
         self,
@@ -495,13 +537,12 @@ class DayAggregator:
             "categories": categories,
             "projects": self._project_rows(events, offline_items),
             "timeline": timeline,
-            "rhythm": self._rhythm_summary(
-                day,
-                mode,
-                timezone_name,
-                screen_intervals,
-                offline_intervals,
-            ),
+            "rhythm": {
+                **self._rhythm_summary(day, mode, timezone_name, screen_intervals, offline_intervals),
+                "devices": _device_summary(
+                    events, activity.get("sources", []), max(0.0, offline_seconds - overlap_seconds)
+                ),
+            },
             "journal": journal,
         }
 

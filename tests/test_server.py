@@ -268,6 +268,7 @@ class RangeAggregator:
                 "first_active": f"{day.isoformat()}T08:00:00+08:00",
                 "last_active": f"{day.isoformat()}T18:00:00+08:00",
                 "hourly_active_seconds": [0] * 24,
+                "devices": [{"device": "mac", "label": "Mac", "active_seconds": 3600 * multiplier, "observed_seconds": 3600 * multiplier}],
             },
         }
 
@@ -1032,6 +1033,7 @@ class ServerTests(unittest.TestCase):
             [([date(2026, 7, 15), date(2026, 7, 16)], "routine")],
         )
         self.assertEqual(len(response["days"][0]["rhythm"]["hourly_active_seconds"]), 24)
+        self.assertEqual(response["days"][0]["rhythm"]["devices"][0]["active_seconds"], 3600)
         self.assertEqual(
             response["top_apps"],
             [

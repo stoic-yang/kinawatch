@@ -110,10 +110,18 @@ export interface OfflineActivity {
 
 export type TimelineBlock = ScreenTimelineBlock | OfflineActivity;
 
+export interface RhythmDevice {
+  device: "mac" | "ipad" | "iphone" | "other" | "offline";
+  label: string;
+  active_seconds: number;
+  observed_seconds: number | null;
+}
+
 export interface RangeRhythm {
   first_active: string | null;
   last_active: string | null;
   hourly_active_seconds: number[];
+  devices?: RhythmDevice[];
 }
 
 export interface WorkflowNote {

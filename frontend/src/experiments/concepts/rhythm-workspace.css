@@ -76,8 +76,8 @@
 .kw-rhythm .kw-rhythm-total-cell>strong { color: var(--kw-ui-ink, #45613b); font-size: 13px; font-weight: 620; line-height: 1.15; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .kw-rhythm .kw-rhythm-total-cell>small { color: var(--kw-ui-muted, #8c9a80); font-size: 11px; line-height: 1.15; }
 .kw-rhythm .kw-rhythm-total-cell>.kw-rhythm-partial-total { color: var(--kw-ui-warning, #927843); }
-.kw-rhythm .kw-rhythm-day-bar { display: block; width: 100%; height: 3px; border-radius: 2px; background: var(--kw-ui-control, #e7ede0); overflow: hidden; }
-.kw-rhythm .kw-rhythm-day-bar>i { display: block; height: 100%; border-radius: inherit; background: var(--kw-ui-accent, #7f9c6c); }
+.kw-rhythm .kw-rhythm-day-bar { display: flex; width: 100%; height: 4px; border-radius: 2px; background: var(--kw-ui-control, #e7ede0); overflow: hidden; }
+.kw-rhythm .kw-rhythm-day-bar>i { display: block; height: 100%; flex: none; background: var(--kw-device-color, var(--kw-ui-line-strong)); }
 @media (max-width: 1080px) {
   .kw-rhythm .kw-rhythm-card-header { grid-template-columns: minmax(170px,1fr) auto; gap: 12px; }
 }
@@ -117,3 +117,16 @@
 .kw-rhythm-tooltip > time { color: var(--kw-ui-muted); font-size: 11px; }
 .kw-rhythm-tooltip > strong { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .kw-rhythm-tooltip > small { color: var(--kw-ui-warning); }
+
+:is(.kw-rhythm, .kw-rhythm-tooltip) [data-device="mac"] { --kw-device-color: light-dark(#527acb, #87a9ef); }
+:is(.kw-rhythm, .kw-rhythm-tooltip) [data-device="ipad"] { --kw-device-color: light-dark(#9975c3, #bd9bdf); }
+:is(.kw-rhythm, .kw-rhythm-tooltip) [data-device="iphone"] { --kw-device-color: light-dark(#37998c, #6ec1b4); }
+:is(.kw-rhythm, .kw-rhythm-tooltip) [data-device="other"] { --kw-device-color: var(--kw-ui-muted); }
+:is(.kw-rhythm, .kw-rhythm-tooltip) [data-device="offline"] { --kw-device-color: var(--kw-ui-warning); }
+.kw-rhythm-device-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 9px; color: var(--kw-ui-muted); font-size: 11px; }
+.kw-rhythm-device-legend > span, .kw-rhythm-device-times > div > span { display: inline-flex; align-items: center; gap: 5px; }
+.kw-rhythm-device-legend i, .kw-rhythm-device-times i { width: 7px; height: 7px; flex: none; border-radius: 2px; background: var(--kw-device-color); }
+.kw-rhythm-device-times { display: grid; gap: 7px; margin: 5px 0; }
+.kw-rhythm-device-times > div { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+.kw-rhythm-device-times b { font-weight: 500; font-variant-numeric: tabular-nums; }
+.kw-rhythm-tooltip .kw-rhythm-device-accounting { max-width: 250px; color: var(--kw-ui-muted); font-size: 11px; }
