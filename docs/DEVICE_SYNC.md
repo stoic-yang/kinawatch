@@ -5,6 +5,34 @@
 使用免费的 Apple“快捷指令”和 iCloud Drive。先在 iPhone 解锁时手动运行，
 尚未配置个人自动化触发器。只读取睡眠、步数，不查询其他健康指标。
 
+### 小米运动健康先同步
+
+使用 Mi Fitness（小米运动健康）的手环时，数据经过“手环 → 小米运动健康 →
+Apple 健康 → 快捷指令导出”到达 KinaWatch。快捷指令只能读取 Apple 健康已收到
+的记录。小米的[连接说明](https://www.mi.com/uk/support/faq/details/KA-515546/)指出，
+重新打开 App 可让设备自动重新连接和同步；[健康同步说明](https://www.mi.com/uk/support/faq/details/KA-230360/)
+也说明同步后可能需要稍等才能在 Apple 健康中看到记录。具体设备仍需真机验证。
+
+生成时添加 `--mi-fitness` 可启用 v3：
+
+```sh
+python3 scripts/build_health_shortcut.py /tmp/health-unsigned.shortcut --mi-fitness
+shortcuts sign --mode anyone --input /tmp/health-unsigned.shortcut --output /tmp/KinaWatch-health-v3.shortcut
+```
+
+这个版本先打开小米运动健康，留出 20 秒同步缓冲，再导出最近数据；请保持 iPhone
+解锁、手环在附近。没有调用已证实的“立即同步”接口，等待也不代表同步完成。
+保存后检查导出的睡眠结束日期：如果没有今天的记录，通知会明确指出缺失并建议在
+小米 App 确认同步后重试。步数和历史睡眠仍正常导出，缺失不表示没有睡眠。
+检查只表示是否含有今天结束的样本，不证明当日记录完整或每一条来自小米。
+这是现有一键流程的补充，尚未添加定时或 App 触发的个人自动化。
+
+`--fixture --mi-fitness` 跳过打开 App 和等待，只用合成数据验证相同的日期检查及
+通知文案分支。2026-09-08 在 macOS 原生 Shortcuts 分别验证有今日记录和仅有旧记录
+的两条分支；iPhone 打开小米 App、设备同步耗时及后台继续执行仍待真机验证。
+
+### 安装与导入
+
 在 Mac 生成并签名，然后在 iPhone 添加：
 
 ```sh
