@@ -143,7 +143,6 @@ export function ConceptFrame({concept, app, nav, active, onNavigate, children, f
     </div> : <div className="concept-timeline-heading"><h2>{app.dateLabel}<span>时间线</span></h2><p>拖动平移 · ⌘ / Ctrl + 滚轮缩放 · 点击活动查看详情</p></div>}
     {app.day && app.displayDay ? <>
       <DayRibbon key={app.date} rangeStart={app.day.range.start} rangeEnd={app.day.range.end} timezone={app.timezone} timeline={app.displayDay.timeline} onSelectBlock={app.onInspect} showControls={concept !== "journal"} touchZoom={concept === "journal"} isVisible={timelineOpen}/>
-      {app.day.quality.sources.some(source => source.type === "apple-screentime") && <details className="device-sync-details"><summary>设备来源</summary>{app.day.quality.sources.map(source => <p key={source.name}>{source.type === "apple-screentime" ? source.label : "Mac"} · {source.coverage === "unknown" ? "当天暂无同步记录" : fmtDuration(source.duration_seconds ?? 0)}{source.latest_event && ` · 最新记录 ${new Date(source.latest_event).toLocaleString("zh-CN")}`}{source.error && ` · ${source.error}`}</p>)}</details>}
       {!app.displayDay.timeline.some(block => block.kind === "screen") && <p className="concept-timeline-empty">当前日期与筛选条件下没有屏幕活动。</p>}
     </> : <p className="concept-timeline-empty">{app.dateLabel} 的时间线尚未载入。</p>}
   </section>;

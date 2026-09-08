@@ -65,6 +65,3 @@
   .health-timing-row { min-height: 25px; }
 }
 @media (prefers-reduced-motion: reduce) { .health-page * { scroll-behavior: auto; } }
-.device-sync-details { margin-top: 12px; color: var(--kw-ui-muted); font-size: 12px; }
-.device-sync-details summary { cursor: pointer; width: fit-content; }
-.device-sync-details p { margin: 7px 0 0; line-height: 1.5; }
