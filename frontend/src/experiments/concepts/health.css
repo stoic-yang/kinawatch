@@ -32,7 +32,6 @@
 .health-night-interval::after { right: -1px; }
 .health-timing-row[aria-pressed="true"] .health-night-interval, .health-timing-row:hover .health-night-interval, .health-timing-row:focus-visible .health-night-interval { background: var(--kw-ui-accent); }
 .health-timing-row[aria-pressed="true"] { color: var(--kw-ui-ink); }
-.health-no-night { padding-left: 5px; font-size: 11px; }
 .health-source-details { margin-top: 18px; color: var(--kw-ui-muted); font-size: 12px; }
 .health-source-details summary { width: fit-content; cursor: pointer; }
 .health-source-content { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-top: 12px; }

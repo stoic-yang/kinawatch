@@ -86,7 +86,7 @@ export function HealthPage({ active, app, state }: { active: boolean; app: Conce
             const item = day.sleep;
             const left = item ? nightPosition(item.start) : 0;
             const width = item ? Math.min(100 - left, (Date.parse(item.end) - Date.parse(item.start)) / 86400000 * 100) : 0;
-            return <button type="button" className="health-timing-row" key={day.date} aria-pressed={day.date === app.date} onClick={() => app.selectDate(day.date)} aria-label={`${fullDate(day.date)}，${item ? `${healthClock(item.start)}至${healthClock(item.end)}` : "未记录"}`}><span>{shortDate(day.date)}</span><span className="health-night-track">{item ? <span className="health-night-interval" style={{ left: `${left}%`, width: `${width}%` }}/>: <span className="health-no-night">未记录</span>}</span><small>{item ? `${healthClock(item.start)}–${healthClock(item.end)}` : "—"}</small></button>;
+            return <button type="button" className="health-timing-row" key={day.date} aria-pressed={day.date === app.date} onClick={() => app.selectDate(day.date)} aria-label={`${fullDate(day.date)}，${item ? `${healthClock(item.start)}至${healthClock(item.end)}` : "未记录"}`}><span>{shortDate(day.date)}</span><span className="health-night-track">{item ? <span className="health-night-interval" style={{ left: `${left}%`, width: `${width}%` }}/> : null}</span><small>{item ? `${healthClock(item.start)}–${healthClock(item.end)}` : "—"}</small></button>;
           })}
         </article>
         <article className="health-steps-chart health-chart-card kw-card" aria-label="每日步数"><header className="health-section-heading"><h2>每日步数</h2><div className="health-stats">
