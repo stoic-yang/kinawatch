@@ -15,7 +15,6 @@ export function WordsHeatmap({ year, selected, today, days, snapshot, active, on
   const { cells, months, weekCount } = useMemo(() => wordYear(year), [year]);
   const stats = useMemo(() => wordStudyStats(days, today, snapshot.fetched_at), [days, today, snapshot.fetched_at]);
   const duration = stats.answerMs >= 3_600_000 ? `${numbers.format(stats.answerMs / 3_600_000)} 小时` : answerTime(stats.answerMs);
-  const [durationValue, durationUnit] = duration.split(" ");
   const arrived = cells.filter((date): date is string => date !== null && date <= today);
   const defaultFocus = arrived.includes(selected) ? selected : arrived[arrived.length - 1];
   const [focusedDate, setFocusedDate] = useState<string | null>(null);
@@ -71,6 +70,13 @@ export function WordsHeatmap({ year, selected, today, days, snapshot, active, on
   return <section className="words-annual kw-annual" aria-label="年度学习热力图" data-year={year}>
     <header className="words-annual-heading">
       <h2>学习日历</h2>
+      <div className="words-study-totals" role="group" aria-label="累计学习统计">
+        <span className="kw-metric-pill" title="Anki 记录的累计作答耗时"><b>{duration.replace(" ", "")}</b><small>累计时长</small></span>
+        <span className="kw-metric-pill" title="当前词库的词条总数，正反卡按同一条笔记去重"><b>{numbers.format(snapshot.words.length)}词</b><small>总单词数</small></span>
+        <span className="kw-metric-pill"><b>{numbers.format(stats.longestStreak)}天</b><small>最长连续</small></span>
+        <span className="kw-metric-pill" title={stats.currentStreak === null ? "更新学习数据后计算当前连续天数" : "连续学习截至今天或昨天，今天尚未学习不会提前中断"}><b>{stats.currentStreak === null ? "—" : `${numbers.format(stats.currentStreak)}天`}</b><small>当前连续</small></span>
+        <span className="kw-metric-pill"><b>{numbers.format(stats.studyDays)}天</b><small>学习天数</small></span>
+      </div>
       <div className="words-year-nav" role="group" aria-label="学习年份">
         <button type="button" aria-label="上一个学习年份" disabled={year <= 1} onClick={() => onYear(year - 1)}>‹</button>
         <span>{year} 年</span>
@@ -104,13 +110,6 @@ export function WordsHeatmap({ year, selected, today, days, snapshot, active, on
       </div>
     </div>
     <div className="words-heat-legend" aria-hidden="true"><span>少</span>{[0, 1, 2, 3, 4].map(level => <i key={level} className={`kw-annual-level-${level}`}/>)}<span>多</span></div>
-    <dl className="words-study-totals" aria-label="累计学习统计">
-      <div><dt title="Anki 记录的累计作答耗时">累计学习时长</dt><dd>{durationValue}<span>{durationUnit}</span></dd></div>
-      <div><dt title="当前词库的词条总数，正反卡按同一条笔记去重">总单词数</dt><dd>{numbers.format(snapshot.words.length)}<span>词</span></dd></div>
-      <div><dt>最长连续天数</dt><dd>{numbers.format(stats.longestStreak)}<span>天</span></dd></div>
-      <div><dt title={stats.currentStreak === null ? "更新学习数据后计算当前连续天数" : "连续学习截至今天或昨天，今天尚未学习不会提前中断"}>当前连续天数</dt><dd>{stats.currentStreak === null ? "—" : numbers.format(stats.currentStreak)}{stats.currentStreak !== null && <span>天</span>}</dd></div>
-      <div><dt>总学习天数</dt><dd>{numbers.format(stats.studyDays)}<span>天</span></dd></div>
-    </dl>
     {active && tooltip && <ViewportTooltip id={tooltipId} className="kw-annual-tooltip" anchor={tooltip.anchor} side="above" onDismiss={dismissTooltip}>
       <time dateTime={tooltip.date}>{fullDate(tooltip.date)}</time><strong>{tooltipDay ? `${tooltipDay.answers} 次作答 · ${tooltipDay.entries} 个词条` : "尚未读取"}</strong>
     </ViewportTooltip>}
