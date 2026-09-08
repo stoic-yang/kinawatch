@@ -51,6 +51,8 @@ export interface ActivitySource {
   event_count?: number;
   duration_seconds?: number;
   error?: string;
+  latest_event?: string | null;
+  coverage?: string;
   media_activity?: Record<string, unknown>;
 }
 
@@ -80,6 +82,8 @@ export interface ScreenTimelineBlock {
   app: string;
   title: string;
   source: string;
+  source_type?: string;
+  bundle_id?: string;
   event_refs: ActivityEventRef[];
   manual_edit: boolean;
   manual_edit_conflict: boolean;

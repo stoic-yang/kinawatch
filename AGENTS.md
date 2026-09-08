@@ -54,6 +54,14 @@ needed.
   snapshot revision. Retain only sleep and steps summaries under the platform
   user-data directory; never retain the archive, import other health metrics,
   or write health data to journals automatically. See `docs/PERSONAL_HEALTH.md`.
+  The separately authorized, opt-in `health_sync` reader may ingest one fixed
+  local iCloud JSON file produced by the user's iPhone shortcut. Validate its
+  version, dates and contents; merge recent summaries atomically while retaining
+  older history and absent metrics. Invalid or empty exports preserve history.
+- The opt-in Screen Time adapter may read synchronized mobile Biome data through
+  the separately installed decoder and retain its own local snapshot. Apple
+  stores and ActivityWatch remain read-only. Mobile activity inspection is
+  read-only; cross-device totals must use interval union. See `docs/DEVICE_SYNC.md`.
 - A weekly-note write may update only the canonical `自由记录` H2 field in
   the fixed `Review/Weekly/YYYY-Www.md` note. Preserve frontmatter, headings,
   legacy sections, unknown sections, and every non-target field.
@@ -68,7 +76,7 @@ needed.
   generated, treated as product state, or bulk-removed from historical notes.
 - Keep optimistic file fingerprints, per-note locks, same-directory temporary
   files, atomic replacement, and conflict rejection on every write path.
-- Except for the daily document and beliefs editors described above, never autosave or
+- Except for the daily document and beliefs editors and opt-in local sync stores described above, never autosave or
   background-write. Never bulk-migrate or delete structured fields.
 - Do not write tests against real notes. Use temporary files and repository
   fixtures only.

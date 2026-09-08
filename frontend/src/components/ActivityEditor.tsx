@@ -57,6 +57,7 @@ export function ActivityEditor({
     setInspector(null);
     setSelectedKey("");
     setSaved(null);
+    if (selection.source_type === "apple-screentime") { setLoading(false); return; }
     fetchActivityInspector(date, mode, selection.event_refs ?? [])
       .then((response) => {
         if (cancelled) return;
@@ -218,8 +219,8 @@ export function ActivityEditor({
       >
         <header className="activity-editor-head">
           <div>
-            <h2 id="activity-editor-title">修改时间线</h2>
-            <p>当前支持修改已有、已结束的事件；新增活动稍后开放。</p>
+            <h2 id="activity-editor-title">{selection.source_type === "apple-screentime" ? "设备活动" : "修改时间线"}</h2>
+            <p>{selection.source_type === "apple-screentime" ? `${selection.source} · Apple 屏幕时间` : "当前支持修改已有、已结束的事件；新增活动稍后开放。"}</p>
           </div>
           <button
             type="button"
@@ -232,6 +233,10 @@ export function ActivityEditor({
           </button>
         </header>
 
+        {selection.source_type === "apple-screentime" && <div className="activity-editor-source">
+          <h3>{selection.app}</h3><p>{new Date(selection.start).toLocaleString("zh-CN")} — {new Date(selection.end).toLocaleTimeString("zh-CN")}</p>
+          <p>{selection.category_label}</p><p>同步记录只读；这里只能确认应用使用，无法确定应用内的具体内容。</p>
+        </div>}
         {loading && (
           <p className="activity-editor-status" role="status">
             正在读取原始事件…

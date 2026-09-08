@@ -259,6 +259,8 @@ class DayAggregator:
                     "app": event.get("app") or "",
                     "title": event.get("title") or "",
                     "source": event.get("source") or "",
+                    "source_type": event.get("source_type", "activitywatch-rest"),
+                    "bundle_id": event.get("bundle_id", ""),
                     "event_refs": [
                         reference
                         for reference in [self._event_reference(event)]

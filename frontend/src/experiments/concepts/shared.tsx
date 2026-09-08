@@ -142,6 +142,7 @@ export function ConceptFrame({concept, app, nav, active, onNavigate, children, f
     </div> : <div className="concept-timeline-heading"><h2>{app.dateLabel}<span>时间线</span></h2><p>拖动平移 · ⌘ / Ctrl + 滚轮缩放 · 点击活动查看详情</p></div>}
     {app.day && app.displayDay ? <>
       <DayRibbon key={app.date} rangeStart={app.day.range.start} rangeEnd={app.day.range.end} timezone={app.timezone} timeline={app.displayDay.timeline} onSelectBlock={app.onInspect} showControls={concept !== "journal"} touchZoom={concept === "journal"} isVisible={timelineOpen}/>
+      {app.day.quality.sources.some(source => source.type === "apple-screentime") && <details className="device-sync-details"><summary>设备来源</summary>{app.day.quality.sources.map(source => <p key={source.name}>{source.type === "apple-screentime" ? source.label : "Mac"} · {source.coverage === "unknown" ? "当天暂无同步记录" : fmtDuration(source.duration_seconds ?? 0)}{source.latest_event && ` · 最新记录 ${new Date(source.latest_event).toLocaleString("zh-CN")}`}{source.error && ` · ${source.error}`}</p>)}</details>}
       {!app.displayDay.timeline.some(block => block.kind === "screen") && <p className="concept-timeline-empty">当前日期与筛选条件下没有屏幕活动。</p>}
     </> : <p className="concept-timeline-empty">{app.dateLabel} 的时间线尚未载入。</p>}
   </section>;
@@ -270,6 +271,6 @@ export function ActivityList({app,blocks,limit=24}: {app: ConceptProps;blocks?: 
   const events = blocks ?? app.displayDay?.timeline.filter((block):block is ScreenTimelineBlock=>block.kind==="screen") ?? [];
   const visible = expanded ? events : events.slice(0,limit);
   return <div className="concept-activity-list">{visible.length ? visible.map((block,index)=><button type="button" className="concept-event" key={`${block.start}-${block.app}-${index}`} onClick={()=>app.onInspect(block)}>
-    <span className="concept-event-time">{fmtClock(block.start,app.timezone)}</span><span className="concept-event-dot" style={{background:categoryColor(block.category)}}/><span className="concept-event-main"><strong>{block.app || block.category_label}</strong><span>{block.title || block.category_label}</span></span><small>{fmtDuration(block.duration_seconds)}</small><span aria-hidden="true">↗</span>
+    <span className="concept-event-time">{fmtClock(block.start,app.timezone)}</span><span className="concept-event-dot" style={{background:categoryColor(block.category)}}/><span className="concept-event-main"><strong>{block.app || block.category_label}</strong><span>{block.source_type === "apple-screentime" ? `${block.source} · ${block.category_label}` : block.title || block.category_label}</span></span><small>{fmtDuration(block.duration_seconds)}</small><span aria-hidden="true">↗</span>
   </button>):<p className="empty-hint">这一天还没有记录到活动。</p>}{events.length>limit && <button type="button" className="concept-more" onClick={()=>setExpanded(!expanded)}>{expanded ? "收起活动" : `查看其余 ${events.length-limit} 条活动`}</button>}</div>;
 }

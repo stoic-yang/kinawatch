@@ -86,6 +86,7 @@ interface RibbonRenderSegment {
   x: number;
   width: number;
   block: ScreenTimelineBlock;
+  lane?: number;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -410,9 +411,19 @@ export function DayRibbon({
     });
   }, [blocks, start, view]);
 
+  const laneNames = useMemo(() => {
+    const names = [...new Set(blocks.map(block => block.source_type === "apple-screentime" ? block.source : "Mac"))];
+    return names.length ? names : ["Mac"];
+  }, [blocks]);
+  const multiLane = laneNames.length > 1;
+  const graphHeight = multiLane ? laneNames.length * 64 : H;
+  const laneY = (index: number) => multiLane ? index * 64 + 24 : LANE_Y;
+  const laneHeight = multiLane ? 32 : LANE_H;
   const renderSegments = useMemo(
-    () => buildRenderSegments(visibleBlocks, start, view, ribbonWidth),
-    [ribbonWidth, start, view, visibleBlocks],
+    () => laneNames.flatMap((name, lane) => buildRenderSegments(visibleBlocks.filter(block =>
+      (block.source_type === "apple-screentime" ? block.source : "Mac") === name), start, view, ribbonWidth)
+      .map(segment => ({ ...segment, key: `${lane}-${segment.key}`, lane }))),
+    [ribbonWidth, start, view, visibleBlocks, laneNames],
   );
 
   const nowX = useMemo(() => {
@@ -691,13 +702,16 @@ export function DayRibbon({
           <button type="button" className="ribbon-reset" aria-label="时间线恢复全天" title="恢复全天（0）" disabled={view.span >= axisSpan} onClick={resetView}>全天</button>
         </div>
       </div>}
+      <div className="ribbon-device-surface" style={{ position: "relative" }}>
+      {multiLane && <div className="ribbon-device-labels" aria-hidden="true">{laneNames.map((name, index) => <span key={name} style={{ position: "absolute", top: index * 60, fontSize: 11, pointerEvents: "none" }}>{name}</span>)}</div>}
       <svg
         ref={ribbonRef}
-        viewBox={`0 0 ${W} ${H}`}
+        viewBox={`0 0 ${W} ${graphHeight}`}
+        style={multiLane ? { height: laneNames.length * 60 } : undefined}
         className={`ribbon ${dragging ? "ribbon-dragging" : ""}`}
         preserveAspectRatio="none"
         role="img"
-        aria-label={`当日活动时间轴，当前范围 ${viewClock(view.start)} 至 ${viewClock(view.start + view.span)}；点击活动块可查看和修改；按住 Command 或 Control 滚动可缩放，${touchZoom ? "双指缩放，" : ""}拖动或左右键平移，加减键缩放，0 或双击恢复全天`}
+        aria-label={`当日活动时间轴，当前范围 ${viewClock(view.start)} 至 ${viewClock(view.start + view.span)}；点击活动块查看详情；按住 Command 或 Control 滚动可缩放，${touchZoom ? "双指缩放，" : ""}拖动或左右键平移，加减键缩放，0 或双击恢复全天`}
         data-view-start={view.start}
         data-view-span={view.span}
         tabIndex={0}
@@ -722,14 +736,8 @@ export function DayRibbon({
         }}
         onMouseLeave={dismissHover}
       >
-        <rect
-          x={0}
-          y={LANE_Y}
-          width={W}
-          height={LANE_H}
-          className="ribbon-lane"
-          rx={5}
-        />
+        {laneNames.map((name, index) => <rect key={name} x={0} y={laneY(index)} width={W}
+          height={laneHeight} className="ribbon-lane" rx={5}/>)}
         {ticks
           .filter((tick) => tick.xPos > 0.5 && tick.xPos < W - 0.5)
           .map((tick) => (
@@ -738,7 +746,7 @@ export function DayRibbon({
               x1={tick.xPos}
               x2={tick.xPos}
               y1={LANE_Y}
-              y2={LANE_Y + LANE_H}
+              y2={graphHeight - 6}
               className="ribbon-grid"
             />
           ))}
@@ -749,9 +757,9 @@ export function DayRibbon({
             <rect
               key={segment.key}
               x={segment.x}
-              y={LANE_Y}
+              y={laneY(segment.lane)}
               width={segment.width}
-              height={LANE_H}
+              height={laneHeight}
               fill={categoryColor(block.category)}
               className={`ribbon-block ${
                 block.manual_edit ? "ribbon-block-edited" : ""
@@ -765,7 +773,7 @@ export function DayRibbon({
               aria-label={`${fmtClock(block.start, timezone)} 到 ${fmtClock(
                 block.end,
                 timezone,
-              )}，${block.app || "未知应用"}，${block.category_label}，点击修改`}
+              )}，${block.app || "未知应用"}，${block.category_label}，${block.source_type === "apple-screentime" ? block.source : "Mac"}，查看详情`}
               onClick={() => {
                 if (suppressClickRef.current || suppressTouchClickRef.current) return;
                 onSelectBlock?.(block);
@@ -794,12 +802,13 @@ export function DayRibbon({
             x1={nowX}
             x2={nowX}
             y1={LANE_Y - 4}
-            y2={LANE_Y + LANE_H + 4}
+            y2={graphHeight - 2}
             className="ribbon-now"
           />
         )}
 
       </svg>
+      </div>
       {/* Keep glyphs outside the non-uniformly scaled SVG coordinate space. */}
       <div className="ribbon-axis" aria-hidden="true">
         {ticks.map((tick) => {
@@ -854,6 +863,7 @@ function RibbonTooltip({
         {fmtDuration(block.duration_seconds)}
       </div>
       <div className="tooltip-title">{block.app || "(未知应用)"}</div>
+      {block.source_type === "apple-screentime" && <div className="tooltip-sub">{block.source} · 屏幕时间</div>}
       {block.title && <div className="tooltip-sub">{block.title}</div>}
       <div className="tooltip-cat">
         <i style={{ background: categoryColor(block.category) }} />

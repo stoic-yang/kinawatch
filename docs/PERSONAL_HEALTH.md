@@ -8,7 +8,7 @@ are no heart-rate scores, medical thresholds, or generated journal entries.
 ## Import and storage
 
 - An explicit file selection imports an Apple Health `export.zip`. This is a
-  snapshot, not background synchronization. Updates should use a newer full
+  complete snapshot. Updates should use a newer full
   export; successful imports replace the previous derived snapshot.
 - Only `apple_health_export/export.xml` (or root `export.xml`) is parsed. CDA
   is an alternate representation and is never counted again. ZIP paths are
@@ -17,11 +17,17 @@ are no heart-rate scores, medical thresholds, or generated journal entries.
   profile attributes, and the original ZIP/XML are not persisted by KinaWatch.
 - The store is `health/snapshot.json` under the platform user-data directory
   returned by `backend.paths.default_data_dir()`. It is independent of the
-  code checkout and journal provider. Reads never create the store.
+  code checkout and journal provider. Reads with synchronization disabled never create the store.
 - The service serializes imports, checks the prior revision, rejects older
   exports, and replaces the snapshot atomically using a private temporary file.
   Failed imports preserve the previous snapshot. No data leaves the loopback
   service, and no additional daemon is installed.
+
+## One-click iCloud sync
+
+The opt-in `health_sync` integration accepts the native iPhone shortcut export.
+It updates recent summaries while preserving earlier history. See
+[DEVICE_SYNC.md](DEVICE_SYNC.md) for setup, schema, permissions and limits.
 
 ## Calculation rules
 

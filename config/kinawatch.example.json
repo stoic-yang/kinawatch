@@ -14,7 +14,16 @@
   "cache_dir": "~/.cache/kinawatch",
   "journal_schema_version": 3,
   "activity_schema_version": 2,
-  "day_schema_version": 12,
+  "day_schema_version": 13,
+  "health_sync": {
+    "enabled": false,
+    "file": "~/Library/Mobile Documents/iCloud~is~workflow~my~workflows/Documents/KinaWatch/health.json"
+  },
+  "screen_time": {
+    "enabled": false,
+    "reader_python": "~/Library/Application Support/KinaWatch/tools/aw-import-screentime/.venv/bin/python",
+    "device_names": {}
+  },
   "timeline_merge_gap_seconds": 2,
   "focus_gap_seconds": 120,
   "meaningful_block_seconds": 60,

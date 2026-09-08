@@ -71,3 +71,7 @@
 @media (max-width: 760px) { .health-overview { grid-template-columns: minmax(0, 1fr); gap: 28px; } .health-heading { gap: 16px; align-items: start; } .health-heading-actions { gap: 8px; width: 100%; } .health-steps-card { padding-left: 0; border-left: 0; } .health-big-number { font-size: 34px; } .health-bars-grid { column-gap: 4px; } .health-bar-value { font-size: 10px; } .health-detail-grid { gap: 28px; } }
 @media (min-width: 1101px) and (max-height: 760px) { .health-overview { margin-bottom: 24px; } .health-duration-card, .health-timing-card, .health-steps-chart { padding-top: 20px; } .health-bar-column { height: 112px; } .health-detail-grid { margin-top: 24px; } .health-bars-steps .health-bar-column { height: 148px; } .health-timing-row { min-height: 22px; } }
 @media (prefers-reduced-motion: reduce) { .health-page * { scroll-behavior: auto; } }
+.health-sync-status { display: flex; align-items: center; justify-content: space-between; gap: 16px; color: var(--kw-ui-muted); font-size: 12px; padding: 10px 0 18px; }
+.device-sync-details { margin-top: 12px; color: var(--kw-ui-muted); font-size: 12px; }
+.device-sync-details summary { cursor: pointer; width: fit-content; }
+.device-sync-details p { margin: 7px 0 0; line-height: 1.5; }

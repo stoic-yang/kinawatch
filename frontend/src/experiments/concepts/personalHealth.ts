@@ -13,6 +13,7 @@ export interface HealthSnapshot {
   version: number; revision: string; available: boolean; timezone: string;
   exported_at?: string; imported_at?: string;
   record_counts?: { sleep: number; steps: number; skipped: number };
+  sync?: { enabled: boolean; state: "waiting" | "ready" | "error"; exported_at?: string; error?: string };
   days: HealthDay[];
 }
 
@@ -57,6 +58,12 @@ export function usePersonalHealth(active: boolean) {
   const [attempt, setAttempt] = useState(0);
   const sequence = useRef(0);
   const busy = useRef(false);
+  useEffect(() => {
+    if (!active) return;
+    const refresh = () => { if (document.visibilityState === "visible" && !busy.current) setAttempt(value => value + 1); };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [active]);
   useEffect(() => {
     if (!active || busy.current) return;
     const ticket = ++sequence.current;

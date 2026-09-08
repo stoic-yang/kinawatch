@@ -65,7 +65,7 @@ export function HealthPage({ active, app, state }: { active: boolean; app: Conce
     const next = [shiftHealthDate(end, direction * span), app.currentDate].sort()[0];
     setEnd(next); app.selectDate(next);
   }
-  const importButton = <button type="button" className="health-import" disabled={importing || !snapshot} onClick={() => input.current?.click()}>{importing ? "正在导入…" : snapshot?.available ? "更新健康数据" : "导入健康数据"}</button>;
+  const importButton = <button type="button" className="health-import" disabled={importing || !snapshot} onClick={() => input.current?.click()}>{importing ? "正在导入…" : "导入完整历史"}</button>;
   return <section className="health-page kw-page" hidden={!active} aria-label="健康">
     <input ref={input} type="file" accept=".zip,application/zip" hidden aria-label="选择 Apple 健康导出文件" onChange={event => {
       const file = event.target.files?.[0]; event.target.value = "";
@@ -78,6 +78,10 @@ export function HealthPage({ active, app, state }: { active: boolean; app: Conce
         <DatePicker date={app.date} maxDate={app.currentDate} active={active} label="健康记录日期" onSelect={date => { setEnd(date); app.selectDate(date); }}/>
       </>}{importButton}</div>
     </header>
+    {snapshot?.sync?.enabled && <div className="health-sync-status" role="status">
+      <span>{snapshot.sync.state === "error" ? snapshot.sync.error : snapshot.sync.state === "ready" ? `最近同步 ${new Date(snapshot.sync.exported_at!).toLocaleString("zh-CN")}` : "在 iPhone 运行“KinaWatch 健康同步”，iCloud 文件到达后即可读取。"}</span>
+      <button type="button" className="health-import" onClick={state.reload} disabled={loading || importing}>{loading ? "正在读取…" : "检查同步"}</button>
+    </div>}
     {error && <div className="health-error" role="alert">{error}<button type="button" onClick={state.reload} disabled={importing}>重新读取</button></div>}
     {loading && !snapshot && <p className="health-loading" role="status">正在读取健康记录…</p>}
     {importing && <p className="health-loading" role="status">正在整理睡眠和步数，请稍候。</p>}

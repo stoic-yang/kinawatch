@@ -21,6 +21,8 @@ from .activity_edits import (
 from .activitywatch_adapter import ActivityWatchAdapter
 from .config import DashboardSettings, load_settings
 from .day_aggregator import DayAggregator
+from .screen_time import ScreenTimeStore
+from .multi_device_activity import MultiDeviceActivity
 from .journal_repository import JournalRepository
 from .paths import PROJECT_ROOT
 from .personal_health import HealthImportConflict, MAX_IMPORT_BYTES, PersonalHealthStore
@@ -76,10 +78,12 @@ class DashboardApplication:
             settings,
             edit_store=edit_store,
         )
+        mobile_config = settings.raw.get("screen_time", {})
+        self.screen_time = ScreenTimeStore(mobile_config) if mobile_config.get("enabled") else None
         self.aggregator = aggregator or DayAggregator(
             settings,
             journal_repository=self.journals,
-            activitywatch=self.activitywatch,
+            activitywatch=MultiDeviceActivity(self.activitywatch, self.screen_time) if self.screen_time else self.activitywatch,
         )
         self.workflow_writer = workflow_writer or WorkflowWriter(self.journals)
         self.activity_editor = activity_editor or ActivityEditor(
@@ -96,6 +100,12 @@ class DashboardApplication:
                 self._personal_health = PersonalHealthStore(self.settings.timezone_name())
             return self._personal_health
 
+    def health_snapshot(self) -> dict:
+        config = self.settings.raw.get("health_sync", {})
+        if config.get("enabled") and config.get("file"):
+            return self.personal_health.sync_file(self.settings.configured_path(config["file"]))
+        return self.personal_health.read()
+
     def health(self) -> dict[str, Any]:
         journal_health = self.journals.health()
         activity_health = self.activitywatch.health()
@@ -107,6 +117,7 @@ class DashboardApplication:
             "journal_provider": journal_health.get("provider", ""),
             "journal_write_enabled": self.settings.journal_write_enabled,
             "activity_edit_enabled": self.settings.activity_edit_enabled,
+            "screen_time": self.screen_time.status() if self.screen_time else {"enabled": False},
             "activitywatch": activity_health,
             "activity_edits": activity_health.get("activity_edits", {}),
             "journal": journal_health,
@@ -450,7 +461,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             if parsed.path == "/api/health":
                 payload = self.server.application.health()
             elif parsed.path == "/api/personal-health":
-                payload = self.server.application.personal_health.read()
+                payload = self.server.application.health_snapshot()
             elif parsed.path == "/api/settings":
                 payload = self.server.application.runtime_settings()
             elif parsed.path == "/api/day":

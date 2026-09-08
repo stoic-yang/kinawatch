@@ -26,7 +26,7 @@ def build_workflow_snapshot(timeline: list[dict[str, Any]], cutoff: str) -> dict
                 "start": start.isoformat(), "end": end.isoformat(),
                 "active_seconds": 0.0,
             })
-        sessions[-1]["end"] = end.isoformat()
+        sessions[-1]["end"] = max(end, datetime.fromisoformat(sessions[-1]["end"])).isoformat()
         sessions[-1]["active_seconds"] += block["duration_seconds"]
     # Apply the minimum after grouping: several short blocks can form a full
     # workflow, but idle gaps never count toward its active duration.

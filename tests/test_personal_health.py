@@ -143,7 +143,7 @@ class HealthHTTPTests(unittest.TestCase):
     def test_import_authority_revision_and_read_endpoint(self):
         with tempfile.TemporaryDirectory() as root:
             store = PersonalHealthStore("Asia/Shanghai", Path(root) / "snapshot.json")
-            app = SimpleNamespace(personal_health=store)
+            app = SimpleNamespace(personal_health=store, health_snapshot=store.read)
             server = IdleHTTPServer(("127.0.0.1", 0), DashboardRequestHandler, app, 60)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()

@@ -266,3 +266,5 @@ docs/         API、数据契约、设计与能耗说明
 请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。KinaWatch 使用
 [MIT License](LICENSE)。ActivityWatch 不随本项目分发；项目关系和第三方声明见
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+健康一键同步与 Mac / iPhone / iPad 时间线配置见 [设备同步](docs/DEVICE_SYNC.md)。
