@@ -19,7 +19,8 @@
 .words-annual-heading > h2 { padding-top: 4px; white-space: nowrap; }
 .words-year-nav { display: flex; align-items: center; gap: 6px; color: var(--kw-ui-muted); font-size: 12px; white-space: nowrap; }
 .words-year-nav > span { min-width: 60px; text-align: center; }
-.words-year-nav > button { width: 28px; height: 28px; border: 0; border-radius: 4px; background: transparent; color: inherit; font-size: 20px; }
+.words-year-nav > button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: inherit; line-height: 1; }
+.words-year-nav > button > svg { display: block; flex: none; }
 .words-year-nav > button:hover:not(:disabled) { background: var(--kw-ui-control); }
 .words-annual .kw-annual-chart { padding: 16px 4px 6px; min-width: calc(36px + var(--annual-weeks) * 12px + (var(--annual-weeks) - 1) * var(--annual-gap)); }
 .words-annual .kw-annual-cell[data-state="future"] { background: var(--kw-heat-0); border-color: var(--kw-ui-line); opacity: .3; }

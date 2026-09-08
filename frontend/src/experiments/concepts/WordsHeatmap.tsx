@@ -78,9 +78,13 @@ export function WordsHeatmap({ year, selected, today, days, snapshot, active, on
         <span className="kw-metric-pill"><b>{numbers.format(stats.studyDays)}天</b><small>学习天数</small></span>
       </div>
       <div className="words-year-nav" role="group" aria-label="学习年份">
-        <button type="button" aria-label="上一个学习年份" disabled={year <= 1} onClick={() => onYear(year - 1)}>‹</button>
+        <button type="button" aria-label="上一个学习年份" disabled={year <= 1} onClick={() => onYear(year - 1)}>
+          <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 3-4 4 4 4"/></svg>
+        </button>
         <span>{year} 年</span>
-        <button type="button" aria-label="下一个学习年份" disabled={year >= Number(today.slice(0, 4))} onClick={() => onYear(year + 1)}>›</button>
+        <button type="button" aria-label="下一个学习年份" disabled={year >= Number(today.slice(0, 4))} onClick={() => onYear(year + 1)}>
+          <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 3 4 4-4 4"/></svg>
+        </button>
       </div>
     </header>
     <div className="kw-annual-scroller" ref={scrollRef}>
