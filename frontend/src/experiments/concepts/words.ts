@@ -46,6 +46,29 @@ export function wordDay(days: Map<string, WordDay>, date: string, snapshot: Word
   return days.get(date) ?? { date, entries: 0, new_entries: 0, answers: 0, answer_ms: 0 };
 }
 
+export function wordStudyStats(days: Map<string, WordDay>, today: string, fetchedAt: string) {
+  const fetchedDate = fetchedAt.slice(0, 10);
+  const recorded = [...days.values()]
+    .filter(day => day.answers > 0 && day.date <= today && day.date <= fetchedDate)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const dayNumber = (date: string) => Date.parse(`${date}T00:00:00Z`) / 86_400_000;
+  let answerMs = 0;
+  let longestStreak = 0;
+  let streak = 0;
+  let previous = -Infinity;
+  for (const day of recorded) {
+    const current = dayNumber(day.date);
+    streak = current === previous + 1 ? streak + 1 : 1;
+    longestStreak = Math.max(longestStreak, streak);
+    answerMs += day.answer_ms;
+    previous = current;
+  }
+  // Today's unfinished study does not break a streak that reached yesterday.
+  // An older snapshot cannot establish the current streak.
+  const currentStreak = fetchedDate < today ? null : previous >= dayNumber(today) - 1 ? streak : 0;
+  return { answerMs, studyDays: recorded.length, longestStreak, currentStreak };
+}
+
 export function wordYear(year: number) {
   const date = new Date(`${String(year).padStart(4, "0")}-01-01T12:00:00Z`);
   const cells: (string | null)[] = Array((date.getUTCDay() + 6) % 7).fill(null);

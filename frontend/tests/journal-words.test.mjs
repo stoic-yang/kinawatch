@@ -9,7 +9,7 @@ import { build } from "esbuild";
 const directory = await mkdtemp(join(tmpdir(), "kinawatch-words-"));
 after(() => rm(directory, { recursive: true, force: true }));
 await build({ entryPoints: [fileURLToPath(new URL("../src/experiments/concepts/words.ts", import.meta.url))], outfile: join(directory, "words.mjs"), bundle: true, platform: "node", format: "esm" });
-const { wordScope, wordDay, wordYear, answerTime } = await import(pathToFileURL(join(directory, "words.mjs")).href);
+const { wordScope, wordDay, wordStudyStats, wordYear, answerTime } = await import(pathToFileURL(join(directory, "words.mjs")).href);
 const snapshot = {
   fetched_at: "2026-09-08T12:00:00+08:00", words: [
     { id: 10, term: "apple", definition: "苹果", cards: [{ id: 1, deck: "A", state: "review" }, { id: 2, deck: "B", state: "learning" }] },
@@ -64,4 +64,44 @@ test("annual heatmap covers each date once in Monday-first weeks", () => {
 test("answer duration preserves seconds and fractional minutes", () => {
   assert.equal(answerTime(0), "0 分钟"); assert.equal(answerTime(30000), "30 秒");
   assert.equal(answerTime(90000), "1.5 分钟");
+});
+
+test("cumulative study time and days count repeated answers without duplicating a day", () => {
+  const stats = wordStudyStats(wordScope(snapshot).days, "2026-09-08", snapshot.fetched_at);
+  assert.deepEqual(stats, { answerMs: 10000, studyDays: 2, longestStreak: 2, currentStreak: 0 });
+});
+
+function studyDays(dates) {
+  return new Map(dates.map(date => [date, { date, answers: 1, entries: 1, new_entries: 0, answer_ms: 1000 }]));
+}
+
+test("current streak survives an unfinished today but ends after a missed day", () => {
+  const days = studyDays(["2026-09-07", "2026-09-04", "2026-09-06"]);
+  assert.equal(wordStudyStats(days, "2026-09-07", "2026-09-07T12:00:00+08:00").currentStreak, 2);
+  assert.equal(wordStudyStats(days, "2026-09-08", "2026-09-08T12:00:00+08:00").currentStreak, 2);
+  assert.equal(wordStudyStats(days, "2026-09-09", "2026-09-09T12:00:00+08:00").currentStreak, 0);
+});
+
+test("streaks continue through year boundaries, leap days and daylight-saving changes", () => {
+  for (const dates of [
+    ["2025-12-30", "2025-12-31", "2026-01-01"],
+    ["2024-02-28", "2024-02-29", "2024-03-01"],
+    ["2026-03-07", "2026-03-08", "2026-03-09"],
+  ]) {
+    const last = dates.at(-1);
+    const stats = wordStudyStats(studyDays(dates), last, `${last}T12:00:00+08:00`);
+    assert.equal(stats.longestStreak, 3);
+    assert.equal(stats.currentStreak, 3);
+  }
+});
+
+test("unread or future days cannot create streaks; an old snapshot leaves current streak unknown", () => {
+  const days = studyDays(["2026-09-06", "2026-09-07", "2026-09-08", "2026-09-09"]);
+  const stats = wordStudyStats(days, "2026-09-08", "2026-09-07T12:00:00+08:00");
+  assert.deepEqual(stats, { answerMs: 2000, studyDays: 2, longestStreak: 2, currentStreak: null });
+  assert.equal(wordStudyStats(days, "2026-09-08", "2026-09-09T12:00:00+08:00").studyDays, 3);
+  days.set("2026-09-07", { ...days.get("2026-09-07"), answers: 0, answer_ms: 0 });
+  assert.equal(wordStudyStats(days, "2026-09-08", "2026-09-08T12:00:00+08:00").longestStreak, 1);
+  assert.deepEqual(wordStudyStats(new Map(), "2026-09-08", "2026-09-08T12:00:00+08:00"),
+    { answerMs: 0, studyDays: 0, longestStreak: 0, currentStreak: 0 });
 });
