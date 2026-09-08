@@ -67,8 +67,17 @@ and additional sleep appear as `kw-metric-pill` summaries in card headings.
 The main-interval chart still shows the final seven days of the chosen window;
 its heading makes that scope explicit in the 30-day view.
 
+Sleep duration and steps use thin lines and circular daily markers. Lines join
+only adjacent recorded days: missing dates break the line, isolated readings
+remain points, and an observed zero stays distinct from missing data. Scales
+start at zero and expand to rounded ticks when needed. Hover or keyboard focus
+shows the exact value in the shared viewport tooltip; clicking a day selects it.
+Arrow keys, Home, and End move focus between dates. The main-interval chart uses
+thin horizontal lines with start/end dots instead of solid bars.
+
 The charts use shared heat colors and the selected-date accent. Narrow screens
-stack the cards and wrap the summary pills. The page-header update action
+stack the cards and wrap the summary pills; the 30-day view reduces date-label
+density. The page-header update action
 refreshes the local reader; the last synchronization/export timestamp and full
 ZIP import action are under the native “数据来源” disclosure. Source errors and
 waiting-for-sync instructions remain visible, and the initial empty state still

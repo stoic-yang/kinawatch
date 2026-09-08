@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { ConceptProps } from "./types";
 import { DatePicker } from "../../components/DatePicker";
 import { healthClock, healthWindow, meanSleep, nightPosition, shiftHealthDate, sleepDuration,
-  type HealthDay, type PersonalHealthState } from "./personalHealth";
+  type PersonalHealthState } from "./personalHealth";
+import { HealthTrend } from "./HealthTrend";
 import "./health.css";
 
 const numbers = new Intl.NumberFormat("zh-CN");
@@ -11,29 +12,6 @@ const fullDate = (date: string) => `${Number(date.slice(5, 7))}月${Number(date.
 const rangeDate = (date: string) => `${date.slice(0, 4)}年${fullDate(date)}`;
 function Moon() {
   return <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="M20.5 13.2A8.7 8.7 0 0 1 10.8 3.5 8.7 8.7 0 1 0 20.5 13.2Z"/></svg>;
-}
-
-function DayBars({ days, selected, kind, onSelect }: {
-  days: HealthDay[]; selected: string; kind: "sleep" | "steps"; onSelect: (date: string) => void;
-}) {
-  const values = days.map(day => kind === "sleep" ? day.sleep?.minutes ?? null : day.steps?.count ?? null);
-  const maximum = Math.max(kind === "sleep" ? 600 : 5000, ...values.filter((v): v is number => v !== null));
-  return <div className={`health-bars health-bars-${kind}`} data-density={days.length > 7 ? "month" : "week"}>
-    <span className="health-chart-ceiling">{kind === "sleep" ? `${Math.ceil(maximum / 60)} 小时` : `${numbers.format(maximum)} 步`}</span>
-    <div className="health-bars-grid" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
-      {days.map((day, index) => {
-        const value = values[index];
-        const description = kind === "sleep" ? sleepDuration(value) : value === null ? "未记录" : `${numbers.format(value)} 步`;
-        return <button type="button" key={day.date} className="health-bar-column" aria-pressed={selected === day.date}
-          aria-label={`${fullDate(day.date)}，${kind === "sleep" ? "睡眠时长" : "步数"}，${description}`}
-          onClick={() => onSelect(day.date)}>
-          <span className="health-bar-space"><span className="health-bar-value" aria-hidden="true">{value === null ? "—" : kind === "sleep" ? `${(value / 60).toFixed(1)}h` : numbers.format(value)}</span>
-            {value === null ? <span className="health-bar-missing"/> : <span className="health-bar-fill" style={{ height: `${Math.max(1, value / maximum * 100)}%` }}/>}</span>
-          <span className="health-bar-date">{days.length <= 7 || index % 5 === 0 || index === days.length - 1 ? shortDate(day.date) : ""}</span>
-        </button>;
-      })}
-    </div>
-  </div>;
 }
 
 export function HealthDiarySummary({ state, date }: { state: PersonalHealthState; date: string }) {
@@ -100,7 +78,7 @@ export function HealthPage({ active, app, state }: { active: boolean; app: Conce
           {sleep && <span className="kw-metric-pill"><strong>{healthClock(sleep.start)} — {healthClock(sleep.end)}</strong><small>主要时段</small></span>}
           {sleep && sleep.sessions.length > 1 && <span className="kw-metric-pill"><strong>{sleep.sessions.length - 1} 段 · {sleepDuration(sleep.minutes - sleep.main_minutes)}</strong><small>小睡</small></span>}
         </div></header>
-        <DayBars days={days} selected={app.date} kind="sleep" onSelect={app.selectDate}/>
+        <HealthTrend visible={active} days={days} selected={app.date} kind="sleep" onSelect={app.selectDate}/>
       </article>
       <div className="health-detail-grid">
         <article className="health-timing-card health-chart-card kw-card" aria-label="作息时间"><header className="health-section-heading"><h2>作息时间</h2>{span > 7 && <span className="health-range-caption">近 7 天</span>}</header><div className="health-clock-axis"><span>18:00</span><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span></div>
@@ -114,7 +92,7 @@ export function HealthPage({ active, app, state }: { active: boolean; app: Conce
         <article className="health-steps-chart health-chart-card kw-card" aria-label="每日步数"><header className="health-section-heading"><h2>每日步数</h2><div className="health-stats">
           <span className="kw-metric-pill"><strong>{selected?.steps ? numbers.format(selected.steps.count) : "未记录"}</strong><small>当日</small></span>
           <span className="kw-metric-pill"><strong>{stepAverage === null ? "未记录" : numbers.format(stepAverage)}</strong><small>近 {span} 天日均</small></span>
-        </div></header><DayBars days={days} selected={app.date} kind="steps" onSelect={app.selectDate}/></article>
+        </div></header><HealthTrend visible={active} days={days} selected={app.date} kind="steps" onSelect={app.selectDate}/></article>
       </div>
       <details className="health-source-details"><summary>数据来源</summary><div className="health-source-content"><span>{syncMessage || "Apple 健康导出"}</span>{importButton}</div></details>
     </>}
