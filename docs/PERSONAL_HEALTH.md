@@ -58,17 +58,22 @@ totals. Reads derive the daily maximum from those totals in memory, preserving
 the stored file and import revision. Existing imports therefore use the same
 rule as new imports without requiring another export.
 
-The UI provides 7/30-day windows, a themed calendar picker, period navigation,
-missing-data markers, and shared date selection with the journal. Controls
-share the title row. The five data regions sit in a centered, open layout with
-no card outlines, more whitespace, subtle separators and bounded chart sizes.
-The overview uses matching label/value/average rows for sleep and steps;
-the main sleep interval follows below. The sleep overview has no journal link,
-duplicate date or coverage badge, and device subtotals are hidden.
-Short desktop windows use
-tighter spacing so all five regions remain visible at 1280 by 720.
-The on-page explanation footer has been removed; the calculation contract
-remains documented here. Narrow layouts wrap and scroll naturally.
+The UI provides 7/30-day windows, the shared calendar picker, period navigation,
+missing-data markers, and shared date selection with the journal. The title,
+date range, and controls use the same page geometry as the rhythm view.
+Three shared `kw-card` surfaces group sleep duration, main sleep intervals,
+and daily steps. Selected-day values, period averages, the main interval,
+and additional sleep appear as `kw-metric-pill` summaries in card headings.
+The main-interval chart still shows the final seven days of the chosen window;
+its heading makes that scope explicit in the 30-day view.
+
+The charts use shared heat colors and the selected-date accent. Narrow screens
+stack the cards and wrap the summary pills. The page-header update action
+refreshes the local reader; the last synchronization/export timestamp and full
+ZIP import action are under the native “数据来源” disclosure. Source errors and
+waiting-for-sync instructions remain visible, and the initial empty state still
+offers an import action. These presentation changes preserve sleep/steps
+calculations, snapshot revisions, and the diary sidebar summary.
 
 ## API
 
