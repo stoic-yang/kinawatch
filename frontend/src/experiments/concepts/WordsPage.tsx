@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { ConceptProps } from "./types";
 import { DatePicker } from "../../components/DatePicker";
 import { WordsHeatmap } from "./WordsHeatmap";
+import { WordsWeekTrend } from "./WordsWeekTrend";
 import { answerTime, useWords, wordDay, wordScope } from "./words";
 import "./words.css";
 
@@ -42,6 +43,7 @@ export function WordsPage({ active, app }: { active: boolean; app: ConceptProps 
           </div>
         </div>
       </section>
+      <WordsWeekTrend days={scope.days} snapshot={snapshot} selected={app.date} active={active} onSelect={selectDate}/>
       <WordsHeatmap key={year} year={year} selected={app.date} today={app.currentDate} days={scope.days} snapshot={snapshot} active={active}
         onYear={year => setCalendarYear({ year, date: app.date })} onSelect={selectDate}/>
     </> : <div className="words-empty" role="status">

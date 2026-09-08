@@ -1,0 +1,30 @@
+.kw-daily-trend { --kw-daily-trend-height: 148px; position: relative; margin-top: 32px; padding: 0 4px 30px 42px; }
+.kw-daily-trend-axis { position: absolute; left: 0; top: 0; width: 34px; height: var(--kw-daily-trend-height); color: var(--kw-ui-muted); font-size: 10px; }
+.kw-daily-trend-axis > span { position: absolute; right: 0; transform: translateY(-50%); white-space: nowrap; }
+.kw-daily-trend-canvas { position: relative; height: var(--kw-daily-trend-height); }
+.kw-daily-trend-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.kw-daily-trend-gridline { stroke: var(--kw-ui-separator); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.kw-daily-trend-line { fill: none; stroke: var(--kw-heat-3); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.kw-daily-trend-empty { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 4px 8px; background: var(--kw-ui-surface); color: var(--kw-ui-muted); font-size: 12px; white-space: nowrap; pointer-events: none; }
+.kw-daily-trend .kw-daily-trend-day { position: absolute; top: 0; height: 100%; padding: 0; border: 0; background: transparent; color: var(--kw-ui-muted); font-family: inherit; cursor: pointer; }
+.kw-daily-trend .kw-daily-trend-day:focus-visible { outline: none; }
+.kw-daily-trend-day[aria-pressed="true"]::before { position: absolute; left: 50%; top: 0; height: 100%; border-left: 1px dashed var(--kw-ui-line); content: ""; }
+.kw-daily-trend-mark { position: absolute; left: 50%; width: 7px; height: 7px; transform: translate(-50%, -50%); border: 2px solid var(--kw-heat-3); border-radius: 50%; background: var(--kw-ui-surface); }
+.kw-daily-trend-day:is([aria-pressed="true"], :hover, :focus-visible) .kw-daily-trend-mark:not(.is-missing) { border-color: var(--kw-ui-accent); background: var(--kw-ui-accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--kw-ui-accent) 12%, transparent); }
+.kw-daily-trend-mark.is-missing { width: 8px; height: 0; border: 0; border-top: 1px solid var(--kw-ui-line-strong); border-radius: 0; }
+.kw-daily-trend-day:is(:hover, :focus-visible) .kw-daily-trend-mark.is-missing { border-color: var(--kw-ui-accent); }
+.kw-daily-trend-value { position: absolute; left: 50%; margin-top: -12px; transform: translate(-50%, -100%); padding: 2px 4px; background: var(--kw-ui-surface); color: var(--kw-ui-accent); font-size: 11px; line-height: 1.4; white-space: nowrap; }
+.kw-daily-trend-day:first-of-type .kw-daily-trend-value { left: 0; transform: translateY(-100%); }
+.kw-daily-trend-day:last-of-type .kw-daily-trend-value { left: auto; right: 0; transform: translateY(-100%); }
+.kw-daily-trend-date { position: absolute; top: calc(100% + 14px); left: 50%; transform: translateX(-50%); color: var(--kw-ui-muted); font-size: 11px; line-height: 1.2; white-space: nowrap; }
+.kw-daily-trend-day:is([aria-pressed="true"], :focus-visible) .kw-daily-trend-date { color: var(--kw-ui-accent); font-weight: 600; }
+.kw-daily-trend[data-density="month"] .kw-daily-trend-mark:not(.is-missing) { width: 5px; height: 5px; border-width: 1.5px; }
+.kw-daily-trend[data-density="month"] .kw-daily-trend-date { font-size: 10px; }
+.viewport-tooltip.kw-daily-trend-tooltip { display: grid; gap: 4px; }
+.kw-daily-trend-tooltip > span { color: var(--kw-ui-muted); font-size: 11px; }
+.kw-daily-trend-tooltip > strong { color: var(--kw-ui-ink); font-size: 13px; font-weight: 600; }
+@media (max-width: 760px) {
+  .kw-daily-trend { padding-left: 34px; }
+  .kw-daily-trend-axis { width: 27px; font-size: 9px; }
+  .kw-daily-trend-date { font-size: 10px; }
+}

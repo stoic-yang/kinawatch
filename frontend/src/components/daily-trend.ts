@@ -1,4 +1,4 @@
-export function healthTrend(values: (number | null)[], baseMaximum: number) {
+export function dailyTrend(values: (number | null)[], baseMaximum: number) {
   const step = baseMaximum / 5;
   const maximum = Math.max(baseMaximum, ...values.map(value => Math.ceil((value ?? 0) / step) * step));
   const points = values.map((value, index) => ({

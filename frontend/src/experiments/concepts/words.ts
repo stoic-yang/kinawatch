@@ -46,6 +46,15 @@ export function wordDay(days: Map<string, WordDay>, date: string, snapshot: Word
   return days.get(date) ?? { date, entries: 0, new_entries: 0, answers: 0, answer_ms: 0 };
 }
 
+export function wordWeek(days: Map<string, WordDay>, end: string, snapshot: WordsSnapshot | null) {
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(`${end}T12:00:00Z`);
+    day.setUTCDate(day.getUTCDate() - 6 + index);
+    const date = day.toISOString().slice(0, 10);
+    return { date, value: wordDay(days, date, snapshot)?.entries ?? null };
+  });
+}
+
 export function wordStudyStats(days: Map<string, WordDay>, today: string, fetchedAt: string) {
   const fetchedDate = fetchedAt.slice(0, 10);
   const recorded = [...days.values()]

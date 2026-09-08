@@ -9,7 +9,7 @@ import { build } from "esbuild";
 const directory = await mkdtemp(join(tmpdir(), "kinawatch-words-"));
 after(() => rm(directory, { recursive: true, force: true }));
 await build({ entryPoints: [fileURLToPath(new URL("../src/experiments/concepts/words.ts", import.meta.url))], outfile: join(directory, "words.mjs"), bundle: true, platform: "node", format: "esm" });
-const { wordScope, wordDay, wordStudyStats, wordYear, answerTime } = await import(pathToFileURL(join(directory, "words.mjs")).href);
+const { wordScope, wordDay, wordWeek, wordStudyStats, wordYear, answerTime } = await import(pathToFileURL(join(directory, "words.mjs")).href);
 const snapshot = {
   fetched_at: "2026-09-08T12:00:00+08:00", words: [
     { id: 10, term: "apple", definition: "苹果", cards: [{ id: 1, deck: "A", state: "review" }, { id: 2, deck: "B", state: "learning" }] },
@@ -38,6 +38,21 @@ test("uncached dates remain unknown; absent reviews in the saved period are zero
   assert.equal(wordDay(scope.days, "2026-09-09", snapshot), null);
   assert.equal(wordDay(scope.days, "2026-09-08", snapshot).answers, 0);
   assert.equal(wordDay(scope.days, "2026-09-08", null), null);
+});
+test("weekly trend counts unique entries, includes recorded zeroes, and leaves unread days unknown", () => {
+  const saved = { ...snapshot, fetched_at: "2026-05-18T12:00:00+08:00" };
+  const week = wordWeek(wordScope(saved).days, "2026-05-20", saved);
+  assert.deepEqual(week.map(day => day.date), ["2026-05-14", "2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18", "2026-05-19", "2026-05-20"]);
+  assert.deepEqual(week.map(day => day.value), [0, 0, 0, 1, 1, null, null]);
+});
+test("weekly dates remain consecutive across years, leap days and daylight-saving changes", () => {
+  for (const [end, start] of [["2026-01-03", "2025-12-28"], ["2024-03-03", "2024-02-26"], ["2026-03-10", "2026-03-04"]]) {
+    const week = wordWeek(new Map(), end, null);
+    assert.equal(week[0].date, start);
+    assert.equal(week.at(-1).date, end);
+    assert.equal(new Set(week.map(day => day.date)).size, 7);
+    assert.ok(week.every(day => day.value === null));
+  }
 });
 test("annual heatmap covers each date once in Monday-first weeks", () => {
   for (const [year, length] of [[2024, 366], [2026, 365], [2012, 366], [2100, 365]]) {
