@@ -19,6 +19,10 @@
     "enabled": false,
     "file": "~/Library/Mobile Documents/iCloud~is~workflow~my~workflows/Documents/KinaWatch/health.json"
   },
+  "anki": {
+    "server_url": "http://127.0.0.1:8765",
+    "query": ""
+  },
   "screen_time": {
     "enabled": false,
     "reader_python": "~/Library/Application Support/KinaWatch/tools/aw-import-screentime/.venv/bin/python",

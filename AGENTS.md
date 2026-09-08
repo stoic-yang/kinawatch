@@ -50,6 +50,11 @@ needed.
   enabled write configuration. Like the daily document editor, it may autosave
   after user editing with serialized saves, retained drafts and conflict checks.
   Reading never creates or imports a note.
+- The authorized vocabulary module may read AnkiConnect on demand and atomically
+  retain its own normalized word/review snapshot in the platform user-data
+  directory. Keep the explicit read-action whitelist, loopback-only transport,
+  plain-text rendering and stale-state reporting. Never write to Anki, initiate
+  AnkiWeb sync, or use real cards as write fixtures. See `docs/WORDS.md`.
 - Personal health imports require an explicit ZIP selection and matching
   snapshot revision. Retain only sleep and steps summaries under the platform
   user-data directory; never retain the archive, import other health metrics,
@@ -76,7 +81,7 @@ needed.
   generated, treated as product state, or bulk-removed from historical notes.
 - Keep optimistic file fingerprints, per-note locks, same-directory temporary
   files, atomic replacement, and conflict rejection on every write path.
-- Except for the daily document and beliefs editors and opt-in local sync stores described above, never autosave or
+- Except for the daily document and beliefs editors, vocabulary snapshots and opt-in local sync stores described above, never autosave or
   background-write. Never bulk-migrate or delete structured fields.
 - Do not write tests against real notes. Use temporary files and repository
   fixtures only.

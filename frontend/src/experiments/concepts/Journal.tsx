@@ -11,6 +11,7 @@ import { presentJournal, updateJournalPresentation, type JournalPresentation } f
 import { BeliefsPage } from "./BeliefsPage";
 import { HealthDiarySummary, HealthPage } from "./HealthPage";
 import { usePersonalHealth } from "./personalHealth";
+import { WordsPage } from "./WordsPage";
 import "./journal.css";
 
 const JOURNAL_NAV = [
@@ -18,6 +19,7 @@ const JOURNAL_NAV = [
   { id: "reference", label: "时间线", icon: "timeline" },
   { id: "weekly-rhythm", label: "节律", icon: "rhythm" },
   { id: "health", label: "健康", icon: "health" },
+  { id: "words", label: "单词", icon: "words" },
   { id: "beliefs", label: "信念", icon: "beliefs" },
 ];
 
@@ -63,6 +65,7 @@ export function Journal(app: ConceptProps) {
       <div className="journal-concept">
         <BeliefsPage active={page === "beliefs"}/>
         <HealthPage active={page === "health"} app={app} state={health}/>
+        <WordsPage active={page === "words"} app={app}/>
         <section className="journal-writing-page" hidden={page !== "journal"} aria-label="日记">
           <div className="journal-writing-layout">
             <aside className="journal-context kw-card" aria-label="日记参考与大纲"><div className="journal-context-content">

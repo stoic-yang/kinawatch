@@ -19,6 +19,7 @@ from .activity_edits import (
     ActivityEditor,
 )
 from .activitywatch_adapter import ActivityWatchAdapter
+from .anki import AnkiStore
 from .config import DashboardSettings, load_settings
 from .day_aggregator import DayAggregator
 from .screen_time import ScreenTimeStore
@@ -66,6 +67,8 @@ class DashboardApplication:
         self.settings = settings
         self._personal_health: PersonalHealthStore | None = None
         self._personal_health_lock = threading.Lock()
+        self._anki: AnkiStore | None = None
+        self._anki_lock = threading.Lock()
         self.journals = journals or JournalRepository(settings)
         edit_store = (
             getattr(activitywatch, "activity_edits", None)
@@ -105,6 +108,12 @@ class DashboardApplication:
         if config.get("enabled") and config.get("file"):
             return self.personal_health.sync_file(self.settings.configured_path(config["file"]))
         return self.personal_health.read()
+
+    def words(self, parameters: dict[str, list[str]]) -> dict:
+        with self._anki_lock:
+            if self._anki is None:
+                self._anki = AnkiStore(self.settings.raw.get("anki", {}), self.settings.timezone_name())
+        return self._anki.read(refresh=_first(parameters, "refresh") == "1")
 
     def health(self) -> dict[str, Any]:
         journal_health = self.journals.health()
@@ -462,6 +471,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 payload = self.server.application.health()
             elif parsed.path == "/api/personal-health":
                 payload = self.server.application.health_snapshot()
+            elif parsed.path == "/api/words":
+                payload = self.server.application.words(parameters)
             elif parsed.path == "/api/settings":
                 payload = self.server.application.runtime_settings()
             elif parsed.path == "/api/day":

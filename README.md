@@ -20,6 +20,7 @@ ActivityWatch。它通过本机只读 REST API 获取事件，并保持自己的
 - 时间线：缩放、活动详情与独立工作流描述编辑，长描述不会撑高活动列表。
 - 节律：近七天、本周、近一年和自然年的活动分布与日期跳转。
 - 信念：独立于日期的 Markdown 文稿，正文可直接编辑，支持目录、自动保存和草稿恢复。
+- 单词：通过 AnkiConnect 读取词库与学习日历，支持搜索、筛选、例句和复习记录，Anki 关闭时保留上次快照。见 [单词模块](docs/WORDS.md)。
 - 可收起侧栏，以及石墨、沙纸、松青、暮蓝、夜航五套配色。
 - 通过 ActivityWatch REST API 自动发现本机窗口与 AFK buckets。
 - 保留 AFK 过滤，同时可把明确处于前台播放状态的媒体时间计入屏幕时间；
@@ -202,6 +203,7 @@ Gate 1 只读取历史日记与 ActivityWatch 数据，不应拿真实日记执�
 
 - `GET /api/health`
 - `GET /api/settings`
+- `GET /api/words`（可用 `refresh=1` 更新 Anki 词库快照）
 - `GET /api/day?date=YYYY-MM-DD&mode=routine`
 - `GET /api/range?start=YYYY-MM-DD&end=YYYY-MM-DD&include=top_apps,timeline`
 - `GET /api/activity/inspect?date=YYYY-MM-DD&mode=routine&bucket_id=...&event_id=...`

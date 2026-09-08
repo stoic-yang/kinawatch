@@ -31,6 +31,9 @@ from backend.workflow_writer import (
 
 
 class StubApplication:
+    def words(self, parameters: dict[str, list[str]]) -> dict[str, Any]:
+        return {"available": True, "status": "ready", "refresh": parameters.get("refresh") == ["1"], "snapshot": {"words": []}}
+
     def journal_document(self, parameters: dict[str, list[str]]) -> dict[str, Any]:
         return {"ok": True, "date": parameters["date"][0], "markdown": ""}
 
@@ -279,6 +282,25 @@ class BatchRangeAggregator(RangeAggregator):
 
 
 class ServerTests(unittest.TestCase):
+    def test_words_route_is_read_only_and_same_origin(self) -> None:
+        server = IdleHTTPServer(("127.0.0.1", 0), DashboardRequestHandler, StubApplication(), idle_timeout_seconds=0.2)
+        thread = threading.Thread(target=server.serve_until_idle)
+        thread.start()
+        try:
+            host, port = server.server_address
+            endpoint = f"http://{host}:{port}/api/words?refresh=1"
+            with urlopen(endpoint, timeout=2) as response:
+                self.assertTrue(json.load(response)["refresh"])
+                self.assertEqual(response.headers["Cache-Control"], "no-store")
+            for request, expected in [(Request(endpoint, headers={"Origin": "https://example.test"}), 403),
+                                      (Request(endpoint, data=b"{}", method="PUT"), 404)]:
+                with self.assertRaises(HTTPError) as caught:
+                    urlopen(request, timeout=2)
+                self.assertEqual(caught.exception.code, expected)
+                caught.exception.close()
+        finally:
+            thread.join(timeout=1); server.server_close(); thread.join(timeout=1)
+
     def test_unavailable_local_sources_are_reported_without_crashing(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             raw = json.loads(EXAMPLE_CONFIG_PATH.read_text(encoding="utf-8"))

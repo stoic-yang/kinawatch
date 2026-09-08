@@ -7,6 +7,10 @@ database, or require a Kina workspace.
 
 ## ActivityWatch boundary
 
+The separate vocabulary page consumes AnkiConnect through an on-demand read-only
+adapter. Its endpoint, local cache, field mapping and statistics are documented
+in [Words](WORDS.md); it does not feed or modify ActivityWatch or journals.
+
 The adapter uses these read-only endpoints:
 
 - `GET /api/0/info`
