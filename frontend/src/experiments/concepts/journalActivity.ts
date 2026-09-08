@@ -1,5 +1,5 @@
 import type { DayResponse, ScreenTimelineBlock } from "../../api";
-import { summarizeSession, type ScreenSession } from "../../lib/sessions";
+import { summarizeSession, workflowBlocks, type ScreenSession } from "../../lib/sessions";
 
 const HALF_HOUR_MS = 30 * 60 * 1000;
 const BREAK_MS = 5 * 60 * 1000;
@@ -11,7 +11,7 @@ export function buildJournalActivity(day: DayResponse | null): ScreenSession[] {
   if (!day) return [];
   const origin = Date.parse(day.range.start);
   const runs: { slot: number; app: string; blocks: ScreenTimelineBlock[]; seconds: number; end: number }[] = [];
-  for (const block of day.timeline) {
+  for (const block of workflowBlocks(day)) {
     if (block.kind !== "screen" || block.duration_seconds <= 0) continue;
     const start = Date.parse(block.start), end = Date.parse(block.end);
     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;

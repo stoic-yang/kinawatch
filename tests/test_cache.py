@@ -84,11 +84,11 @@ class DayCacheTests(unittest.TestCase):
             )
         )
 
-    def test_pre_minimum_workflow_snapshot_is_rejected_even_for_historical_days(self) -> None:
+    def test_pre_mac_workflow_snapshot_is_rejected_even_for_historical_days(self) -> None:
         self.cache.put(self.day, "calendar", self.fingerprint, "upstream-a", self.response)
         path = self.cache._path(self.day, "calendar")
         stored = json.loads(path.read_text())
-        stored["_cache_meta"]["day_schema_version"] = 11
+        stored["_cache_meta"]["day_schema_version"] = 14
         path.write_text(json.dumps(stored))
         self.assertIsNone(self.cache.get(self.day, "calendar", self.fingerprint,
                                          "upstream-a", is_today=False))

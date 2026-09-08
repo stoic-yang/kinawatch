@@ -76,6 +76,8 @@ export interface ScreenTimelineBlock {
   start: string;
   end: string;
   duration_seconds: number;
+  /** Activity credited on this device before cross-device equal sharing. */
+  device_duration_seconds?: number;
   category: string;
   category_label: string;
   project: string;
@@ -164,6 +166,7 @@ export interface JournalData {
 export interface DayResponse {
   workflows: {
     version: number;
+    source: "mac";
     id: string;
     cutoff: string;
     min_active_seconds: number;

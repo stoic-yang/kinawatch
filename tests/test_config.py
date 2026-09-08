@@ -33,7 +33,7 @@ class DashboardConfigTests(unittest.TestCase):
         )
         self.assertEqual(settings.activitywatch["server_url"], "http://127.0.0.1:5600")
         self.assertEqual(settings.journal_schema_version, 3)
-        self.assertEqual(settings.day_schema_version, 14)
+        self.assertEqual(settings.day_schema_version, 15)
         self.assertFalse(settings.activitywatch["media_activity"]["enabled"])
         self.assertEqual(
             settings.activitywatch["media_activity"]["rules"][0][

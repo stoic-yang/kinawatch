@@ -17,6 +17,18 @@ const block = (from, to, app = "Editor", seconds = to - from, category = "work")
 const day = timeline => ({ workflows: { sessions: timeline.filter(block => block.kind === "screen").map((block, index) => ({ id: index.toString(16).padStart(16, "0"), start: block.start, end: block.end })) }, range: { start: clock(0), end: clock(86400) }, timeline, journal: { workflow_notes: [], activity_summary_markdown: "" } });
 const sum = sessions => sessions.reduce((total, item) => total + item.seconds, 0);
 
+test("journal activity uses Mac time without mobile evidence", () => {
+  const mac = { ...block(0, 1800, "Editor", 900), device_duration_seconds: 1800, source_type: "activitywatch-rest" };
+  const phone = { ...block(0, 3600, "Phone chat", 2700), source_type: "apple-screentime" };
+  const source = day([mac, phone]);
+  const before = JSON.stringify(source);
+  const items = buildJournalActivity(source);
+  assert.equal(sum(items), 1800);
+  assert.ok(items.every(item => item.topApps.every(app => app.app === "Editor")));
+  assert.equal(items.at(-1).end, mac.end);
+  assert.equal(JSON.stringify(source), before);
+});
+
 test("long use splits on half-hour boundaries, preserving source and precise totals", () => {
   const source = day([block(1200, 7500, "Editor", 5700.125)]);
   const before = JSON.stringify(source);

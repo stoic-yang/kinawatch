@@ -40,7 +40,10 @@ def partition_devices(events: list[dict]) -> tuple[list[dict], float, int]:
                 weights.append(event["duration_seconds"] / (b - a).total_seconds())
             total = sum(weights)
             for index, weight in zip(indices, weights):
+                # Keep the native allocation for Mac-only workflows. Within-Mac
+                # overlap/AFK processing has already happened before this split.
                 result.append({**events[index], "timestamp": start.isoformat(), "wall_end_timestamp": end.isoformat(),
+                               "device_duration_seconds": seconds * weight,
                                "duration_seconds": seconds / len(devices) * weight / total,
                                "overlap_adjusted": len(devices) > 1 or len(indices) > 1})
     return result, parallel, maximum

@@ -174,6 +174,33 @@ class DayAggregatorTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
+    def test_mac_workflows_preserve_native_time_while_timeline_keeps_mobile(self) -> None:
+        activity = self.activitywatch._payload()
+        template = activity["events"][0]
+        mac = {**template, "timestamp": "2026-07-15T09:00:00+08:00",
+               "wall_end_timestamp": "2026-07-15T09:30:00+08:00", "duration_seconds": 1800,
+               "device_id": "mac", "source_type": "activitywatch-rest"}
+        phone = {**template, "timestamp": "2026-07-15T08:45:00+08:00",
+                 "wall_end_timestamp": "2026-07-15T09:45:00+08:00", "duration_seconds": 3600,
+                 "device_id": "phone", "source": "iPhone", "source_type": "apple-screentime", "app": "Chat"}
+        activity["events"], _, _ = partition_devices([phone, mac])
+        activity["total_duration_seconds"] = 3600
+        activity["time_accounting"]["wall_duration_seconds"] = 3600
+        self.activitywatch._payload = lambda: activity
+        payload = self.aggregator.get_day(date(2026, 7, 15), "calendar")
+        self.assertEqual(payload["overview"]["active_seconds"], 3600)
+        screen = [row for row in payload["timeline"] if row["kind"] == "screen"]
+        self.assertEqual(sum(row["duration_seconds"] for row in screen), 3600)
+        self.assertTrue(any(row["source"] == "iPhone" for row in screen))
+        mac_blocks = [row for row in screen if row["source_type"] == "activitywatch-rest"]
+        self.assertEqual(sum(row["device_duration_seconds"] for row in mac_blocks), 1800)
+        self.assertEqual(sum(row["duration_seconds"] for row in mac_blocks), 900)
+        sessions = payload["workflows"]["sessions"]
+        self.assertEqual(len(sessions), 1)
+        self.assertEqual(sessions[0]["active_seconds"], 1800)
+        self.assertEqual(datetime.fromisoformat(sessions[0]["start"]), datetime.fromisoformat(mac["timestamp"]))
+        self.assertEqual(datetime.fromisoformat(sessions[0]["end"]), datetime.fromisoformat(mac["wall_end_timestamp"]))
+
     def test_day_combines_journal_activity_and_overlap_without_double_count(self) -> None:
         payload = self.aggregator.get_day(date(2026, 7, 15), "calendar")
 

@@ -95,14 +95,16 @@ def event(device, start, end, allocated=None):
 
 
 class MultiDeviceTests(unittest.TestCase):
-    def test_short_parallel_device_does_not_shorten_workflow_end(self):
+    def test_parallel_mobile_does_not_change_mac_workflow_end_or_time(self):
         timeline = []
-        for device, start, end in [('phone', 0, 3600), ('mac', 60, 120), ('pad', 3300, 4200)]:
-            row = event(device, start, end)
-            timeline.append({'kind': 'screen', 'start': row['timestamp'], 'end': row['wall_end_timestamp'], 'duration_seconds': row['duration_seconds']})
+        rows, _, _ = partition_devices([event('phone', 0, 3600), event('mac', 60, 1860), event('pad', 3300, 4200)])
+        for row in rows:
+            timeline.append({**row, 'kind': 'screen', 'start': row['timestamp'], 'end': row['wall_end_timestamp'],
+                             'source_type': 'activitywatch-rest' if row['device_id'] == 'mac' else 'apple-screentime'})
         result = build_workflow_snapshot(timeline, timeline[-1]['end'])
         self.assertEqual(len(result['sessions']), 1)
-        self.assertEqual(result['sessions'][0]['end'], timeline[-1]['end'])
+        self.assertEqual(result['sessions'][0]['end'], event('mac', 60, 1860)['wall_end_timestamp'])
+        self.assertEqual(result['sessions'][0]['active_seconds'], 1800)
 
     def test_parallel_three_devices_add_only_union_and_equal_shares(self):
         result, parallel, maximum = partition_devices([event('mac', 0, 600), event('phone', 300, 900), event('pad', 300, 600)])
@@ -110,11 +112,19 @@ class MultiDeviceTests(unittest.TestCase):
         self.assertEqual((parallel, maximum), (300, 3))
         self.assertAlmostEqual(sum(e['duration_seconds'] for e in result if e['device_id'] == 'mac'), 400)
         self.assertAlmostEqual(sum(e['duration_seconds'] for e in result if e['device_id'] == 'pad'), 100)
+        self.assertAlmostEqual(sum(e['device_duration_seconds'] for e in result if e['device_id'] == 'mac'), 600)
+        self.assertAlmostEqual(sum(e['device_duration_seconds'] for e in result if e['device_id'] == 'pad'), 300)
 
     def test_native_parallel_rows_preserve_density_without_mobile(self):
         result, parallel, maximum = partition_devices([event('mac', 0, 600, 300), event('mac', 0, 600, 300)])
         self.assertEqual([e['duration_seconds'] for e in result], [300, 300])
         self.assertEqual((parallel, maximum), (0, 1))
+
+    def test_native_parallel_allocation_is_preserved_with_mobile(self):
+        rows, _, _ = partition_devices([event('mac', 0, 600, 300), event('mac', 0, 600, 300), event('phone', 150, 450)])
+        mac = [row for row in rows if row['device_id'] == 'mac']
+        self.assertAlmostEqual(sum(row['device_duration_seconds'] for row in mac), 600)
+        self.assertAlmostEqual(sum(row['duration_seconds'] for row in rows), 600)
 
     def test_adjacent_intervals_have_no_overlap(self):
         result, parallel, maximum = partition_devices([event('mac', 0, 300), event('phone', 300, 600)])

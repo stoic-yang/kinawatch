@@ -64,13 +64,20 @@ function screenBlocks(day: DayResponse): ScreenTimelineBlock[] {
 }
 
 export function buildSessions(day: DayResponse): ScreenSession[] {
-  const blocks = screenBlocks(day);
+  const blocks = workflowBlocks(day);
   return day.workflows.sessions.flatMap(workflow => {
     const visible = blocks.filter(block => toMs(block.start) >= toMs(workflow.start)
       && toMs(block.end) <= toMs(workflow.end));
     return visible.length ? [{ ...summarizeSession(visible, workflow.id),
       start: workflow.start, end: workflow.end }] : [];
   });
+}
+
+/** Mac workflow statistics use device time, independent of mobile overlap. */
+export function workflowBlocks(day: DayResponse): ScreenTimelineBlock[] {
+  return screenBlocks(day)
+    .filter(block => (block.source_type ?? "activitywatch-rest") === "activitywatch-rest")
+    .map(block => ({ ...block, duration_seconds: block.device_duration_seconds ?? block.duration_seconds }));
 }
 
 /** Summarize a view fragment without defining another workflow boundary. */

@@ -114,17 +114,26 @@ outside the current contract.
 
 ### Generated workflow descriptions
 
-`GET /api/day` returns `workflows: {version: 1, id, cutoff, min_active_seconds, sessions}`. Each
+`GET /api/day` returns `workflows: {version: 1, source: "mac", id, cutoff, min_active_seconds, sessions}`. Each
 session has `id`, `start`, `end` and `active_seconds`; the backend alone groups
-screen events at gaps over 15 minutes. After grouping, only sessions with at
+Mac screen events (`source_type: "activitywatch-rest"`) at gaps over 15 minutes.
+Mobile events cannot start, extend or bridge workflows. After grouping, only sessions with at
 least 900 active seconds qualify, including exactly 15 minutes. Idle gaps do
 not count toward this minimum. Short fragments remain in the raw timeline and
 daily totals; their existing descriptions are not rewritten or deleted.
-IDs use the UTC start instant and remain stable while a workflow extends.
+Workflow time uses each block's `device_duration_seconds`: its Mac activity
+allocation after AFK/background/within-Mac overlap processing, before any
+cross-device equal sharing. Frontend and external consumers must use only Mac
+blocks and this field for workflow app, title and category statistics (falling
+back to `duration_seconds` for older blocks). The all-device timeline and daily
+totals continue to use the original `duration_seconds` accounting.
+IDs use the Mac source namespace and UTC start instant and remain stable while a workflow extends.
+The namespace prevents old multi-device generated descriptions from attaching
+to a new Mac workflow merely because their start instant matches.
 The snapshot digest tracks both the source timeline and segmentation rules.
 The frontend summarizes visible blocks inside these supplied boundaries instead
 of regrouping or applying another minimum after category filtering.
-Day cache schema version 12 invalidates older responses so historical days and
+Day cache schema version 15 invalidates older responses so historical days and
 external description generators consume the same qualified workflow list.
 
 The external generator saves this snapshot and reads the document/fingerprint

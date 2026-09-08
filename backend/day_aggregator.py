@@ -275,6 +275,7 @@ class DayAggregator:
                 ):
                     previous["end"] = max(previous_end, end).isoformat()
                     previous["duration_seconds"] += float(event["duration_seconds"])
+                    previous["device_duration_seconds"] += float(event.get("device_duration_seconds", event["duration_seconds"]))
                     reference = self._event_reference(event)
                     if (
                         reference is not None
@@ -295,6 +296,7 @@ class DayAggregator:
                     "start": start.isoformat(),
                     "end": end.isoformat(),
                     "duration_seconds": float(event["duration_seconds"]),
+                    "device_duration_seconds": float(event.get("device_duration_seconds", event["duration_seconds"])),
                     "category": event.get("category"),
                     "category_label": event.get("category_label"),
                     "project": event.get("project") or "",

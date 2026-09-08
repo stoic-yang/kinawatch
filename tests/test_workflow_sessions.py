@@ -11,6 +11,30 @@ def block(start, end, seconds=60, title="Synthetic"):
 
 
 class WorkflowSessionTests(unittest.TestCase):
+    def test_mobile_cannot_bridge_extend_or_contribute_to_mac_workflows(self):
+        mac = [block("2026-09-06T09:00:00+08:00", "2026-09-06T09:20:00+08:00", 600),
+               block("2026-09-06T10:00:00+08:00", "2026-09-06T10:20:00+08:00", 600)]
+        for row in mac:
+            row.update(source_type="activitywatch-rest", device_duration_seconds=1200)
+        phone = {**block("2026-09-06T08:30:00+08:00", "2026-09-06T10:40:00+08:00", 6600),
+                 "source_type": "apple-screentime"}
+        tablet = {**phone, "source": "iPad"}
+        cutoff = phone["end"]
+        baseline = build_workflow_snapshot(mac, cutoff)
+        combined = build_workflow_snapshot([phone, tablet, *mac], cutoff)
+        self.assertEqual(combined, baseline)
+        self.assertEqual(combined["source"], "mac")
+        self.assertEqual([(s["start"], s["end"], s["active_seconds"]) for s in combined["sessions"]],
+                         [(row["start"], row["end"], 1200) for row in mac])
+        self.assertEqual(build_workflow_snapshot([phone, tablet], cutoff)["sessions"], [])
+
+    def test_mac_minimum_ignores_cross_device_shares(self):
+        row = {**block("2026-09-06T09:00:00+08:00", "2026-09-06T09:15:00+08:00", 450),
+               "device_duration_seconds": 900}
+        self.assertEqual(build_workflow_snapshot([row], row["end"])["sessions"][0]["active_seconds"], 900)
+        row["device_duration_seconds"] = 899
+        self.assertEqual(build_workflow_snapshot([row], row["end"])["sessions"], [])
+
     def test_fifteen_minute_boundary_crosses_midnight_without_counting_gaps(self):
         timeline = [block("2026-09-06T23:35:00+08:00", "2026-09-06T23:45:00+08:00", 600),
                     block("2026-09-07T00:00:00+08:00", "2026-09-07T00:05:00+08:00", 300),

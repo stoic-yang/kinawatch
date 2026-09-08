@@ -140,10 +140,15 @@ uv sync --locked --no-dev
   Zotero 为“研究/论文”，远程连接保留“远程操作”。这些是应用用途的粗分类，
   不证明用户当时正在执行某项具体任务。未知标识继续保留未分类。
 - 手机和平板详情只读；Mac 原始事件仍通过原有指纹检查的编辑接口处理。
-  新记录会影响工作流分段与证据快照，不自动改写或迁移既有工作流描述。
+- 工作流只按 Mac 有效活动划分，超过 15 分钟的 Mac 空闲间隔分段，累计有效
+  活动达到 15 分钟才显示。手机和平板不能连接、延长或单独形成工作流。
+  工作流内时长、应用、分类使用 Mac 在跨设备均分前的有效时长；AFK、后台和
+  Mac 内部重叠处理继续生效。移动记录仍显示在时间线与多设备总量中。
+  既有工作流描述不自动改写或迁移。
 
 接口无需新端口或远程访问：`/api/health.screen_time` 给出源状态，日级
-`quality.sources` 给出来源，时间线块包含 `source_type/bundle_id`；日缓存版本 14。
+`quality.sources` 给出来源，时间线块包含 `source_type/bundle_id` 和均分前的
+`device_duration_seconds`；日缓存版本 15。
 默认安装中两个同步源均关闭，仍使用原有低能耗生命周期。
 
 上游来源：[aw-import-screentime](https://github.com/ActivityWatch/aw-import-screentime)、
