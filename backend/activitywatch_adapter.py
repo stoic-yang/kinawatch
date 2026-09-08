@@ -20,6 +20,11 @@ from zoneinfo import ZoneInfo
 from .activity_edits import ActivityEditStore
 from .config import DashboardSettings, load_json
 
+CLASSIFICATION_FIELDS = (
+    "app", "title", "url", "project", "file", "language", "status",
+    "bundle_id", "source_type",
+)
+
 
 class ActivityWatchError(RuntimeError):
     pass
@@ -521,7 +526,7 @@ class ActivityWatchAdapter:
 
     @staticmethod
     def _rule_matches(event: dict[str, Any], rule: dict[str, Any]) -> bool:
-        for field in ("app", "title", "url", "project", "file", "language", "status"):
+        for field in CLASSIFICATION_FIELDS:
             value = _normalize(event.get(field))
             equals = rule.get(f"{field}_equals")
             if isinstance(equals, list) and not any(
@@ -664,10 +669,7 @@ class ActivityWatchAdapter:
     ) -> list[tuple[dict[str, Any], dict[str, str] | None]]:
         # Only reuse matches within this calculation, so changed rules or
         # manual overrides never inherit a match from a previous request.
-        fields = (
-            "app", "title", "url", "project", "file", "language", "status",
-            "manual_category", "manual_category_label",
-        )
+        fields = (*CLASSIFICATION_FIELDS, "manual_category", "manual_category_label")
         matches: dict[tuple[tuple[str, bool], ...], dict[str, str] | None] = {}
         classified = []
         for event in events:

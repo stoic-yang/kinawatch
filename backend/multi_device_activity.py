@@ -68,7 +68,8 @@ class MultiDeviceActivity:
         classification = self.mac._classification_config()
         for event, match in self.mac._classify_events(mobile, classification):
             event.update({"category": match["category"] if match else "uncategorized",
-                          "category_label": match["category_label"] if match else "未分类"})
+                          "category_label": match["category_label"] if match else "未分类",
+                          "classification_rule": match["rule"] if match else None})
         events, parallel, maximum = partition_devices([*activity["events"], *mobile])
         # Preserve native Mac classifications and classify mobile using the same rules.
         classified = [(e, {"category": e["category"], "category_label": e["category_label"],

@@ -15,6 +15,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   social: "#C562A8",
   browsing: "#EE9A3C",
   entertainment: "#E25F5F",
+  video: "#B27C9B",
+  life: "#8F9870",
   system: "#9AA3B2",
   remote: "#4FB39A",
   uncategorized: "#D4D4D2",

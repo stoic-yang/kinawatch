@@ -61,13 +61,22 @@ These optimizations leave the response and day-cache schema unchanged.
 ordered `rules`. Rules can match the following event fields:
 
 ```text
-app title url project file language status
+app title url project file language status bundle_id source_type
 ```
 
 Each field supports `_equals`, `_contains`, and `_regex`. All predicates present
 in one rule must match, and the first matching rule wins. The public starter is
 `config/categories.example.json`; personal titles and project names should stay
 in an ignored or external file.
+
+Mobile app fallbacks use an exact `bundle_id_equals`,
+`source_type_equals: ["apple-screentime"]`, and `title_regex: ["^$"]`. They
+therefore survive localized/custom display names, do not match Mac events,
+and yield to content rules if a future source provides titles. Classification
+memoization includes both identity fields; display-name changes invalidate
+mobile day fingerprints. The starter distinguishes video with unknown purpose,
+social feeds, and daily-life services instead of inferring study or recreation
+from a mobile video app alone.
 
 ## Manual activity correction overlay
 

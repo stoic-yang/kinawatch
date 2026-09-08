@@ -23,6 +23,27 @@ APP_NAMES = {
     "com.openai.chat": "ChatGPT", "com.ss.iphone.ugc.Aweme": "抖音", "com.alipay.iphoneclient": "支付宝",
     "com.netease.cloudmusic": "网易云音乐", "com.liguangming.Shadowrocket": "Shadowrocket",
     "com.icbc.iphoneclient": "工商银行", "com.cmbchina.MPBBank": "招商银行",
+    "ph.telegra.Telegraph": "Telegram", "com.tencent.mqq": "QQ", "com.tencent.meeting": "腾讯会议",
+    "com.tencent.ww": "企业微信", "com.apple.MobileSMS": "信息", "com.netease.mailmaster": "网易邮箱大师",
+    "com.google.ios.youtube": "YouTube", "com.google.chrome.ios": "Google Chrome",
+    "com.taobao.fleamarket": "闲鱼", "com.taobao.taobao4iphone": "淘宝", "com.xunmeng.pinduoduo": "拼多多",
+    "cn.12306.rails12306": "铁路12306", "com.meituan.imeituan": "美团", "com.meituan.imovie": "猫眼",
+    "com.baidu.map": "百度地图", "com.chinaunicom.mobilebusiness": "中国联通",
+    "com.xiaomi.miwatch.pro": "小米运动健康", "com.apple.Health": "健康",
+    "com.whoosh.whooshgame": "MyWhoosh",
+    "com.ssreader.ChaoXingStudy": "学习通", "com.netease.uuremote": "UU远程",
+    "com.apple.Passwords": "密码", "com.apple.AppStore": "App Store", "com.apple.weather": "天气",
+    "com.apple.calculator": "计算器", "com.apple.camera": "相机", "com.apple.mobileslideshow": "照片",
+    "com.apple.mobiletimer": "时钟", "com.apple.ClockAngel": "时钟待机界面",
+    "com.apple.reminders": "提醒事项", "com.apple.mobilecal": "日历", "com.cron.calendar": "Notion Calendar",
+    "com.apple.mobilephone": "电话", "com.apple.InCallService": "通话界面", "com.apple.findmy": "查找",
+    "com.apple.Preview": "预览", "com.apple.BarcodeScanner": "扫码器", "com.apple.shortcuts": "快捷指令",
+    "com.apple.HeadphoneProxService": "耳机连接界面", "com.apple.ScreenshotServicesService": "截屏界面",
+    "com.apple.LocalAuthenticationUIService": "身份验证界面", "com.apple.AuthKitUIService": "Apple 账户验证",
+    "com.apple.PassbookUIService": "钱包界面", "com.apple.PosterBoard": "壁纸界面",
+    "com.apple.ContinuityCaptureShieldUI": "连续互通相机界面", "com.apple.MediaRemoteUIService": "媒体控制界面",
+    "com.apple.ClipViewService": "App Clip 界面", "com.apple.purplebuddy": "设备设置助理",
+    "com.apple.sidecar": "随航", "com.apple.susuiservice": "系统更新界面",
 }
 
 
@@ -108,7 +129,9 @@ class ScreenTimeStore:
         with self._lock:
             values = [(device["id"], device.get("label"), [e["id"] for e in device["events"]
                        if e["end"][:10] >= low and e["timestamp"][:10] <= high]) for device in self._snapshot["devices"]]
-            return hashlib.sha256(json.dumps([values, self.error], sort_keys=True).encode()).hexdigest()
+            return hashlib.sha256(json.dumps(
+                [values, self.error, APP_NAMES, self.config.get("app_names", {})], sort_keys=True,
+            ).encode()).hexdigest()
 
     def read_range(self, start: datetime, end: datetime) -> tuple[list[dict], list[dict]]:
         self.refresh()

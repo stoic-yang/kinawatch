@@ -10,9 +10,282 @@
     "reading": {"label": "阅读"},
     "entertainment": {"label": "娱乐"},
     "system": {"label": "系统/工具"},
-    "browsing": {"label": "网页浏览"}
+    "browsing": {"label": "网页浏览"},
+    "video": {"label": "视频/影音"},
+    "life": {"label": "生活事务"},
+    "social": {"label": "社交/信息流"},
+    "coursework": {"label": "课程/学业"},
+    "document_work": {"label": "文档/课件"},
+    "remote": {"label": "远程操作"}
   },
   "rules": [
+    {
+      "name": "mobile-video",
+      "label": "移动视频，内容用途未知",
+      "category": "video",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "tv.danmaku.bilianime",
+        "tv.danmaku.bilibilihd",
+        "com.google.ios.youtube",
+        "com.ss.iphone.ugc.Aweme"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-social",
+      "label": "移动社交与信息流",
+      "category": "social",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "com.xingin.discover",
+        "com.atebits.Tweetie2",
+        "com.zhihu.ios"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-communication",
+      "label": "移动聊天、邮件与通话",
+      "category": "communication",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "com.tencent.xin",
+        "ph.telegra.Telegraph",
+        "com.tencent.mqq",
+        "com.tencent.meeting",
+        "com.tencent.ww",
+        "com.apple.MobileSMS",
+        "com.apple.mobilemail",
+        "com.netease.mailmaster",
+        "com.apple.mobilephone",
+        "com.apple.InCallService"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-life",
+      "label": "移动购物、支付、出行与健康事务",
+      "category": "life",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "com.360buy.jdmobile",
+        "com.taobao.fleamarket",
+        "com.taobao.taobao4iphone",
+        "com.xunmeng.pinduoduo",
+        "cn.12306.rails12306",
+        "com.meituan.imeituan",
+        "com.meituan.imovie",
+        "com.icbc.iphoneclient",
+        "com.cmbchina.MPBBank",
+        "com.alipay.iphoneclient",
+        "com.baidu.map",
+        "com.chinaunicom.mobilebusiness",
+        "com.xiaomi.miwatch.pro",
+        "com.apple.Health",
+        "com.apple.PassbookUIService",
+        "com.whoosh.whooshgame"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-system",
+      "label": "移动系统界面与实用工具",
+      "category": "system",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "com.apple.Preferences",
+        "com.apple.Passwords",
+        "com.apple.AppStore",
+        "com.liguangming.Shadowrocket",
+        "com.apple.ClockAngel",
+        "com.apple.weather",
+        "com.apple.calculator",
+        "com.apple.HeadphoneProxService",
+        "com.apple.camera",
+        "com.apple.mobiletimer",
+        "com.apple.ScreenshotServicesService",
+        "com.apple.mobileslideshow",
+        "com.apple.LocalAuthenticationUIService",
+        "com.apple.PosterBoard",
+        "com.apple.ContinuityCaptureShieldUI",
+        "com.apple.MediaRemoteUIService",
+        "com.apple.BarcodeScanner",
+        "com.apple.ClipViewService",
+        "com.apple.findmy",
+        "com.apple.purplebuddy",
+        "com.apple.AuthKitUIService",
+        "com.apple.sidecar",
+        "com.apple.susuiservice",
+        "com.apple.shortcuts"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-planning",
+      "label": "移动日历与提醒事项",
+      "category": "planning",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "com.apple.reminders",
+        "com.apple.mobilecal",
+        "com.cron.calendar"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-browsing",
+      "label": "移动网页，页面内容未知",
+      "category": "browsing",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "com.apple.mobilesafari",
+        "com.google.chrome.ios"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-reading",
+      "label": "移动图书阅读",
+      "category": "reading",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "com.apple.iBooks"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-coursework",
+      "label": "移动课程平台",
+      "category": "coursework",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "com.ssreader.ChaoXingStudy"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-research",
+      "label": "移动文献管理",
+      "category": "research",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "org.zotero.ios.Zotero"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-notes",
+      "label": "移动笔记，主题未知",
+      "category": "writing",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "com.goodnotesapp.x",
+        "com.apple.mobilenotes"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-documents",
+      "label": "移动文档，主题未知",
+      "category": "document_work",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "com.apple.Preview"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-ai",
+      "label": "移动 AI 工作台，任务未知",
+      "category": "ai_collaboration",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "com.openai.chat"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-music",
+      "label": "移动音乐播放",
+      "category": "entertainment",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "com.apple.Music",
+        "com.netease.cloudmusic"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
+    {
+      "name": "mobile-remote",
+      "label": "移动远程连接，远端内容未知",
+      "category": "remote",
+      "source_type_equals": [
+        "apple-screentime"
+      ],
+      "bundle_id_equals": [
+        "com.netease.uuremote"
+      ],
+      "title_regex": [
+        "^$"
+      ]
+    },
     {
       "name": "ai-workspaces",
       "label": "AI 工作台",
@@ -50,7 +323,7 @@
       "category": "communication",
       "app_equals": [
         "Slack", "Microsoft Teams", "Discord", "Telegram", "Mail", "邮件",
-        "Outlook", "微信", "WeChat", "Zoom", "腾讯会议"
+        "Outlook", "微信", "WeChat", "Zoom", "腾讯会议", "WeCom"
       ]
     },
     {
@@ -104,7 +377,7 @@
       "category": "system",
       "app_equals": [
         "Finder", "访达", "System Settings", "系统设置", "explorer.exe",
-        "Task Manager", "Activity Monitor", "活动监视器"
+        "Task Manager", "Activity Monitor", "活动监视器", "Shortcuts"
       ]
     },
     {
