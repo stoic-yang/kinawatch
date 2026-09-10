@@ -502,6 +502,37 @@ export function fetchBeliefs(): Promise<BeliefsResponse> {
   return getJSON("/api/journal/beliefs");
 }
 
+export interface BeliefRecord {
+  id: string;
+  markdown: string;
+  fingerprint: string;
+  path: string;
+  legacy: boolean;
+  created_at: number;
+  updated_at: number;
+  liked_days: string[];
+  liked_today: boolean;
+  like_count: number;
+  pinned: boolean;
+}
+export interface BeliefLibraryResponse {
+  ok: boolean;
+  namespace: string;
+  write_enabled: boolean;
+  timezone: string;
+  today: string;
+  revision: string;
+  records: BeliefRecord[];
+  order: string[];
+}
+export function fetchBeliefLibrary(): Promise<BeliefLibraryResponse> { return getJSON("/api/beliefs"); }
+export function saveBeliefDocument(payload: {namespace: string; id: string; markdown: string; expected_fingerprint: string | null}): Promise<BeliefLibraryResponse> {
+  return requestJSON("/api/beliefs/document", { method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload) });
+}
+export function saveBeliefState(payload: {namespace: string; expected_revision: string} & ({action: "order"; order: string[]} | {action: "pin"; id: string; value: boolean} | {action: "like"; id: string; value: boolean; day: string})): Promise<BeliefLibraryResponse> {
+  return requestJSON("/api/beliefs/state", { method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload) });
+}
+
 export function saveBeliefs(markdown: string, fingerprint: FileFingerprint): Promise<BeliefsResponse> {
   return requestJSON("/api/journal/beliefs", {
     method: "PUT",

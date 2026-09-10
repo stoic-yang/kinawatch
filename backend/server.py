@@ -20,6 +20,7 @@ from .activity_edits import (
 )
 from .activitywatch_adapter import ActivityWatchAdapter
 from .anki import AnkiStore
+from .beliefs import BeliefLibrary
 from .config import DashboardSettings, load_settings
 from .day_aggregator import DayAggregator
 from .screen_time import ScreenTimeStore
@@ -313,6 +314,19 @@ class DashboardApplication:
         result["write_enabled"] = self.settings.journal_write_enabled
         return result
 
+    def belief_library(self) -> dict[str, Any]:
+        return BeliefLibrary(self.journals).read()
+
+    def save_belief_document(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if not self.settings.journal_write_enabled:
+            raise WorkflowWriteDisabled("项目配置尚未启用信念写入。")
+        return BeliefLibrary(self.journals).save(payload)
+
+    def save_belief_state(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if not self.settings.journal_write_enabled:
+            raise WorkflowWriteDisabled("项目配置尚未启用信念写入。")
+        return BeliefLibrary(self.journals).manage(payload)
+
     def save_beliefs(self, payload: dict[str, Any]) -> dict[str, Any]:
         if not self.settings.journal_write_enabled:
             raise WorkflowWriteDisabled("项目配置尚未启用笔记写入。")
@@ -487,6 +501,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 payload = self.server.application.permanent_note()
             elif parsed.path == "/api/journal/beliefs":
                 payload = self.server.application.beliefs()
+            elif parsed.path == "/api/beliefs":
+                payload = self.server.application.belief_library()
             elif parsed.path == "/api/journal/weekly":
                 payload = self.server.application.weekly_review(parameters)
             elif parsed.path == "/api/journal/monthly":
@@ -551,6 +567,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             "/api/journal/review": self.server.application.save_review,
             "/api/journal/permanent": self.server.application.save_permanent_note,
             "/api/journal/beliefs": self.server.application.save_beliefs,
+            "/api/beliefs/document": self.server.application.save_belief_document,
+            "/api/beliefs/state": self.server.application.save_belief_state,
             "/api/journal/weekly": self.server.application.save_weekly_review,
             "/api/journal/monthly": self.server.application.save_monthly_review,
             "/api/activity/edit": self.server.application.save_activity,
@@ -563,7 +581,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         try:
             payload = self._read_json(
                 MAX_DOCUMENT_BODY_BYTES
-                if parsed.path in {"/api/journal/document", "/api/journal/beliefs"}
+                if parsed.path in {"/api/journal/document", "/api/journal/beliefs", "/api/beliefs/document"}
                 else MAX_WRITE_BODY_BYTES
             )
             result = action(payload)

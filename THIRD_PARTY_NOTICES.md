@@ -19,3 +19,9 @@ respective owners. This repository uses the name only to describe compatibility.
 The frontend dependency licenses are recorded by their upstream packages and
 lockfile. KinaWatch's own source code is licensed under the repository's
 [MIT License](LICENSE).
+
+The beliefs module bundles [markdown-it](https://github.com/markdown-it/markdown-it)
+and [js-yaml](https://github.com/nodeca/js-yaml), both under the MIT License,
+and icons from [Lucide](https://lucide.dev/license) under the ISC License.
+Upstream copyright and license notices are retained in the dependency packages
+and bundled license comments.

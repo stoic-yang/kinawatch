@@ -19,9 +19,9 @@ ActivityWatch。它通过本机只读 REST API 获取事件，并保持自己的
 - 日记：Markdown 实时显示与安静的自动保存，工作流竖向时间线和 Kina 总结分栏参考。
 - 时间线：缩放、活动详情与独立工作流描述编辑，长描述不会撑高活动列表。
 - 节律：近七天、本周、近一年和自然年的活动分布与日期跳转。
-- 信念：独立于日期的 Markdown 文稿，正文可直接编辑，支持目录、自动保存和草稿恢复。
+- 信念：简洁标题列表与右侧浏览栏，一条信念一份 Markdown；支持标签、拖动顺序、每天一次且可撤销的点赞，以及按累计点赞排序。见 [信念文档](docs/BELIEFS.md)。
 - 单词：通过 AnkiConnect 展示当日与累计学习统计、词库进度与全年学习热力图，Anki 关闭时保留上次快照。见 [单词模块](docs/WORDS.md)。
-- 可收起侧栏，以及石墨、沙纸、松青、暮蓝、夜航五套配色。
+- 可收起侧栏，新增月白、雾白、霜白，保留原有五套配色。
 - 通过 ActivityWatch REST API 自动发现本机窗口与 AFK buckets。
 - 保留 AFK 过滤，同时可把明确处于前台播放状态的媒体时间计入屏幕时间；
   操作活跃与被动观看分别核算。
@@ -93,6 +93,11 @@ python3 -m backend.server
 `python3 -m backend.server --idle-timeout 0`；这会关闭空闲自动退出。
 
 ### Journal storage
+
+新版信念使用 `journal.beliefs_dir`（默认 `Review/Beliefs`）存放独立 Markdown
+文件，编辑标题、标签与正文后显式保存。旧信念文稿按条目继续读取，保存某一条时
+才生成该条独立文件；原稿保留。点赞、常用和顺序由同目录管理文件持久保存。
+详情见 [信念存储与兼容规则](docs/BELIEFS.md)。
 
 默认配置 `journal.provider: "local"`。启用写入后，日记和信念正文在输入暂停后保存，
 工作流描述通过保存按钮更新；首次保存才创建对应文件，启动和浏览不会创建记录。
@@ -210,6 +215,9 @@ Gate 1 只读取历史日记与 ActivityWatch 数据，不应拿真实日记执�
 - `GET /api/journal/permanent`
 - `GET /api/journal/document?date=YYYY-MM-DD`
 - `GET /api/journal/beliefs`
+- `GET /api/beliefs`
+- `PUT /api/beliefs/document`
+- `PUT /api/beliefs/state`
 - `GET /api/journal/weekly?week_id=YYYY-Www`
 - `GET /api/journal/monthly?month_id=YYYY-MM`
 - `PUT /api/activity/edit`

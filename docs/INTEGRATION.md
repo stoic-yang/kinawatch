@@ -228,6 +228,12 @@ does.
 
 ## Beliefs note
 
+The current beliefs UI uses the standalone-file library documented in
+[Beliefs](BELIEFS.md): explicit full-Markdown saves, YAML and inline tags,
+persistent manual order, pins and one reversible vote per calendar day.
+The legacy document endpoint below remains for older clients; the new UI does
+not autosave or rewrite the original multi-section note.
+
 `GET /api/journal/beliefs` reads the fixed `journal.beliefs_note_path`, which
 defaults to `Review/我的人生信念.md` under the selected provider's root.
 `PUT /api/journal/beliefs` accepts only `markdown` and `expected_fingerprint`;

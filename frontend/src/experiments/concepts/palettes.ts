@@ -6,6 +6,27 @@ type PaletteColors = Record<
   "heat-0" | "heat-1" | "heat-2" | "heat-3" | "heat-4", string>;
 
 export const PALETTES = [
+  { id: "moon", name: "月白", description: "月白 · 墨蓝", dark: false, colors: {
+    canvas: "#fafbfc", surface: "#ffffff", "surface-subtle": "#eef2f6", rail: "#263648",
+    control: "#eef2f6", "control-hover": "#eef3f7", "control-active": "#dce6f0",
+    line: "#d9e1e8", "line-strong": "#b9c6d2", ink: "#293442", muted: "#657383", faint: "#657383",
+    accent: "#496783", "accent-strong": "#354b62", "on-accent": "#ffffff", chart: "#9db2c6",
+    "heat-0": "#eef2f6", "heat-1": "#d6e1eb", "heat-2": "#adc1d3", "heat-3": "#7a99b4", "heat-4": "#496783",
+  } },
+  { id: "mist", name: "雾白", description: "雾白 · 松灰", dark: false, colors: {
+    canvas: "#f8faf8", surface: "#ffffff", "surface-subtle": "#edf2ee", rail: "#dce5e0",
+    control: "#edf2ee", "control-hover": "#edf3ef", "control-active": "#dce7df",
+    line: "#d6e0d9", "line-strong": "#b6c8bd", ink: "#303c37", muted: "#647469", faint: "#647469",
+    accent: "#466d57", "accent-strong": "#344f40", "on-accent": "#ffffff", chart: "#9fb9a9",
+    "heat-0": "#edf2ee", "heat-1": "#d3e1d8", "heat-2": "#aec9b8", "heat-3": "#7da38c", "heat-4": "#466d57",
+  } },
+  { id: "frost", name: "霜白", description: "霜白 · 紫灰", dark: false, colors: {
+    canvas: "#fafafc", surface: "#ffffff", "surface-subtle": "#f1eff5", rail: "#36323f",
+    control: "#f1eff5", "control-hover": "#f1eff5", "control-active": "#e6e0ed",
+    line: "#dfdae7", "line-strong": "#c4bacf", ink: "#3b3845", muted: "#776e80", faint: "#776e80",
+    accent: "#74658a", "accent-strong": "#574869", "on-accent": "#ffffff", chart: "#b5a8c7",
+    "heat-0": "#f1eff5", "heat-1": "#e0d8e9", "heat-2": "#c4b6d4", "heat-3": "#9d8ab3", "heat-4": "#74658a",
+  } },
   { id: "graphite", name: "石墨", description: "浅灰 · 清蓝", dark: false, colors: {
     canvas: "#ffffff", surface: "#ffffff", "surface-subtle": "#fafafb", rail: "#f5f5f7",
     control: "#f1f2f4", "control-hover": "#e9ebef", "control-active": "#eaf0fc",
@@ -53,7 +74,7 @@ function resolvePalette(id: string | null) {
   return PALETTES.find(palette => palette.id === id)?.id ?? LEGACY_PALETTES[id ?? ""];
 }
 export function currentPalette(): PaletteId {
-  return PALETTES.find(palette => palette.id === document.documentElement.dataset.palette)?.id ?? "graphite";
+  return PALETTES.find(palette => palette.id === document.documentElement.dataset.palette)?.id ?? "moon";
 }
 
 export function applyPalette(id: PaletteId, persist = false) {
@@ -62,6 +83,8 @@ export function applyPalette(id: PaletteId, persist = false) {
   root.dataset.palette = palette.id;
   root.style.colorScheme = palette.dark ? "dark" : "light";
   for (const [name, color] of Object.entries(palette.colors)) root.style.setProperty(`--kw-palette-${name}`, color);
+  const rail = id === "moon" ? ["#f1f5f9", "#afbecc", "#354b62"] : id === "frost" ? ["#f0edf4", "#c1b8ca", "#4c445b"] : id === "mist" ? ["#34483c", "#4e6255", "#c8d8ce"] : [palette.colors.ink, palette.colors.muted, palette.colors["control-active"]];
+  ["ink", "muted", "active"].forEach((name, index) => root.style.setProperty(`--kw-palette-rail-${name}`, rail[index]));
   if (persist) {
     try { localStorage.setItem(STORAGE_KEY, id); } catch { /* Browsing without storage still supports switching. */ }
     const url = new URL(window.location.href);
@@ -74,5 +97,5 @@ export function initializePalette() {
   let saved: string | null = null;
   try { saved = localStorage.getItem(STORAGE_KEY); } catch { /* Storage can be unavailable. */ }
   const requested = new URLSearchParams(window.location.search).get("palette");
-  applyPalette(resolvePalette(requested) ?? resolvePalette(saved) ?? "graphite");
+  applyPalette(resolvePalette(requested) ?? resolvePalette(saved) ?? "moon");
 }

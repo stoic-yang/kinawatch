@@ -50,6 +50,14 @@ needed.
   enabled write configuration. Like the daily document editor, it may autosave
   after user editing with serialized saves, retained drafts and conflict checks.
   Reading never creates or imports a note.
+- The separately authorized beliefs library stores one complete Markdown file
+  per explicit save under `journal.beliefs_dir` (default `Review/Beliefs`).
+  YAML properties belong to that file and may be edited. User-triggered daily
+  likes, pins and order use its own `.kinawatch.json` with revision checks and
+  atomic writes. Legacy sections are projected on read and copied individually
+  only on explicit save; preserve the entire legacy file. Never bulk-migrate
+  on startup, accept client paths, or use real beliefs as write fixtures.
+  See `docs/BELIEFS.md`.
 - The authorized vocabulary module may read AnkiConnect on demand and atomically
   retain its own normalized word/review snapshot in the platform user-data
   directory. Keep the explicit read-action whitelist, loopback-only transport,

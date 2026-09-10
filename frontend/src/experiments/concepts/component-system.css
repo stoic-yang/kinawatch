@@ -83,6 +83,28 @@
 }
 
 /* Surfaces */
+.theme-grove.concept-journal .concept-rail {
+  --kw-ui-ink: var(--kw-palette-rail-ink);
+  --kw-ui-muted: var(--kw-palette-rail-muted);
+  --kw-ui-faint: var(--kw-palette-rail-muted);
+  --kw-ui-accent: var(--kw-palette-rail-ink);
+  --kw-ui-accent-strong: var(--kw-palette-rail-ink);
+  --kw-ui-control-hover: var(--kw-palette-rail-active);
+  --kw-ui-control-active: var(--kw-palette-rail-active);
+  color: var(--kw-palette-rail-ink);
+}
+.theme-grove.concept-journal .concept-rail .theme-brand { color: var(--kw-palette-rail-ink); }
+.theme-grove.concept-journal .concept-rail .concept-navigation button[aria-current] { background: var(--kw-palette-rail-active); color: var(--kw-palette-rail-ink); box-shadow: none; }
+.theme-grove.concept-journal .concept-rail .kw-appearance {
+  --kw-ui-ink: var(--kw-palette-ink);
+  --kw-ui-muted: var(--kw-palette-muted);
+  --kw-ui-faint: var(--kw-palette-faint);
+  --kw-ui-accent: var(--kw-palette-accent);
+  --kw-ui-accent-strong: var(--kw-palette-accent-strong);
+  --kw-ui-control-hover: var(--kw-palette-control-hover);
+  --kw-ui-control-active: var(--kw-palette-control-active);
+  color: var(--kw-palette-ink);
+}
 .theme-grove.concept-page .kw-card {
   border: 1px solid var(--kw-ui-separator);
   border-radius: var(--kw-ui-card-radius);

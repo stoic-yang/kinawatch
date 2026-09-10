@@ -60,6 +60,7 @@
     "daily_note_date_format": "%Y-%m-%d",
     "daily_note_template": [],
     "permanent_note_path": "incoming.md",
-    "beliefs_note_path": "Review/我的人生信念.md"
+    "beliefs_note_path": "Review/我的人生信念.md",
+    "beliefs_dir": "Review/Beliefs"
   }
 }

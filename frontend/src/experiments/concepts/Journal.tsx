@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { cloneElement, isValidElement, lazy, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { DatePicker } from "../../components/DatePicker";
 import { fmtClock } from "../../lib/format";
 import { ConceptFrame, SessionNotes } from "./shared";
@@ -8,7 +8,6 @@ import { journalDocumentSession } from "./journalDocumentStore";
 import { extractJournalHeadings, type JournalHeading } from "./journalOutline";
 import { JournalTimeline } from "./JournalTimeline";
 import { presentJournal, updateJournalPresentation, type JournalPresentation } from "./journalPresentation";
-import { BeliefsPage } from "./BeliefsPage";
 import { HealthDiarySummary, HealthPage } from "./HealthPage";
 import { usePersonalHealth } from "./personalHealth";
 import { WordsPage } from "./WordsPage";
@@ -22,9 +21,12 @@ const JOURNAL_NAV = [
   { id: "words", label: "单词", icon: "words" },
   { id: "beliefs", label: "信念", icon: "beliefs" },
 ];
+const BeliefsPage = lazy(() => import("./BeliefsPage").then(module => ({default: module.BeliefsPage})));
 
 export function Journal(app: ConceptProps) {
   const [page, setPage] = useState("journal");
+  const [beliefsOpened, setBeliefsOpened] = useState(false);
+  useEffect(() => {if (page === "beliefs") setBeliefsOpened(true);}, [page]);
   const health = usePersonalHealth(page === "health" || page === "journal");
   const session = useMemo(() => journalDocumentSession(app.date), [app.date]);
   const documentState = useSyncExternalStore(session.subscribe, session.getSnapshot);
@@ -63,7 +65,7 @@ export function Journal(app: ConceptProps) {
   return (
     <ConceptFrame concept="journal" app={app} nav={JOURNAL_NAV} active={page} onNavigate={setPage} timelinePageId="reference">{timeline => (
       <div className="journal-concept">
-        <BeliefsPage active={page === "beliefs"}/>
+        {(beliefsOpened || page === "beliefs") && <Suspense fallback={page === "beliefs" ? <p role="status">正在读取信念…</p> : null}><BeliefsPage active={page === "beliefs"}/></Suspense>}
         <HealthPage active={page === "health"} app={app} state={health}/>
         <WordsPage active={page === "words"} app={app}/>
         <section className="journal-writing-page" hidden={page !== "journal"} aria-label="日记">

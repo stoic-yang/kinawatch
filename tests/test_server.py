@@ -115,6 +115,15 @@ class StubApplication:
     def save_beliefs(self, payload: dict[str, Any]) -> dict[str, Any]:
         return {**self.beliefs(), "exists": True, "markdown": payload["markdown"]}
 
+    def belief_library(self) -> dict[str, Any]:
+        return {"ok": True, "records": [], "order": [], "revision": "fixture", "namespace": "fixture"}
+
+    def save_belief_document(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return {**self.belief_library(), "records": [{"id": payload["id"], "markdown": payload["markdown"]}]}
+
+    def save_belief_state(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.belief_library()
+
     def weekly_review(
         self,
         parameters: dict[str, list[str]],
