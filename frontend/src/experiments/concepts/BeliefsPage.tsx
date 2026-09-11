@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
-import { ArrowLeft, ArrowRight, BookOpen, Code, FileText, GripVertical, Pencil, Plus, Search, SlidersHorizontal, ThumbsUp } from "lucide-react";
+import { ArrowLeft, BookOpen, Code, FileText, GripVertical, Pencil, Plus, RefreshCw, Search, SlidersHorizontal, ThumbsUp } from "lucide-react";
 import { ApiError, fetchBeliefLibrary, saveBeliefDocument, saveBeliefState, type BeliefLibraryResponse, type BeliefRecord } from "../../api";
 import { beliefView, draftKey, EMPTY_BELIEF, nextBeliefDay, orderedBeliefs, parseBelief, readBeliefDrafts, reorderBeliefs, type BeliefDraft, type BeliefSort, type BeliefView } from "./beliefModel";
 import "./beliefs.css";
 
-const PAGE_SIZE = 8;
 export function BeliefsPage({ active }: { active: boolean }) {
   const [library, setLibrary] = useState<BeliefLibraryResponse | null>(null);
   const [drafts, setDrafts] = useState<Record<string, BeliefDraft>>({});
@@ -12,7 +11,7 @@ export function BeliefsPage({ active }: { active: boolean }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [source, setSource] = useState(false), [preview, setPreview] = useState(false);
   const [query, setQuery] = useState(""), [scope, setScope] = useState("all"), [tag, setTag] = useState("");
-  const [sort, setSort] = useState<BeliefSort>("manual"), [page, setPage] = useState(0);
+  const [sort, setSort] = useState<BeliefSort>("manual");
   const [toolsOpen, setToolsOpen] = useState(false), [busy, setBusy] = useState(false);
   const [error, setError] = useState(""), [status, setStatus] = useState("");
   const [conflict, setConflict] = useState<{id: string; remote?: BeliefRecord} | null>(null);
@@ -28,11 +27,12 @@ export function BeliefsPage({ active }: { active: boolean }) {
     }
     setLibrary(value);
   }, []);
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (feedback = false) => {
     if (writing.current) return;
     const request = ++generation.current;
-    try { const value = await fetchBeliefLibrary(); if (request === generation.current) { accept(value); setError(""); } }
-    catch (reason) { if (request === generation.current) setError((reason as Error).message); }
+    if (feedback) setStatus("正在刷新信念…");
+    try { const value = await fetchBeliefLibrary(); if (request === generation.current) { accept(value); setError(""); if (feedback) setStatus("信念已刷新。"); } }
+    catch (reason) { if (request === generation.current) {setError((reason as Error).message); if (feedback) setStatus("");} }
   }, [accept]);
   useEffect(() => {
     if (!active) return;
@@ -68,8 +68,6 @@ export function BeliefsPage({ active }: { active: boolean }) {
     (scope === "all" || item.pinned) && (!effectiveTag || (effectiveTag === "untagged" ? !item.tags.length : item.tags.some(value => value.toLowerCase() === effectiveTag.slice(4))))
     && (!query.trim() || [item.title, item.markdown, ...item.tags.map(value => "#" + value)].join(" ").toLowerCase().includes(query.trim().toLowerCase()))
   ), [rows, library?.order, sort, scope, effectiveTag, query]);
-  const pages = Math.max(1, Math.ceil(matched.length / PAGE_SIZE)), currentPage = Math.min(page, pages - 1);
-  const shown = matched.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
   const newDraft = Object.values(drafts).find(item => item.expectedFingerprint === null), editable = Boolean(library?.write_enabled) && !busy;
   useLayoutEffect(() => { const element = textarea.current; if (element) {element.style.height = "auto"; element.style.height = Math.max(320, element.scrollHeight + 2) + "px";} }, [mode, preview, draft?.markdown, active]);
   useEffect(() => {
@@ -92,7 +90,7 @@ export function BeliefsPage({ active }: { active: boolean }) {
   }
   function finishSave(value: BeliefLibraryResponse, saved: BeliefDraft) {
     accept(value); discardDraft(saved.id); setMode("reading"); setSource(false); setConflict(null); setError("");
-    if (saved.expectedFingerprint === null) {setQuery(""); setScope("all"); setTag(""); setSort("manual"); setPage(0);}
+    if (saved.expectedFingerprint === null) {setQuery(""); setScope("all"); setTag(""); setSort("manual");}
     setStatus("Markdown 文件已保存。");
   }
   async function save(overwrite = false) {
@@ -130,12 +128,12 @@ export function BeliefsPage({ active }: { active: boolean }) {
     if (!library || !editable || sort !== "manual") return;
     const subset = matched.map(item => item.id), index = subset.indexOf(id) + direction;
     if (index < 0 || index >= subset.length) return;
-    setPage(Math.floor(index / PAGE_SIZE)); void manage("order", undefined, reorderBeliefs(library.order, subset, id, index));
+    void manage("order", undefined, reorderBeliefs(library.order, subset, id, index));
   }
   function pointerDown(event: PointerEvent<HTMLButtonElement>, id: string) {
     if (!editable || event.button !== 0) return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    const subset = shown.map(item => item.id); dragSession.current = {id, start: event.clientY, index: subset.indexOf(id), subset, active: false};
+    const subset = matched.map(item => item.id); dragSession.current = {id, start: event.clientY, index: subset.indexOf(id), subset, active: false};
   }
   function pointerMove(event: PointerEvent<HTMLButtonElement>) {
     const session = dragSession.current;
@@ -151,23 +149,23 @@ export function BeliefsPage({ active }: { active: boolean }) {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     if (!cancelled && session?.active && library) void manage("order", undefined, reorderBeliefs(library.order, session.subset, session.id, session.index));
   }
-  function filterTag(value: string) {setTag("tag:" + value.toLowerCase()); setPage(0); back();}
+  function filterTag(value: string) {setTag("tag:" + value.toLowerCase()); back();}
   function renderedDocument(item: {html: string; tags: string[]; error: string}, editing = false) {
     return <>{item.tags.length > 0 && <div className="belief-document-tags" aria-label="信念标签">{item.tags.map(value => editing ? <span className="belief-tag" key={value}>#{value}</span> : <button className="belief-tag" type="button" key={value} onClick={() => filterTag(value)}>#{value}</button>)}</div>}{item.error ? <p role="alert">{item.error}</p> : <div className="belief-markdown" dangerouslySetInnerHTML={{__html: item.html}}/>}</>;
   }
   return <section className="beliefs-page" hidden={!active} aria-label="我的人生信念" aria-busy={busy}>
     <div className="beliefs-layout"><div className="beliefs-main">
-      <header className="beliefs-heading"><h1>我的人生信念</h1>{mode === "list" && library && <span>{matched.length} 条</span>}<button type="button" className="belief-icon belief-mobile-tools" aria-label="搜索与整理信念" aria-expanded={toolsOpen} onClick={() => setToolsOpen(!toolsOpen)}><SlidersHorizontal size={17}/></button></header>
+      <header className="beliefs-heading"><h1>我的人生信念</h1><div className="belief-heading-actions"><button type="button" className="belief-icon" aria-label="刷新信念" title="刷新信念" disabled={busy} onClick={() => void refresh(true)}><RefreshCw size={16}/></button><button type="button" className="belief-icon belief-mobile-tools" aria-label="搜索与整理信念" aria-expanded={toolsOpen} onClick={() => setToolsOpen(!toolsOpen)}><SlidersHorizontal size={17}/></button></div></header>
       <span className="belief-sr-only" role="status">{status}</span>
       {error && <div className="belief-error" role="alert"><p>{error}</p>{mode !== "edit" && <button type="button" disabled={busy} onClick={() => void refresh()}>刷新</button>}</div>}
       {!library && !error && <p className="belief-empty">正在读取信念…</p>}
       {library && !library.write_enabled && <p className="belief-readonly">当前为只读；启用日记写入后可编辑、点赞和调整顺序。</p>}
-      {library && mode === "list" && <><ul className="belief-list" ref={list} data-drop-end={Boolean(drag && !drag.before)} aria-label="信念列表">
-        {shown.map(item => <li key={item.id} data-belief-id={item.id} className={(drag?.id === item.id ? "is-dragging " : "") + (drag?.before === item.id ? "is-drop-before" : "")} style={drag?.id === item.id ? {"--belief-drag-y": drag.y + "px"} as CSSProperties : undefined}>
+      {library && mode === "list" && <ul className="belief-list" ref={list} data-drop-end={Boolean(drag && !drag.before)} aria-label="信念列表">
+        {matched.map(item => <li key={item.id} data-belief-id={item.id} className={(drag?.id === item.id ? "is-dragging " : "") + (drag?.before === item.id ? "is-drop-before" : "")} style={drag?.id === item.id ? {"--belief-drag-y": drag.y + "px"} as CSSProperties : undefined}>
           {sort === "manual" ? <button type="button" className="belief-grip" disabled={!editable} aria-label={"拖动调整顺序：" + item.title} title="拖动排序，也可用 ↑ ↓" onPointerDown={event => pointerDown(event, item.id)} onPointerMove={pointerMove} onPointerUp={event => endDrag(event)} onPointerCancel={event => endDrag(event, true)} onLostPointerCapture={() => {dragSession.current = null; setDrag(null);}} onKeyDown={event => {if (["ArrowUp", "ArrowDown"].includes(event.key)) {event.preventDefault(); move(item.id, event.key === "ArrowUp" ? -1 : 1);} if (event.key === "Escape") {dragSession.current = null; setDrag(null);}}}><GripVertical size={14}/></button> : <span/>}
           <button type="button" className="belief-open" onClick={() => open(item.id)} aria-label={"打开：" + item.title + (drafts[item.id] ? "，有未保存草稿" : "")}>{item.title}</button>{likeButton(item)}
-        </li>)}{!shown.length && <li className="belief-empty">{query || effectiveTag ? "没有符合条件的信念。" : scope === "pinned" ? "将常用的信念留在这里。" : "写下值得记住的一句话。"}</li>}
-      </ul><div className="belief-pagination"><span>{matched.length ? (currentPage * PAGE_SIZE + 1) + "–" + Math.min((currentPage + 1) * PAGE_SIZE, matched.length) + " / " + matched.length : ""}</span><div><button type="button" className="belief-icon" aria-label="上一页信念" disabled={!currentPage} onClick={() => setPage(currentPage - 1)}><ArrowLeft size={16}/></button><button type="button" className="belief-icon" aria-label="下一页信念" disabled={currentPage >= pages - 1} onClick={() => setPage(currentPage + 1)}><ArrowRight size={16}/></button></div></div></>}
+        </li>)}{!matched.length && <li className="belief-empty">{query || effectiveTag ? "没有符合条件的信念。" : scope === "pinned" ? "将常用的信念留在这里。" : "写下值得记住的一句话。"}</li>}
+      </ul>}
       {mode === "reading" && current && <article className="belief-document" aria-label="Markdown 信念文档">
         <div className="belief-document-toolbar"><button type="button" disabled={busy} onClick={back}><ArrowLeft size={16}/>返回列表</button><div><button type="button" onClick={() => setSource(!source)}>{source ? <BookOpen size={16}/> : <Code size={16}/>}{source ? "阅读" : "原文"}</button><button type="button" disabled={!editable} onClick={edit}><Pencil size={15}/>编辑</button></div></div>
         <div className="belief-file-name" title={current.path}><FileText size={14}/><span>{current.title}.md</span></div>
@@ -183,10 +181,10 @@ export function BeliefsPage({ active }: { active: boolean }) {
       </article>}
       {mode === "reading" && library && !current && <div className="belief-empty">文件已移走或删除。<button type="button" onClick={back}>返回列表</button></div>}
     </div><aside className="belief-browser" data-open={toolsOpen} aria-label="信念浏览管理"><h2>浏览</h2>
-      <label className="belief-search"><Search size={15}/><input type="search" aria-label="搜索信念" placeholder="搜索信念…" disabled={busy} value={query} onChange={event => {setQuery(event.target.value); setPage(0); back();}}/></label>
-      <nav className="belief-scope" aria-label="浏览范围"><button type="button" disabled={busy} aria-pressed={scope === "all"} onClick={() => {setScope("all"); setPage(0); back();}}>全部信念<span>{rows.length}</span></button><button type="button" disabled={busy} aria-pressed={scope === "pinned"} onClick={() => {setScope("pinned"); setPage(0); back();}}>常用<span>{rows.filter(item => item.pinned).length}</span></button></nav>
-      <label className="belief-filter">排序<select aria-label="信念排序方式" value={sort} disabled={busy} onChange={event => {setSort(event.target.value as BeliefSort); setPage(0); back();}}><option value="manual">手动顺序</option><option value="likes">点赞最多</option><option value="recent">最近加入</option><option value="updated">最近修改</option></select></label>
-      <label className="belief-filter">标签<select aria-label="按标签筛选" value={effectiveTag} disabled={busy || !tags.length} onChange={event => {setTag(event.target.value); setPage(0); back();}}><option value="">{tags.length ? "全部标签" : "尚未添加标签"}</option>{tags.length > 0 && <option value="untagged">未添加标签</option>}{tags.map(([key, value]) => <option key={key} value={"tag:" + key}>{value.name} · {value.count}</option>)}</select></label>
+      <label className="belief-search"><Search size={15}/><input type="search" aria-label="搜索信念" placeholder="搜索信念…" disabled={busy} value={query} onChange={event => {setQuery(event.target.value); back();}}/></label>
+      <nav className="belief-scope" aria-label="浏览范围"><button type="button" disabled={busy} aria-pressed={scope === "all"} onClick={() => {setScope("all"); back();}}>全部信念<span>{rows.length}</span></button><button type="button" disabled={busy} aria-pressed={scope === "pinned"} onClick={() => {setScope("pinned"); back();}}>常用<span>{rows.filter(item => item.pinned).length}</span></button></nav>
+      <label className="belief-filter">排序<select aria-label="信念排序方式" value={sort} disabled={busy} onChange={event => {setSort(event.target.value as BeliefSort); back();}}><option value="manual">手动顺序</option><option value="likes">点赞最多</option><option value="recent">最近加入</option><option value="updated">最近修改</option></select></label>
+      <label className="belief-filter">标签<select aria-label="按标签筛选" value={effectiveTag} disabled={busy || !tags.length} onChange={event => {setTag(event.target.value); back();}}><option value="">{tags.length ? "全部标签" : "尚未添加标签"}</option>{tags.length > 0 && <option value="untagged">未添加标签</option>}{tags.map(([key, value]) => <option key={key} value={"tag:" + key}>{value.name} · {value.count}</option>)}</select></label>
       <button type="button" className="belief-add" disabled={!editable} onClick={create}><Plus size={16}/>新增信念</button>{newDraft && <button type="button" className="belief-resume" disabled={busy} onClick={create}>继续未完成的信念</button>}
     </aside></div>
   </section>;

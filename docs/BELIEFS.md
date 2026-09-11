@@ -2,6 +2,9 @@
 
 The beliefs page uses an unnumbered title list, the existing application
 navigation, and a right sidebar for search, sorting, scope, tags and creation.
+All matching beliefs appear in one continuous page-scrolling list, without a
+page-size cap or pagination. The header refresh action reloads the library while
+retaining the current search, filters, sort and unsaved drafts.
 Each newly saved belief is a complete UTF-8 Markdown file, including optional
 YAML properties. Reading, source viewing and explicit editing are separate.
 

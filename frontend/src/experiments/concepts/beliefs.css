@@ -8,7 +8,7 @@
 .beliefs-main { min-width: 0; }
 .beliefs-heading { display: flex; align-items: center; gap: 16px; min-height: 40px; margin-bottom: 19px; padding-bottom: 16px; border-bottom: 1px solid var(--kw-ui-line); }
 .beliefs-heading h1 { margin: 0; font-family: "Source Han Serif SC", "Songti SC", serif; font-size: 25px; font-weight: 500; line-height: 1.45; letter-spacing: .015em; }
-.beliefs-heading > span { margin-left: auto; font-size: 12px; white-space: nowrap; color: var(--kw-ui-muted); }
+.belief-heading-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 .belief-list { position: relative; display: grid; gap: 10px; list-style: none; padding: 0; margin: 0; }
 .belief-list > li:not(.belief-empty) { position: relative; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 7px; border-radius: 4px; }
 .belief-list > li:hover { background: var(--kw-ui-control-hover); }
@@ -23,8 +23,6 @@
 .belief-like { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 46px; min-height: 36px; padding: 5px 7px; border: 0; border-radius: 5px; color: var(--kw-ui-muted); background: transparent; font-size: 12px; font-variant-numeric: tabular-nums; }
 .belief-like:hover, .belief-like[aria-pressed="true"] { color: var(--kw-ui-accent); background: var(--kw-ui-control-active); }
 .belief-like[aria-pressed="true"] svg { fill: color-mix(in srgb, var(--kw-ui-accent) 14%, transparent); }
-.belief-pagination { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 18px; color: var(--kw-ui-muted); font-size: 12px; }
-.belief-pagination > div { display: flex; gap: 12px; }
 .belief-icon { display: inline-flex; justify-content: center; align-items: center; width: 30px; height: 32px; padding: 5px; border: 0; border-radius: 5px; background: transparent; color: var(--kw-ui-muted); }
 .belief-icon:hover { background: var(--kw-ui-control-hover); }
 .belief-browser { position: sticky; top: 30px; min-width: 0; padding: 20px 16px; border-radius: 7px; background: var(--kw-ui-control); }
@@ -86,7 +84,7 @@
 .belief-empty { display: block; padding: 70px 20px; color: var(--kw-ui-muted); text-align: center; font-size: 14px; }
 .belief-readonly { color: var(--kw-ui-muted); font-size: 12px; }
 .belief-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-.beliefs-page .belief-mobile-tools { display: none; margin-left: auto; }
+.beliefs-page .belief-mobile-tools { display: none; }
 @media (min-width: 1400px) { .beliefs-layout { grid-template-columns: minmax(0,1fr) 196px; gap: 32px; } }
 @media (max-width: 1000px) { .theme-grove.concept-journal .beliefs-page { padding: 26px 24px 40px; } .beliefs-layout { grid-template-columns: minmax(0,1fr); } .belief-browser { display: none; position: static; } .belief-browser[data-open="true"] { display: block; grid-row: 1; } .beliefs-page .belief-mobile-tools { display: inline-flex; } }
 @media (max-width: 580px) { .theme-grove.concept-journal .beliefs-page { padding: 22px 18px 28px; } .beliefs-heading h1 { font-size: 23px; } .belief-document { padding: 22px 20px 28px; } }
