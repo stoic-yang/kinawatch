@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 
 from .activity_edits import ActivityEditStore
 from .config import DashboardSettings, load_json
+from .local_activity import LOCAL_BUCKET, LOCAL_SOURCE_TYPE, LocalActivityStore, fill_unobserved_intervals
 
 CLASSIFICATION_FIELDS = (
     "app", "title", "url", "project", "file", "language", "status",
@@ -215,6 +216,7 @@ class ActivityWatchAdapter:
         self.settings = settings
         self._client = client
         self.activity_edits = edit_store or ActivityEditStore(settings)
+        self.local_activity = LocalActivityStore(settings)
         self._resolved: dict[str, Any] | None = None
         self._classification_cache: tuple[tuple[int, int], dict[str, Any]] | None = None
 
@@ -367,6 +369,7 @@ class ActivityWatchAdapter:
             "language": data.get("language"),
             "status": data.get("status"),
             "source": source,
+            **({"source_type": LOCAL_SOURCE_TYPE} if bucket_id == LOCAL_BUCKET else {}),
             "bucket_id": bucket_id,
             "event_id": (
                 str(item["id"]) if item.get("id") is not None else None
@@ -774,6 +777,13 @@ class ActivityWatchAdapter:
         window_events: list[dict[str, Any]],
         afk_events: list[dict[str, Any]],
     ) -> dict[str, Any]:
+        local_error = ""
+        try:
+            local = [event for item in self.local_activity.events(start_utc, end_utc)
+                     if (event := self._parse_event(item, LOCAL_BUCKET, source, start_utc, end_utc)) is not None]
+            window_events = [*window_events, *fill_unobserved_intervals(local, window_events)]
+        except (OSError, ValueError, OverflowError) as error:
+            local_error = f"本地活动暂时无法读取：{error}"
         observed_seconds = sum(
             float(event["duration_seconds"]) for event in window_events
         )
@@ -861,7 +871,7 @@ class ActivityWatchAdapter:
         manual_conflicts = sum(
             bool(event.get("manual_edit_conflict")) for event in events
         )
-        issues = []
+        issues = [local_error] if local_error else []
         if manual_conflicts:
             issues.append(
                 f"{manual_conflicts} 条手动活动校正因原始事件变化而未应用。"
@@ -932,6 +942,34 @@ class ActivityWatchAdapter:
                 "passive_media_seconds": passive_media_seconds,
             },
         }
+        sources = [source_payload]
+        local_events = [event for event in events if event.get("source_type") == LOCAL_SOURCE_TYPE]
+        local_windows = [event for event in window_events if event.get("source_type") == LOCAL_SOURCE_TYPE]
+        if local_windows:
+            local_seconds = sum(event["duration_seconds"] for event in local_events)
+            local_observed = sum(event["duration_seconds"] for event in local_windows)
+            local_active = sum(event["duration_seconds"] for event in active_events
+                               if event.get("source_type") == LOCAL_SOURCE_TYPE)
+            local_foreground = sum(event["duration_seconds"] for event in foreground
+                                   if event.get("source_type") == LOCAL_SOURCE_TYPE)
+            local_conflicts = sum(bool(event.get("manual_edit_conflict")) for event in local_events)
+            raw_media = [event for event in media_events if event.get("source_type") != LOCAL_SOURCE_TYPE]
+            source_payload = {**source_payload, "duration_seconds": wall_seconds - local_seconds,
+                              "event_count": len(events) - len(local_events),
+                              "manual_edit_conflicts": manual_conflicts - local_conflicts,
+                              "observed_event_count": len(window_events) - len(local_windows),
+                              "observed_duration_seconds": observed_seconds - local_observed,
+                              "afk_filter": {**source_payload["afk_filter"],
+                                  "afk_removed_seconds": max(0, observed_seconds - local_observed - active_before_background + local_active),
+                                  "background_removed_seconds": max(0, active_before_background - local_active - foreground_seconds + local_foreground)},
+                              "media_activity": {**source_payload["media_activity"],
+                                  "matched_event_count": len(raw_media),
+                                  "foreground_media_seconds": _duration(_merge_intervals([_event_interval(e) for e in raw_media])),
+                                  "passive_media_seconds": max(0, wall_seconds - local_seconds - sum(e["duration_seconds"] for e in interactive_wall_events if e.get("source_type") != LOCAL_SOURCE_TYPE))}}
+            sources = [source_payload, {"name": source, "label": source, "type": LOCAL_SOURCE_TYPE,
+                       "ok": True, "bucket_id": LOCAL_BUCKET, "event_count": len(local_events),
+                       "duration_seconds": local_seconds, "observed_event_count": len(local_windows),
+                       "observed_duration_seconds": local_observed, "manual_edit_conflicts": local_conflicts}]
         return {
             "bucket_id": resolved["window_bucket_id"],
             "range": {
@@ -939,9 +977,9 @@ class ActivityWatchAdapter:
                 "end_utc": end_utc.isoformat(),
                 "timezone": timezone_name,
             },
-            "sources": [source_payload],
+            "sources": sources,
             "time_accounting": time_accounting,
-            "complete": True,
+            "complete": not local_error,
             "issues": issues,
             "raw_event_count": len(window_events),
             "event_count": len(events),
@@ -1020,7 +1058,7 @@ class ActivityWatchAdapter:
         return results
 
     def correction_fingerprint(self, day: date) -> str:
-        return self.activity_edits.fingerprint_for_day(day)
+        return self.activity_edits.fingerprint_for_day(day) + self.local_activity.fingerprint(day)
 
     @staticmethod
     def _local_input_value(value: datetime, zone: ZoneInfo) -> str:
@@ -1053,11 +1091,12 @@ class ActivityWatchAdapter:
         event_ids: list[str],
     ) -> dict[str, Any]:
         resolved, classification, timezone_name, source = self._load_context()
-        if bucket_id != resolved["window_bucket_id"]:
+        if bucket_id not in {resolved["window_bucket_id"], LOCAL_BUCKET}:
             raise ValueError("只能检查当前配置的窗口活动 bucket。")
         requested = {str(value) for value in event_ids}
         start_utc, end_utc = self.date_range(day, mode, timezone_name)
-        raw_items = self._api().events(bucket_id, start_utc, end_utc)
+        raw_items = (self.local_activity.events(start_utc, end_utc) if bucket_id == LOCAL_BUCKET
+                     else self._api().events(bucket_id, start_utc, end_utc))
         zone = ZoneInfo(timezone_name)
         now_utc = datetime.now(timezone.utc)
         rows: list[dict[str, Any]] = []

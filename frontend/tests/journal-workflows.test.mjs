@@ -12,6 +12,15 @@ await build({ entryPoints: ["sessions", "kinaSummary"].map(name => fileURLToPath
 const { buildSessions, topAppsForDay } = await import(pathToFileURL(join(directory, "sessions.mjs")).href);
 const { parseKinaSummary, assignKinaSummaryToSessions } = await import(pathToFileURL(join(directory, "kinaSummary.mjs")).href);
 
+test("local Mac records contribute native time to workflow summaries", () => {
+  const workflow = { id: "local", start: "2026-09-11T10:00:00Z", end: "2026-09-11T10:20:00Z", active_seconds: 1200 };
+  const local = { kind: "screen", start: workflow.start, end: workflow.end, source_type: "kinawatch-local", app: "Editor", category: "work", category_label: "Work", duration_seconds: 600, device_duration_seconds: 1200 };
+  const mobile = { ...local, source_type: "apple-screentime", app: "Phone" };
+  const [session] = buildSessions({ workflows: { sessions: [workflow] }, timeline: [local, mobile] });
+  assert.equal(session.seconds, 1200);
+  assert.deepEqual(session.topApps, [{ app: "Editor", category: "work", seconds: 1200 }]);
+});
+
 test("workflow summaries use Mac device time and exclude overlapping mobile apps", () => {
   const workflow = { id: "0123456789abcdef", start: "2026-09-06T09:00:00+08:00", end: "2026-09-06T09:30:00+08:00", active_seconds: 1800 };
   const mac = { kind: "screen", start: workflow.start, end: workflow.end, source_type: "activitywatch-rest", app: "Editor", category: "work", category_label: "Work", duration_seconds: 900, device_duration_seconds: 1800 };

@@ -33,6 +33,12 @@ needed.
 
 - Bind only to `127.0.0.1` or `localhost`; do not add broad CORS.
 - Treat ActivityWatch, its database, and all local configuration as read-only.
+- The separately authorized recovery workflow may install an explicitly selected,
+  precomputed Mac activity snapshot in KinaWatch storage and configure
+  `local_activity_file`. This is independent of ActivityWatch; the service only
+  reads it, fills uncaptured intervals, and retains the normal AFK, classification,
+  overlap and workflow rules. Do not add visible recovery labels. Existing
+  fingerprint-checked corrections may target these local event identities.
 - Manual activity corrections may write only the KinaWatch-owned overlay after
   an enabled, explicit save. Bind every override to one raw event fingerprint
   and the selected day; require overlay revision checks, atomic replacement,

@@ -13,7 +13,7 @@ MIN_WORKFLOW_ACTIVE_SECONDS = 15 * 60
 def build_workflow_snapshot(timeline: list[dict[str, Any]], cutoff: str) -> dict[str, Any]:
     blocks = [{**block, "duration_seconds": block.get("device_duration_seconds", block["duration_seconds"])}
               for block in timeline if block["kind"] == "screen"
-              and block.get("source_type", "activitywatch-rest") == "activitywatch-rest"]
+              and block.get("source_type", "activitywatch-rest") in {"activitywatch-rest", "kinawatch-local"}]
     sessions: list[dict[str, Any]] = []
     for block in blocks:
         start = datetime.fromisoformat(block["start"].replace("Z", "+00:00"))

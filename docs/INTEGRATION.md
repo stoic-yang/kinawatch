@@ -59,6 +59,32 @@ tracks interval starts and ends instead of rescanning every event at every
 boundary, preserving equal sharing, split boundaries and original event order.
 These optimizations leave the response and day-cache schema unchanged.
 
+## Optional local Mac activity snapshot
+
+An explicit `local_activity_file` configuration selects one precomputed local
+JSON snapshot: `{"version": 1, "events": [{"id": "stable-id", "timestamp":
+"2026-01-01T09:00:00Z", "duration": 60, "data": {"app": "Editor", "title":
+"Document", "url": ""}}]}`. It is disabled when the path is omitted. The service
+never creates or writes the snapshot. Events must have unique IDs, aware times,
+finite positive durations, no mutual overlaps, and must already have ended.
+
+Local events fill only intervals without captured Mac windows, before the same
+AFK filtering, classification and multi-device union accounting. Internal source
+type `kinawatch-local` and bucket identity `kinawatch-local-activity` preserve
+provenance without a visible label. They join Mac workflows and support the
+existing fingerprint-checked correction overlay. Local and captured blocks do
+not merge their inspector identities. Per-day fingerprints include the snapshot;
+invalid snapshots report an issue while retaining captured data.
+
+`python3 -m scripts.reconstruct_local_activity` can produce a candidate from an
+explicit frozen evidence directory. It uses Computer History foreground context,
+clips to not-AFK intervals, caps each observation at 120 seconds, stops at session
+boundaries and unknown applications, and uses Chrome metadata only where its URL
+matches an observed foreground Chrome window. It does not install the result.
+Installation requires a user-requested recovery, an unchanged configuration,
+an atomic replacement under an exclusive lock, and retained evidence/rollback
+files outside the public repository. Never write recovered events to ActivityWatch.
+
 ## Category rules
 
 `activitywatch.categories_file` points to a JSON object with `categories` and

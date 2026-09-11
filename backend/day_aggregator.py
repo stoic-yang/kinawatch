@@ -262,6 +262,8 @@ class DayAggregator:
                 event.get("app"),
                 event.get("title"),
                 event.get("source"),
+                event.get("source_type", "activitywatch-rest"),
+                event.get("bucket_id"),
             )
             if blocks:
                 previous = blocks[-1]

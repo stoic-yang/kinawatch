@@ -76,7 +76,7 @@ export function buildSessions(day: DayResponse): ScreenSession[] {
 /** Mac workflow statistics use device time, independent of mobile overlap. */
 export function workflowBlocks(day: DayResponse): ScreenTimelineBlock[] {
   return screenBlocks(day)
-    .filter(block => (block.source_type ?? "activitywatch-rest") === "activitywatch-rest")
+    .filter(block => ["activitywatch-rest", "kinawatch-local"].includes(block.source_type ?? "activitywatch-rest"))
     .map(block => ({ ...block, duration_seconds: block.device_duration_seconds ?? block.duration_seconds }));
 }
 
