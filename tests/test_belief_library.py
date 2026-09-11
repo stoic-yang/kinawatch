@@ -91,6 +91,17 @@ class BeliefLibraryTests(unittest.TestCase):
             undone = self.manage('like', id=FIRST, value=False, day='2026-09-11')
             self.assertEqual(undone['records'][0]['liked_days'], ['2026-09-10'])
 
+    def test_legacy_sections_do_not_inherit_collection_properties(self):
+        original = '\ufeff---\r\ntitle: Library\r\ntags: [meta/library, meta/draft]\r\n---\r\n# 原稿\r\n\r\n## 1. 原则甲\r\n保留单条的 #专注 标签。\r\n\r\n## 2. 原则乙\r\n没有标签。'.encode()
+        entries = legacy_entries(original)
+        self.assertEqual(len(entries), 2)
+        self.assertTrue(entries[0][1].startswith('# 原则甲\r\n'))
+        self.assertIn('#专注', entries[0][1])
+        self.assertEqual(entries[1][1], '# 原则乙\r\n没有标签。')
+        self.assertTrue(all('meta/' not in markdown and 'title: Library' not in markdown for _, markdown in entries))
+        single = '---\ntags: [专注]\n---\n# 单条信念\n正文。'.encode()
+        self.assertEqual(legacy_entries(single)[0][1], single.decode())
+
     def test_edit_preserves_creation_time_and_default_manual_order(self):
         first = self.save()['records'][0]
         before = self.save(SECOND, '# 新增的合成原则')

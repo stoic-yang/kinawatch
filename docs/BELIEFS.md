@@ -7,8 +7,9 @@ The same header action resumes an unfinished new belief when a draft exists.
 Search uses a compact field with a shared focus ring and an explicit clear
 button; Escape also clears the query while keeping the input focused.
 All matching beliefs appear in one continuous page-scrolling list, without a
-page-size cap or pagination. The header refresh action reloads the library while
-retaining the current search, filters, sort and unsaved drafts.
+page-size cap or pagination. The library reloads on page activation, window
+focus and the daily transition, retaining search, filters, sort and drafts.
+There is no permanent refresh button; failed reads offer a retry action.
 Each newly saved belief is a complete UTF-8 Markdown file, including optional
 YAML properties. Reading, source viewing and explicit editing are separate.
 
@@ -33,6 +34,9 @@ with new tags marked pending and unavailable for filtering until saved. Saving,
 editing or refreshing rebuilds the index from the current Markdown files.
 New beliefs start with an empty tag list; no tags or categories are preselected.
 Favorites are a separate, explicitly chosen browsing scope, never a tag.
+Tag labels render as plain words without a hash prefix. Existing nested tags
+use a readable middle dot instead of a slash; filtering keeps the complete
+original identity, and Markdown editing/source views retain the original syntax.
 Tag matching ignores case. Code spans, fences, escaped hashes and
 Markdown link labels do not create tags. Reading supports headings, emphasis,
 lists, quotes, tables, links and code. HTML is escaped, and unsafe link schemes
@@ -52,7 +56,10 @@ There is no background directory scan or provider-to-provider migration.
 
 The old `journal.beliefs_note_path` remains intact. H2 sections outside fences
 are presented individually, with leading numeric list labels removed only
-from the projected title. Until saved, they continue reading the original
+from the projected title. Collection-level properties, including its tags,
+are not inherited by these sections; tags inside each section remain indexed.
+A legacy file without H2 sections remains one complete document with its own
+properties. Until saved, the sections continue reading the original
 document. An explicit save copies that one section into a standalone Markdown
 file and retains its existing votes, pin and position. The old file is never
 rewritten or deleted. Editing an already copied section in the old file does

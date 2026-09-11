@@ -9,7 +9,7 @@ import { build } from "esbuild";
 const directory = await mkdtemp(join(tmpdir(), "kinawatch-beliefs-"));
 after(() => rm(directory, {recursive: true, force: true}));
 await build({entryPoints: [fileURLToPath(new URL("../src/experiments/concepts/beliefModel.ts", import.meta.url))], outfile: join(directory, "model.mjs"), bundle: true, platform: "node", format: "esm"});
-const { EMPTY_BELIEF, parseBelief, beliefView, beliefTagIndex, orderedBeliefs, reorderBeliefs, nextBeliefDay, readBeliefDrafts } = await import(pathToFileURL(join(directory, "model.mjs")).href);
+const { EMPTY_BELIEF, parseBelief, beliefView, beliefTagIndex, beliefTagLabel, orderedBeliefs, reorderBeliefs, nextBeliefDay, readBeliefDrafts } = await import(pathToFileURL(join(directory, "model.mjs")).href);
 
 test("Markdown properties and inline tags derive the title without rewriting source", () => {
   const source = '\ufeff---\r\ntags: [专注, "#实践", Focus]\r\naliases: [别名]\r\n---\r\n# **先看证据**，再判断\r\n\r\n#复盘 #focus\r\n\r\n`#代码` [不是 #链接](https://example.com) \\#转义\r\n\r\n```md\r\n#代码块\r\n```';
@@ -51,6 +51,18 @@ test("new beliefs and favorite status never manufacture default tags", () => {
   assert.deepEqual(beliefTagIndex([{...empty, pinned: true}]), []);
   assert.deepEqual(beliefTagIndex([], parseBelief('# 草稿\n\n#自定义').tags), [{key: '自定义', name: '自定义', count: 0}]);
   assert.deepEqual(beliefTagIndex([]), []);
+});
+
+test("tag presentation hides Markdown syntax while keeping source and filter identities", () => {
+  const source = '---\ntags: [学习/专注, 工作/专注]\n---\n# 原则\n\n#学习/专注 #实践';
+  const view = beliefView({id: 'a', path: 'example.md', markdown: source});
+  assert.equal(view.markdown, source);
+  assert.deepEqual(view.tags, ['学习/专注', '工作/专注', '实践']);
+  assert.equal(beliefTagLabel(view.tags[0]), '学习 · 专注');
+  assert.equal(beliefTagLabel('实践'), '实践');
+  assert.match(view.html, /<span class="belief-inline-tag">学习 · 专注<\/span>/);
+  assert.match(view.html, /<span class="belief-inline-tag">实践<\/span>/);
+  assert.deepEqual(beliefTagIndex([view]).map(tag => tag.key).sort(), [...view.tags].sort());
 });
 
 test("rich Markdown supports lists, quotes, tables and code", () => {

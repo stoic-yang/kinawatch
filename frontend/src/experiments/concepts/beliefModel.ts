@@ -4,6 +4,7 @@ import type { BeliefRecord } from "../../api";
 
 export const EMPTY_BELIEF = "---\ntags: []\n---\n\n# \n\n";
 const escape = (value: string) => value.replace(/[&<>"']/g, character => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[character]!));
+export function beliefTagLabel(tag: string) { return tag.split("/").filter(Boolean).join(" · "); }
 const markdown = new MarkdownIt({ html: false, breaks: false, typographer: false });
 markdown.inline.ruler.before("text", "belief_tag", (state, silent) => {
   // markdown-it tracks nested links here; its community types omit this field.
@@ -15,7 +16,7 @@ markdown.inline.ruler.before("text", "belief_tag", (state, silent) => {
   state.pos += match[0].length;
   return true;
 });
-markdown.renderer.rules.belief_tag = (tokens, index) => `<span class="belief-inline-tag">#${escape(tokens[index].content)}</span>`;
+markdown.renderer.rules.belief_tag = (tokens, index) => `<span class="belief-inline-tag">${escape(beliefTagLabel(tokens[index].content))}</span>`;
 markdown.renderer.rules.link_open = (tokens, index, options, _environment, renderer) => {
   tokens[index].attrSet("target", "_blank");
   tokens[index].attrSet("rel", "noopener noreferrer");
@@ -38,7 +39,7 @@ export function parseBelief(source: string) {
   }
   const tokens = markdown.parse(body, {});
   const index = tokens.findIndex(token => token.type === "heading_open" && token.tag === "h1");
-  const title = (index < 0 ? "" : (tokens[index + 1].children ?? []).map(token => token.type === "belief_tag" ? "#" + token.content : ["softbreak", "hardbreak"].includes(token.type) ? " " : ["text", "code_inline", "image"].includes(token.type) ? token.content : "").join("").trim())
+  const title = (index < 0 ? "" : (tokens[index + 1].children ?? []).map(token => token.type === "belief_tag" ? beliefTagLabel(token.content) : ["softbreak", "hardbreak"].includes(token.type) ? " " : ["text", "code_inline", "image"].includes(token.type) ? token.content : "").join("").trim())
     || (typeof properties.title === "string" ? properties.title.trim() : "");
   const values: unknown[] = properties.tags == null ? [] : Array.isArray(properties.tags) ? [...properties.tags] : [properties.tags];
   for (const token of tokens) for (const child of token.children ?? []) if (child.type === "belief_tag") values.push(child.content);

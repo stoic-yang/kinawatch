@@ -33,7 +33,7 @@ def digest(content: bytes) -> str:
 
 def legacy_entries(content: bytes) -> list[tuple[str, str]]:
     """Project H2 sections without writing or discarding the original document."""
-    prefix, body, _ = split_document(content)
+    _, body, _ = split_document(content)
     lines = body.splitlines(keepends=True)
     sections: list[tuple[int, str]] = []
     fence = ""
@@ -59,7 +59,8 @@ def legacy_entries(content: bytes) -> list[tuple[str, str]]:
         key = digest(f"{title}\0{occurrences[title]}".encode())[:24]
         end = sections[position + 1][0] if position + 1 < len(sections) else len(lines)
         ending = "\r\n" if lines[start].endswith("\r\n") else "\n"
-        markdown = prefix.decode("utf-8") + "# " + title + ending + "".join(lines[start + 1:end])
+        # Whole-document properties describe the collection, not each section.
+        markdown = "# " + title + ending + "".join(lines[start + 1:end])
         result.append(("l-" + key, markdown))
     return result
 
