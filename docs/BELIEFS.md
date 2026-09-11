@@ -11,7 +11,16 @@ page-size cap or pagination. The library reloads on page activation, window
 focus and the daily transition, retaining search, filters, sort and drafts.
 There is no permanent refresh button; failed reads offer a retry action.
 Each newly saved belief is a complete UTF-8 Markdown file, including optional
-YAML properties. Reading, source viewing and explicit editing are separate.
+YAML properties. The default editor presents the belief sentence first, followed
+by lightweight tag chips and an optional expandable explanation. It has no
+document-frame border, filename heading or visible YAML template. An empty
+draft starts with only an empty H1; a `tags` property is added when needed.
+Writing, raw Markdown editing and preview share one retained draft. Switching
+views does not serialize the file again. Title/body edits preserve other source
+ranges; tag edits replace only the YAML value and retain unrelated properties,
+comments, BOM and line endings. Structures that cannot be edited this way stay
+available in source view. Uncommitted tag input is included when saving, changing
+views or returning to the list. All saves remain explicit and conflict-checked.
 
 ```markdown
 ---

@@ -2,7 +2,7 @@ import MarkdownIt from "markdown-it";
 import { JSON_SCHEMA, load } from "js-yaml";
 import type { BeliefRecord } from "../../api";
 
-export const EMPTY_BELIEF = "---\ntags: []\n---\n\n# \n\n";
+export const EMPTY_BELIEF = "#\n\n";
 const escape = (value: string) => value.replace(/[&<>"']/g, character => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[character]!));
 export function beliefTagLabel(tag: string) { return tag.split("/").filter(Boolean).join(" · "); }
 const markdown = new MarkdownIt({ html: false, breaks: false, typographer: false });
