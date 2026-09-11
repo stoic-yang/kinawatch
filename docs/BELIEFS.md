@@ -1,7 +1,11 @@
 # Beliefs library
 
 The beliefs page uses an unnumbered title list, the existing application
-navigation, and a right sidebar for search, sorting, scope, tags and creation.
+navigation, and a right sidebar for search, sorting, scope and tags. Creation
+lives in the page header, above the list and browsing controls at every width.
+The same header action resumes an unfinished new belief when a draft exists.
+Search uses a compact field with a shared focus ring and an explicit clear
+button; Escape also clears the query while keeping the input focused.
 All matching beliefs appear in one continuous page-scrolling list, without a
 page-size cap or pagination. The header refresh action reloads the library while
 retaining the current search, filters, sort and unsaved drafts.

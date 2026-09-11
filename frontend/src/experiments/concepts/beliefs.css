@@ -6,9 +6,9 @@
 .beliefs-page svg { flex-shrink: 0; stroke-width: 1.5; }
 .beliefs-layout { display: grid; grid-template-columns: minmax(0, 1fr) 176px; align-items: start; gap: 28px; }
 .beliefs-main { min-width: 0; }
-.beliefs-heading { display: flex; align-items: center; gap: 16px; min-height: 40px; margin-bottom: 19px; padding-bottom: 16px; border-bottom: 1px solid var(--kw-ui-line); }
+.beliefs-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; min-height: 40px; margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--kw-ui-line); }
 .beliefs-heading h1 { margin: 0; font-family: "Source Han Serif SC", "Songti SC", serif; font-size: 25px; font-weight: 500; line-height: 1.45; letter-spacing: .015em; }
-.belief-heading-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.belief-heading-actions { display: flex; flex-shrink: 0; align-items: center; gap: 6px; margin-left: auto; }
 .belief-list { position: relative; display: grid; gap: 10px; list-style: none; padding: 0; margin: 0; }
 .belief-list > li:not(.belief-empty) { position: relative; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 7px; border-radius: 4px; }
 .belief-list > li:hover { background: var(--kw-ui-control-hover); }
@@ -27,9 +27,15 @@
 .belief-icon:hover { background: var(--kw-ui-control-hover); }
 .belief-browser { position: sticky; top: 30px; min-width: 0; padding: 20px 16px; border-radius: 7px; background: var(--kw-ui-control); }
 .belief-browser h2 { margin: 0 0 18px; font-size: 13px; font-weight: 500; }
-.belief-search { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--kw-ui-line); color: var(--kw-ui-muted); }
-.belief-search input { min-width: 0; width: 100%; padding: 0; border: 0; background: transparent; color: var(--kw-ui-ink); font-size: 16px; line-height: 1.6; }
+.belief-search { display: flex; align-items: center; gap: 7px; min-height: 38px; padding: 7px 9px; border: 1px solid var(--kw-ui-line); border-radius: 8px; color: var(--kw-ui-muted); background: var(--kw-ui-surface); }
+.belief-search:hover { border-color: var(--kw-ui-line-strong); }
+.belief-search:focus-within { border-color: var(--kw-ui-accent); box-shadow: var(--kw-ui-focus); }
+.belief-search input { min-width: 0; width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--kw-ui-ink); font-family: inherit; font-size: 13px; line-height: 22px; appearance: none; }
+.theme-grove.concept-page .belief-search input:focus-visible { outline: none; }
+.belief-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
 .belief-search input::placeholder { color: var(--kw-ui-muted); opacity: 1; }
+.belief-search button { display: grid; flex-shrink: 0; place-items: center; width: 20px; height: 22px; padding: 0; border: 0; border-radius: 4px; color: var(--kw-ui-muted); background: transparent; }
+.belief-search button:hover { color: var(--kw-ui-ink); background: var(--kw-ui-control-hover); }
 .belief-scope { display: grid; gap: 5px; margin: 22px -8px; }
 .belief-scope button { display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 10px 8px; border: 0; border-radius: 4px; color: var(--kw-ui-muted); background: transparent; font-size: 13px; text-align: left; }
 .belief-scope button span { font-size: 11px; font-variant-numeric: tabular-nums; }
@@ -45,8 +51,8 @@
 .belief-tag-filters button[data-pending="true"] { opacity: 1; }
 .belief-tags-empty { margin: 4px 8px; font-size: 11px; line-height: 1.8; }
 .belief-add, .belief-save { display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 10px 18px; border: 0; border-radius: 4px; color: var(--kw-ui-on-accent); background: var(--kw-ui-accent); font-size: 13px; }
-.belief-add { width: 100%; margin-top: 26px; padding: 10px; }
-.belief-resume { display: block; margin-top: 15px; padding: 0; border: 0; background: transparent; color: var(--kw-ui-muted); font-size: 11px; text-align: left; }
+.belief-add { min-height: 36px; margin-left: 6px; padding: 8px 12px; border-radius: 7px; font-size: 12px; white-space: nowrap; }
+.belief-add:hover:enabled { background: var(--kw-ui-accent-strong); }
 .belief-document { min-height: 470px; padding: 24px 28px 30px; border: 1px solid var(--kw-ui-line); border-radius: 6px; background: var(--kw-ui-surface); }
 .belief-document-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 23px; }
 .belief-document-toolbar > div { display: flex; align-items: center; gap: 16px; }
@@ -96,4 +102,4 @@
 @media (min-width: 1400px) { .beliefs-layout { grid-template-columns: minmax(0,1fr) 196px; gap: 32px; } }
 @media (max-width: 1000px) { .theme-grove.concept-journal .beliefs-page { padding: 26px 24px 40px; } .beliefs-layout { grid-template-columns: minmax(0,1fr); } .belief-browser { display: none; position: static; } .belief-browser[data-open="true"] { display: block; grid-row: 1; } .beliefs-page .belief-mobile-tools { display: inline-flex; } }
 @media (max-width: 580px) { .theme-grove.concept-journal .beliefs-page { padding: 22px 18px 28px; } .beliefs-heading h1 { font-size: 23px; } .belief-document { padding: 22px 20px 28px; } }
-@media (pointer: coarse) { .beliefs-page .belief-icon, .belief-grip, .belief-like, .belief-document-toolbar button, .belief-tag, .belief-tag-filters button, .belief-save-row button { min-height: 44px; } .belief-document textarea { font-size: 16px; } .belief-list > li:not(.belief-empty) { grid-template-columns: 36px minmax(0,1fr) auto; } .belief-grip { width: 36px; } }
+@media (pointer: coarse) { .beliefs-page .belief-icon, .belief-add, .belief-grip, .belief-like, .belief-document-toolbar button, .belief-tag, .belief-tag-filters button, .belief-save-row button { min-height: 44px; } .belief-document textarea, .belief-search input { font-size: 16px; } .belief-search { min-height: 44px; } .belief-search button { width: 28px; height: 28px; } .belief-list > li:not(.belief-empty) { grid-template-columns: 36px minmax(0,1fr) auto; } .belief-grip { width: 36px; } }
