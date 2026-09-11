@@ -36,6 +36,14 @@
 .belief-scope button[aria-pressed="true"] { color: var(--kw-ui-ink); background: var(--kw-ui-control-active); }
 .belief-filter { display: grid; gap: 9px; margin-top: 18px; color: var(--kw-ui-muted); font-size: 11px; }
 .belief-filter select { width: 100%; min-width: 0; padding: 8px 7px; border: 1px solid var(--kw-ui-line); border-radius: 4px; color: var(--kw-ui-ink); background: var(--kw-ui-control); font-family: inherit; font-size: 13px; line-height: 1.5; }
+.belief-tag-filters { display: grid; gap: 3px; margin: 0 -8px; }
+.belief-tag-filters button { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; width: 100%; padding: 8px; border: 0; border-radius: 4px; color: var(--kw-ui-muted); background: transparent; font-size: 12px; line-height: 1.6; text-align: left; }
+.belief-tag-filters button > span { min-width: 0; overflow-wrap: anywhere; }
+.belief-tag-filters small { flex-shrink: 0; font-size: 10px; font-variant-numeric: tabular-nums; }
+.belief-tag-filters button:hover:enabled { background: var(--kw-ui-control-hover); }
+.belief-tag-filters button[aria-pressed="true"] { color: var(--kw-ui-accent); background: var(--kw-ui-control-active); }
+.belief-tag-filters button[data-pending="true"] { opacity: 1; }
+.belief-tags-empty { margin: 4px 8px; font-size: 11px; line-height: 1.8; }
 .belief-add, .belief-save { display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 10px 18px; border: 0; border-radius: 4px; color: var(--kw-ui-on-accent); background: var(--kw-ui-accent); font-size: 13px; }
 .belief-add { width: 100%; margin-top: 26px; padding: 10px; }
 .belief-resume { display: block; margin-top: 15px; padding: 0; border: 0; background: transparent; color: var(--kw-ui-muted); font-size: 11px; text-align: left; }
@@ -88,4 +96,4 @@
 @media (min-width: 1400px) { .beliefs-layout { grid-template-columns: minmax(0,1fr) 196px; gap: 32px; } }
 @media (max-width: 1000px) { .theme-grove.concept-journal .beliefs-page { padding: 26px 24px 40px; } .beliefs-layout { grid-template-columns: minmax(0,1fr); } .belief-browser { display: none; position: static; } .belief-browser[data-open="true"] { display: block; grid-row: 1; } .beliefs-page .belief-mobile-tools { display: inline-flex; } }
 @media (max-width: 580px) { .theme-grove.concept-journal .beliefs-page { padding: 22px 18px 28px; } .beliefs-heading h1 { font-size: 23px; } .belief-document { padding: 22px 20px 28px; } }
-@media (pointer: coarse) { .beliefs-page .belief-icon, .belief-grip, .belief-like, .belief-document-toolbar button, .belief-tag, .belief-save-row button { min-height: 44px; } .belief-document textarea { font-size: 16px; } .belief-list > li:not(.belief-empty) { grid-template-columns: 36px minmax(0,1fr) auto; } .belief-grip { width: 36px; } }
+@media (pointer: coarse) { .beliefs-page .belief-icon, .belief-grip, .belief-like, .belief-document-toolbar button, .belief-tag, .belief-tag-filters button, .belief-save-row button { min-height: 44px; } .belief-document textarea { font-size: 16px; } .belief-list > li:not(.belief-empty) { grid-template-columns: 36px minmax(0,1fr) auto; } .belief-grip { width: 36px; } }

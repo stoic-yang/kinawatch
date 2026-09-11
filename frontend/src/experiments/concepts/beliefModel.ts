@@ -63,6 +63,19 @@ export function beliefView(record: BeliefRecord) {
 export type BeliefView = ReturnType<typeof beliefView>;
 export type BeliefSort = "manual" | "likes" | "recent" | "updated";
 
+export function beliefTagIndex(records: Pick<BeliefView, "tags">[], pendingTags: string[] = []) {
+  const tags = new Map<string, {key: string; name: string; count: number}>();
+  for (const record of records) for (const name of record.tags) {
+    const key = name.toLowerCase(), previous = tags.get(key);
+    tags.set(key, {key, name: previous?.name ?? name, count: (previous?.count ?? 0) + 1});
+  }
+  for (const name of pendingTags) {
+    const key = name.toLowerCase();
+    if (!tags.has(key)) tags.set(key, {key, name, count: 0});
+  }
+  return [...tags.values()].sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
+}
+
 export function orderedBeliefs(records: BeliefView[], order: string[], sort: BeliefSort) {
   const ranks = new Map(order.map((id, index) => [id, index]));
   return [...records].sort((a, b) => {

@@ -23,7 +23,13 @@ An inline #reflection tag is also indexed.
 
 The first H1 supplies the list title; a string `title` property is a fallback.
 Tags support YAML lists, inline YAML arrays, a single string and inline
-hashtags. Tag matching ignores case. Code spans, fences, escaped hashes and
+hashtags. The sidebar lists these tags directly with saved-belief counts;
+clicking one filters the list. Tags in the active draft also appear immediately,
+with new tags marked pending and unavailable for filtering until saved. Saving,
+editing or refreshing rebuilds the index from the current Markdown files.
+New beliefs start with an empty tag list; no tags or categories are preselected.
+Favorites are a separate, explicitly chosen browsing scope, never a tag.
+Tag matching ignores case. Code spans, fences, escaped hashes and
 Markdown link labels do not create tags. Reading supports headings, emphasis,
 lists, quotes, tables, links and code. HTML is escaped, and unsafe link schemes
 are rejected. The original Markdown is retained; unknown properties are never

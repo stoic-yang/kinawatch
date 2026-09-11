@@ -9,7 +9,7 @@ import { build } from "esbuild";
 const directory = await mkdtemp(join(tmpdir(), "kinawatch-beliefs-"));
 after(() => rm(directory, {recursive: true, force: true}));
 await build({entryPoints: [fileURLToPath(new URL("../src/experiments/concepts/beliefModel.ts", import.meta.url))], outfile: join(directory, "model.mjs"), bundle: true, platform: "node", format: "esm"});
-const { parseBelief, beliefView, orderedBeliefs, reorderBeliefs, nextBeliefDay, readBeliefDrafts } = await import(pathToFileURL(join(directory, "model.mjs")).href);
+const { EMPTY_BELIEF, parseBelief, beliefView, beliefTagIndex, orderedBeliefs, reorderBeliefs, nextBeliefDay, readBeliefDrafts } = await import(pathToFileURL(join(directory, "model.mjs")).href);
 
 test("Markdown properties and inline tags derive the title without rewriting source", () => {
   const source = '\ufeff---\r\ntags: [专注, "#实践", Focus]\r\naliases: [别名]\r\n---\r\n# **先看证据**，再判断\r\n\r\n#复盘 #focus\r\n\r\n`#代码` [不是 #链接](https://example.com) \\#转义\r\n\r\n```md\r\n#代码块\r\n```';
@@ -28,6 +28,29 @@ test("malformed YAML is visible and unsafe HTML stays literal", () => {
   assert.ok(!result.html.includes('href="javascript:'));
   const broken = beliefView({id: 'a', path: 'broken.md', markdown: '---\ntags: [未闭合\n---\n# 标题'});
   assert.equal(broken.title, 'broken.md'); assert.ok(broken.error);
+});
+
+test("sidebar tags reflect drafts, then saved Markdown without double-counting", () => {
+  const first = parseBelief('---\ntags: [Focus]\n---\n# 原则甲\n\n#focus');
+  const draft = parseBelief('---\ntags: [focus, 新标签]\n---\n# 原则乙\n\n#实践');
+  const pending = beliefTagIndex([first], draft.tags);
+  assert.equal(pending.find(tag => tag.key === 'focus').count, 1);
+  assert.deepEqual(pending.filter(tag => !tag.count).map(tag => tag.name).sort(), ['实践', '新标签']);
+  const saved = beliefTagIndex([first, draft]);
+  assert.equal(saved.find(tag => tag.key === 'focus').count, 2);
+  assert.equal(saved.find(tag => tag.key === '新标签').count, 1);
+  assert.ok(saved.every(tag => tag.count > 0));
+  const revised = beliefTagIndex([first, parseBelief('# 原则乙\n\n#实践')]);
+  assert.ok(!revised.some(tag => tag.key === '新标签'));
+  assert.equal(revised.find(tag => tag.key === 'focus').count, 1);
+});
+
+test("new beliefs and favorite status never manufacture default tags", () => {
+  const empty = parseBelief(EMPTY_BELIEF);
+  assert.deepEqual(empty.tags, []);
+  assert.deepEqual(beliefTagIndex([{...empty, pinned: true}]), []);
+  assert.deepEqual(beliefTagIndex([], parseBelief('# 草稿\n\n#自定义').tags), [{key: '自定义', name: '自定义', count: 0}]);
+  assert.deepEqual(beliefTagIndex([]), []);
 });
 
 test("rich Markdown supports lists, quotes, tables and code", () => {
