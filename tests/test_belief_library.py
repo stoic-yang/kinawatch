@@ -125,18 +125,32 @@ class BeliefLibraryTests(unittest.TestCase):
         self.assertEqual(sum(result is not None for result in results), 1)
         self.assertEqual(self.library.read()['records'][0]['like_count'], 1)
 
-    def test_order_pin_and_invalid_request_never_lose_records(self):
+    def test_order_and_invalid_request_never_lose_records(self):
         self.save(); self.save(SECOND, '# 另一个原则')
         self.manage('order', order=[FIRST, SECOND])
-        self.manage('pin', id=SECOND, value=True)
         after = BeliefLibrary(self.repository).read()
         self.assertEqual(after['order'], [FIRST, SECOND])
-        self.assertTrue(next(item for item in after['records'] if item['id'] == SECOND)['pinned'])
         for order in [[FIRST], [FIRST, FIRST], [FIRST, 'unknown']]:
             with self.assertRaises(WorkflowWriteValidation): self.manage('order', order=order)
         self.assertEqual(self.library.read()['order'], [FIRST, SECOND])
         for payload in [{'id': '../outside'}, {'namespace': 'wrong', 'id': FIRST, 'markdown': '# 不写入', 'expected_fingerprint': after['records'][0]['fingerprint']}]:
             with self.assertRaises((WorkflowWriteValidation, WorkflowWriteConflict)): self.library.save(payload)
+
+    def test_retired_favorites_are_ignored_and_preserved_without_a_write_api(self):
+        self.save()
+        state = json.loads(self.library.metadata.read_text())
+        self.assertNotIn('pinned', state['items'][FIRST])
+        state['items'][FIRST]['pinned'] = True
+        self.library.metadata.write_text(json.dumps(state))
+        original = self.library.metadata.read_bytes()
+        snapshot = self.library.read()
+        self.assertNotIn('pinned', snapshot['records'][0])
+        with self.assertRaises(WorkflowWriteValidation):
+            self.manage('pin', id=FIRST, value=False)
+        self.assertEqual(self.library.metadata.read_bytes(), original)
+        liked = self.manage('like', id=FIRST, value=True, day=snapshot['today'])
+        self.assertEqual(liked['records'][0]['like_count'], 1)
+        self.assertTrue(json.loads(self.library.metadata.read_text())['items'][FIRST]['pinned'])
 
     def test_readonly_gate_and_symlink_confinement(self):
         self.settings.raw['journal_write_enabled'] = False

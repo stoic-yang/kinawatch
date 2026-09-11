@@ -45,7 +45,7 @@ test("sidebar tags reflect drafts, then saved Markdown without double-counting",
   assert.equal(revised.find(tag => tag.key === 'focus').count, 1);
 });
 
-test("new beliefs and favorite status never manufacture default tags", () => {
+test("new beliefs and legacy metadata never manufacture default tags", () => {
   const empty = parseBelief(EMPTY_BELIEF);
   assert.deepEqual(empty.tags, []);
   assert.deepEqual(beliefTagIndex([{...empty, pinned: true}]), []);

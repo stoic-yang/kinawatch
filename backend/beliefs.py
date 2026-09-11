@@ -133,7 +133,7 @@ class BeliefLibrary:
             if len(set(state["order"])) != len(state["order"]) or not isinstance(state.get("items"), dict):
                 raise ValueError()
             for value in state["items"].values():
-                if not isinstance(value, dict) or type(value.get("pinned", False)) is not bool:
+                if not isinstance(value, dict):
                     raise ValueError()
                 days = value.get("liked_days", [])
                 if not isinstance(days, list) or any(not isinstance(day, str) or datetime.strptime(day, "%Y-%m-%d").strftime("%Y-%m-%d") != day for day in days):
@@ -174,7 +174,7 @@ class BeliefLibrary:
         for item in records:
             extra = state["items"].get(item["id"], {})
             days = extra.get("liked_days", [])
-            item.update(liked_days=days, like_count=len(days), liked_today=today in days, pinned=extra.get("pinned", False), created_at=extra.get("created_at", item["created_at"]))
+            item.update(liked_days=days, like_count=len(days), liked_today=today in days, created_at=extra.get("created_at", item["created_at"]))
         known = {item["id"] for item in records}
         missing = sorted((item for item in records if item["id"] not in state["order"]), key=lambda item: item["created_at"], reverse=True)
         order = [item["id"] for item in missing] + [identifier for identifier in state["order"] if identifier in known]
@@ -219,7 +219,7 @@ class BeliefLibrary:
             # Reserve identity/order before publishing the file. If the file
             # write fails, absent IDs are ignored; no partial Markdown is read.
             state["order"] = snapshot["order"] if current else [identifier, *snapshot["order"]]
-            extra = state["items"].setdefault(identifier, {"pinned": False, "liked_days": []})
+            extra = state["items"].setdefault(identifier, {"liked_days": []})
             extra.setdefault("created_at", current["created_at"] if current else time.time_ns())
             self._safe(self.metadata)
             metadata_version = fingerprint_file(self.metadata)
@@ -235,7 +235,7 @@ class BeliefLibrary:
         fields = {"namespace", "action", "expected_revision", "order"} if action == "order" else {"namespace", "action", "expected_revision", "id", "value"}
         if action == "like":
             fields.add("day")
-        if action not in {"like", "pin", "order"} or set(payload) != fields:
+        if action not in {"like", "order"} or set(payload) != fields:
             raise WorkflowWriteValidation("信念管理请求格式无效。")
         if payload["namespace"] != self.namespace:
             raise WorkflowWriteConflict("信念存储位置已改变，请刷新后重试。")
@@ -253,18 +253,15 @@ class BeliefLibrary:
                 identifier, value = payload["id"], payload["value"]
                 if not isinstance(identifier, str) or identifier not in identifiers or type(value) is not bool:
                     raise WorkflowWriteValidation("信念标识或状态无效。")
-                extra = state["items"].setdefault(identifier, {"pinned": False, "liked_days": []})
-                if action == "pin":
-                    extra["pinned"] = value
+                extra = state["items"].setdefault(identifier, {"liked_days": []})
+                if payload["day"] != snapshot["today"]:
+                    raise WorkflowWriteConflict("日期已变化，请刷新后再点赞。")
+                days = set(extra.get("liked_days", []))
+                if value:
+                    days.add(snapshot["today"])
                 else:
-                    if payload["day"] != snapshot["today"]:
-                        raise WorkflowWriteConflict("日期已变化，请刷新后再点赞。")
-                    days = set(extra.get("liked_days", []))
-                    if value:
-                        days.add(snapshot["today"])
-                    else:
-                        days.discard(snapshot["today"])
-                    extra["liked_days"] = sorted(days)
+                    days.discard(snapshot["today"])
+                extra["liked_days"] = sorted(days)
             self._safe(self.metadata)
             version = fingerprint_file(self.metadata)
             if digest(self._bytes(self.metadata)) != snapshot["revision"]:

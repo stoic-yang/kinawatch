@@ -96,7 +96,7 @@ python3 -m backend.server
 
 新版信念使用 `journal.beliefs_dir`（默认 `Review/Beliefs`）存放独立 Markdown
 文件，编辑标题、标签与正文后显式保存。旧信念文稿按条目继续读取，保存某一条时
-才生成该条独立文件；原稿保留。点赞、收藏和顺序由同目录管理文件持久保存。
+才生成该条独立文件；原稿保留。点赞和顺序由同目录管理文件持久保存。
 详情见 [信念存储与兼容规则](docs/BELIEFS.md)。
 
 默认配置 `journal.provider: "local"`。启用写入后，日记和信念正文在输入暂停后保存，

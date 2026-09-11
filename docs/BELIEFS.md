@@ -1,7 +1,7 @@
 # Beliefs library
 
 The beliefs page uses an unnumbered title list, the existing application
-navigation, and a right sidebar for search, sorting, scope and tags. Creation
+navigation, and a right sidebar for search, sorting and tags. Creation
 lives in the page header, above the list and browsing controls at every width.
 The same header action resumes an unfinished new belief when a draft exists.
 Search uses a compact field with a shared focus ring and an explicit clear
@@ -42,7 +42,7 @@ clicking one filters the list. Tags in the active draft also appear immediately,
 with new tags marked pending and unavailable for filtering until saved. Saving,
 editing or refreshing rebuilds the index from the current Markdown files.
 New beliefs start with an empty tag list; no tags or categories are preselected.
-Favorites are a separate, explicitly chosen browsing scope, never a tag.
+The All beliefs control resets search and tag filters. There is no favorites feature.
 Tag labels render as plain words without a hash prefix. Existing nested tags
 use a readable middle dot instead of a slash; filtering keeps the complete
 original identity, and Markdown editing/source views retain the original syntax.
@@ -70,16 +70,29 @@ are not inherited by these sections; tags inside each section remain indexed.
 A legacy file without H2 sections remains one complete document with its own
 properties. Until saved, the sections continue reading the original
 document. An explicit save copies that one section into a standalone Markdown
-file and retains its existing votes, pin and position. The old file is never
+file and retains its existing votes and position. The old file is never
 rewritten or deleted. Editing an already copied section in the old file does
 not replace the independent file. The legacy document API remains compatible
 for older clients, but the new UI uses the library API.
 
-`.kinawatch.json` holds manual order, first-saved creation times, pins and a set
+`.kinawatch.json` holds manual order, first-saved creation times and a set
 of liked calendar dates for each ID. The current day uses the configured
 ActivityWatch timezone and server clock. One day contributes at most one vote;
 unliking removes only today's vote. Sorting by total likes uses manual order
 to break ties. Filtering and automatic sorting do not rewrite manual order.
+Retired `pinned` metadata is ignored and left intact, never exposed or changed
+through the API. New records do not create it.
+
+Likes use an outline thumb at rest and a solid accent-colored thumb when liked
+today. Only the icon and count change; the button and row stay transparent on
+hover and selection. Clicking updates the count immediately, with a short thumb
+animation and count transition; reduced-motion preferences disable both.
+Requests remain serialized with revision checks, without fading the page while
+saving a like. On failure, the view reconciles with the server or restores the
+previous snapshot. The accessible label describes today's action and total
+count, with a keyboard focus ring and a live status message.
+The restrained click feedback draws on
+[YouTube's official interaction design notes](https://blog.youtube/news-and-events/youtube-new-features-2023/).
 
 Reads create nothing. All mutations require `journal_write_enabled`, matching
 storage namespace, fixed directory confinement, no symlinks, a shared process
@@ -101,12 +114,12 @@ Drafts from the previous whole-document editor are not deleted.
 - `GET /api/beliefs`: `namespace`, `revision`, `timezone`, `today`,
   `write_enabled`, `order`, and `records`. Each record includes stable `id`,
   complete `markdown`, `fingerprint`, relative `path`, `legacy`, creation and
-  modification timestamps, `liked_days`, `like_count`, `liked_today`, `pinned`.
+  modification timestamps, `liked_days`, `like_count`, `liked_today`.
 - `PUT /api/beliefs/document`: exactly `namespace`, `id`, `markdown`,
   `expected_fingerprint` (null for a new ID). Maximum Markdown size: 2 MiB.
 - `PUT /api/beliefs/state`: `namespace`, `expected_revision`, `action`, plus
-  `order` for a complete ID permutation; or `id`, boolean `value` for `pin`;
-  or `id`, boolean `value`, `day` for `like`. A stale day is rejected.
+  `order` for a complete ID permutation; or `id`, boolean `value`, `day` for
+  `like`. A stale day is rejected. The retired `pin` action is rejected.
 
 Mutations return a fresh complete library snapshot. Disabled writes return 403,
 invalid inputs 400, stale fingerprints/revisions/namespaces 409. These routes

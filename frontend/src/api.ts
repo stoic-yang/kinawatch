@@ -513,7 +513,6 @@ export interface BeliefRecord {
   liked_days: string[];
   liked_today: boolean;
   like_count: number;
-  pinned: boolean;
 }
 export interface BeliefLibraryResponse {
   ok: boolean;
@@ -529,7 +528,7 @@ export function fetchBeliefLibrary(): Promise<BeliefLibraryResponse> { return ge
 export function saveBeliefDocument(payload: {namespace: string; id: string; markdown: string; expected_fingerprint: string | null}): Promise<BeliefLibraryResponse> {
   return requestJSON("/api/beliefs/document", { method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload) });
 }
-export function saveBeliefState(payload: {namespace: string; expected_revision: string} & ({action: "order"; order: string[]} | {action: "pin"; id: string; value: boolean} | {action: "like"; id: string; value: boolean; day: string})): Promise<BeliefLibraryResponse> {
+export function saveBeliefState(payload: {namespace: string; expected_revision: string} & ({action: "order"; order: string[]} | {action: "like"; id: string; value: boolean; day: string})): Promise<BeliefLibraryResponse> {
   return requestJSON("/api/beliefs/state", { method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload) });
 }
 
