@@ -79,12 +79,11 @@ function rangeDayFromResponse(day: DayResponse): RangeDay {
 
 // The selected day lives in the URL so a browser reload refreshes data while
 // staying on the same day instead of snapping back to today.
-function dateFromURL(currentDate: string): string | null {
+function dateFromURL(): string | null {
   const value = new URLSearchParams(window.location.search).get("date");
   if (
     value &&
-    isValidDateString(value) &&
-    value <= currentDate
+    isValidDateString(value)
   ) {
     return value;
   }
@@ -121,7 +120,7 @@ export default function App({ renderShell }: {
   const [runtime, setRuntime] = useState<RuntimeSettings | null>(null);
   const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   const [date, setDate] = useState(
-    () => dateFromURL(provisionalDate) ?? provisionalDate,
+    () => dateFromURL() ?? provisionalDate,
   );
   const [day, setDay] = useState<DayResponse | null>(null);
   const [week, setWeek] = useState<RangeDay[]>([]);
@@ -180,7 +179,7 @@ export default function App({ renderShell }: {
           settings.routine_day_start,
           settings.timezone,
         );
-        const nextDate = dateFromURL(today) ?? today;
+        const nextDate = dateFromURL() ?? today;
         loadGeneration.current += 1;
         selectedDateRef.current = nextDate;
         setDay(null);
@@ -231,10 +230,11 @@ export default function App({ renderShell }: {
   }, [calendarYear, currentDate, weekMode]);
   const annualTotal = inclusiveDateCount(annualRange.start, annualRange.end);
   const weekRange = useMemo(() => {
+    const activityDate = date < currentDate ? date : currentDate;
     if (weekMode === "rolling") {
-      return { start: shiftDate(date, -6), end: date };
+      return { start: shiftDate(activityDate, -6), end: activityDate };
     }
-    const start = startOfISOWeek(date);
+    const start = startOfISOWeek(activityDate);
     const sunday = shiftDate(start, 6);
     return { start, end: sunday < currentDate ? sunday : currentDate };
   }, [currentDate, date, weekMode]);
@@ -632,7 +632,6 @@ export default function App({ renderShell }: {
   const canMoveToNextWeek =
     startOfISOWeek(date) < startOfISOWeek(currentDate);
   const canMoveHeaderPrevious = date > `${ACTIVITY_FIRST_YEAR}-01-01`;
-  const canMoveHeaderNext = date < currentDate;
   const moveHeaderDate = (delta: -1 | 1) =>
     selectDate(shiftDate(date, delta));
 
@@ -676,10 +675,7 @@ export default function App({ renderShell }: {
         date={date} today={currentDate} monthCursor={monthCursor}
         monthRecords={monthRecords} categories={categoryOptions} apps={topApps}
         hidden={hiddenCats} onSelectDate={selectDate}
-        onMonthChange={(delta) => setMonthCursor((month) => {
-          const next = shiftMonth(month, delta);
-          return next > monthOf(currentDate) ? month : next;
-        })}
+        onMonthChange={(delta) => setMonthCursor((month) => shiftMonth(month, delta))}
         onToggleCategory={(category) => setHiddenCats((previous) => {
           const next = new Set(previous);
           if (next.has(category)) next.delete(category); else next.add(category);
@@ -753,10 +749,7 @@ export default function App({ renderShell }: {
             setMobileSidebarOpen(false);
           }}
           onMonthChange={(delta) =>
-            setMonthCursor((m) => {
-              const next = shiftMonth(m, delta);
-              return next > monthOf(currentDate) ? m : next;
-            })
+            setMonthCursor((month) => shiftMonth(month, delta))
           }
           onToggleCategory={(c) =>
             setHiddenCats((prev) => {
@@ -827,7 +820,6 @@ export default function App({ renderShell }: {
             <button
               type="button"
               aria-label="下一天"
-              disabled={!canMoveHeaderNext}
               onClick={() => moveHeaderDate(1)}
             >
               <span

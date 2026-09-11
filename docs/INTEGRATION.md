@@ -282,6 +282,12 @@ do not invalidate date-specific activity caches.
 
 ## Daily document editing
 
+The journal calendar, day navigation and date URLs accept future dates, including
+dates beyond the configured routine-day boundary. Opening or reloading a future
+date keeps that date selected; only editing creates or changes its note. Activity
+summary ranges remain bounded by the current day. Future notes use the same
+write gate, fingerprints and conflict handling as other dates.
+
 The scheme 1 Journal editor reads `GET /api/journal/document?date=YYYY-MM-DD`
 and writes `PUT /api/journal/document` with `date`, `markdown`, and
 `expected_fingerprint`. The browser never supplies a file path. Both responses

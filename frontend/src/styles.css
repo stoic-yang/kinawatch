@@ -231,11 +231,6 @@ body {
   color: var(--text-3);
 }
 
-.cal-day-future {
-  opacity: 0.3;
-  cursor: default;
-}
-
 .cal-day-today {
   color: var(--accent);
   font-weight: 700;

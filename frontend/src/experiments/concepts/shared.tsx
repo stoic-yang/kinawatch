@@ -107,7 +107,7 @@ export function ConceptFrame({concept, app, nav, active, onNavigate, children, f
   useEffect(() => {
     function restore() {
       const date = new URLSearchParams(window.location.search).get("date") ?? appRef.current.currentDate;
-      if (isValidDateString(date) && date <= appRef.current.currentDate && date !== appRef.current.date) appRef.current.selectDate(date);
+      if (isValidDateString(date) && date !== appRef.current.date) appRef.current.selectDate(date);
       let id = window.location.hash.slice(1);
       if (concept === "journal" && (id === "library" || id.startsWith("library-"))) {
         id = "journal";

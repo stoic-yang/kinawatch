@@ -6,7 +6,7 @@ import tempfile
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from urllib.error import HTTPError
@@ -91,6 +91,35 @@ class JournalDocumentTests(unittest.TestCase):
         self.assertEqual(saved["markdown"], body)
         self.assertEqual(self.location.note.read_bytes(), body.encode())
         self.assertEqual(self.writer.read_document(DAY)["markdown"], body)
+
+    def test_future_notes_round_trip_for_both_providers_without_touching_other_dates(self) -> None:
+        for provider in ("local", "obsidian"):
+            repository = JournalRepository(fixture_settings(self.root / provider, provider))
+            writer = WorkflowWriter(repository)
+            today = date.today()
+            current_note = repository.locate(today).note
+            current_note.parent.mkdir(parents=True)
+            current_note.write_bytes(b"Keep today's note unchanged.\n")
+            for offset in (1, 40, 400):
+                target = today + timedelta(days=offset)
+                with self.subTest(provider=provider, date=target):
+                    loaded = writer.read_document(target.isoformat())
+                    note = repository.locate(target).note
+                    self.assertFalse(note.exists())
+                    body = f"# 提前计划 {target}\n\n- [ ] 准备阅读材料\n"
+                    payload = {
+                        "date": target.isoformat(),
+                        "markdown": body,
+                        "expected_fingerprint": loaded["journal_fingerprint"],
+                    }
+                    saved = writer.upsert_document(payload)
+                    self.assertTrue(saved["created"])
+                    self.assertEqual(note.read_text(), body)
+                    self.assertEqual(writer.read_document(target.isoformat())["markdown"], body)
+                    with self.assertRaises(WorkflowWriteConflict):
+                        writer.upsert_document({**payload, "markdown": "stale draft"})
+                    self.assertEqual(note.read_text(), body)
+                    self.assertEqual(current_note.read_bytes(), b"Keep today's note unchanged.\n")
 
     def test_frontmatter_and_all_unknown_body_round_trip_without_normalizing(self) -> None:
         prefix = (

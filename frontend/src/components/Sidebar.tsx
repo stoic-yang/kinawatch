@@ -2,7 +2,6 @@ import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import {
   buildMonthCells,
   MONDAY_WEEKDAYS,
-  monthOf,
 } from "../lib/calendar";
 import { categoryColor } from "../lib/colors";
 import { fmtDuration } from "../lib/format";
@@ -118,7 +117,6 @@ export function Sidebar({
         <button
           className="nav-btn cal-nav"
           aria-label="下个月"
-          disabled={monthCursor >= monthOf(today)}
           onClick={() => onMonthChange(1)}
         >
           <span className="cal-chevron cal-chevron-next" aria-hidden="true" />
@@ -155,7 +153,6 @@ export function Sidebar({
               className={[
                 "cal-day",
                 c.inMonth ? "" : "cal-day-out",
-                c.future ? "cal-day-future" : "",
                 selected ? "cal-day-selected" : "",
                 isToday ? "cal-day-today" : "",
               ]
@@ -163,7 +160,6 @@ export function Sidebar({
                 .join(" ")}
               aria-label={dateLabel}
               aria-current={selected ? "date" : undefined}
-              disabled={c.future}
               onClick={() => onSelectDate(c.date)}
             >
               <span>{c.day}</span>

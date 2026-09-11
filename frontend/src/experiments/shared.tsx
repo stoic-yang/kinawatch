@@ -18,13 +18,13 @@ export function DateControls({ date, currentDate, onSelect }: {
     <button className="theme-date-arrow" aria-label="上一天" disabled={date <= "2026-01-01"} onClick={() => onSelect(shiftDate(date, -1))}>‹</button>
     <label className="theme-date-picker">
       <span className="theme-sr-only">选择日期</span>
-      <input type="date" aria-label="选择日期" value={date} min="2026-01-01" max={currentDate}
+      <input type="date" aria-label="选择日期" value={date} min="2026-01-01"
         onChange={(event) => {
           const next = event.target.value;
-          if (isValidDateString(next) && next >= "2026-01-01" && next <= currentDate) onSelect(next);
+          if (isValidDateString(next) && next >= "2026-01-01") onSelect(next);
         }} />
     </label>
-    <button className="theme-date-arrow" aria-label="下一天" disabled={date >= currentDate} onClick={() => onSelect(shiftDate(date, 1))}>›</button>
+    <button className="theme-date-arrow" aria-label="下一天" onClick={() => onSelect(shiftDate(date, 1))}>›</button>
   </nav>;
 }
 
