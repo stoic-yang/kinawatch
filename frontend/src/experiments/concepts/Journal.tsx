@@ -11,10 +11,13 @@ import { presentJournal, updateJournalPresentation, type JournalPresentation } f
 import { HealthDiarySummary, HealthPage } from "./HealthPage";
 import { usePersonalHealth } from "./personalHealth";
 import { WordsPage } from "./WordsPage";
+import { TimetablePage, TimetablePeek } from "./TimetablePage";
+import { useTimetable } from "./useTimetable";
 import "./journal.css";
 
 const JOURNAL_NAV = [
   { id: "journal", label: "日记", icon: "note" },
+  { id: "timetable", label: "课表", icon: "calendar" },
   { id: "reference", label: "时间线", icon: "timeline" },
   { id: "weekly-rhythm", label: "节律", icon: "rhythm" },
   { id: "health", label: "健康", icon: "health" },
@@ -28,6 +31,7 @@ export function Journal(app: ConceptProps) {
   const [beliefsOpened, setBeliefsOpened] = useState(false);
   useEffect(() => {if (page === "beliefs") setBeliefsOpened(true);}, [page]);
   const health = usePersonalHealth(page === "health" || page === "journal");
+  const timetable = useTimetable(page === "timetable" || page === "journal");
   const session = useMemo(() => journalDocumentSession(app.date), [app.date]);
   const documentState = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const editor = useRef<MarkdownDocumentEditorHandle>(null);
@@ -68,6 +72,7 @@ export function Journal(app: ConceptProps) {
         {(beliefsOpened || page === "beliefs") && <Suspense fallback={page === "beliefs" ? <p role="status">正在读取信念…</p> : null}><BeliefsPage active={page === "beliefs"}/></Suspense>}
         <HealthPage active={page === "health"} app={app} state={health}/>
         <WordsPage active={page === "words"} app={app}/>
+        <TimetablePage active={page === "timetable"} state={timetable}/>
         <section className="journal-writing-page" hidden={page !== "journal"} aria-label="日记">
           <div className="journal-writing-layout">
             <aside className="journal-context kw-card" aria-label="日记参考与大纲"><div className="journal-context-content">
@@ -112,6 +117,7 @@ export function Journal(app: ConceptProps) {
 
             <aside className="journal-day-sidebar grove-calendar kw-card" aria-label="当日日历与活动">
               <div className="journal-day-sidebar-content">
+                <TimetablePeek state={timetable}/>
                 {isValidElement<{ independentSections?: boolean; healthSummary?: ReactNode }>(app.calendar)
                   ? cloneElement(app.calendar, { independentSections: true, healthSummary: health.snapshot?.available ? <HealthDiarySummary state={health} date={app.date}/> : undefined })
                   : app.calendar}

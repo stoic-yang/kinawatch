@@ -27,6 +27,7 @@ from .screen_time import ScreenTimeStore
 from .multi_device_activity import MultiDeviceActivity
 from .journal_repository import JournalRepository
 from .paths import PROJECT_ROOT
+from .timetable import read_timetable
 from .personal_health import HealthImportConflict, MAX_IMPORT_BYTES, PersonalHealthStore
 from .workflow_writer import (
     WorkflowWriteConflict,
@@ -115,6 +116,10 @@ class DashboardApplication:
             if self._anki is None:
                 self._anki = AnkiStore(self.settings.raw.get("anki", {}), self.settings.timezone_name())
         return self._anki.read(refresh=_first(parameters, "refresh") == "1")
+
+    def timetable(self) -> dict:
+        configured = self.settings.raw.get("timetable", {}).get("file")
+        return read_timetable(self.settings.configured_path(configured) if configured else None)
 
     def health(self) -> dict[str, Any]:
         journal_health = self.journals.health()
@@ -487,6 +492,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 payload = self.server.application.health_snapshot()
             elif parsed.path == "/api/words":
                 payload = self.server.application.words(parameters)
+            elif parsed.path == "/api/timetable":
+                payload = self.server.application.timetable()
             elif parsed.path == "/api/settings":
                 payload = self.server.application.runtime_settings()
             elif parsed.path == "/api/day":
