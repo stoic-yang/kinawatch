@@ -14,7 +14,7 @@ from .paths import default_config_path, default_data_dir, expanded_path
 
 
 CURRENT_JOURNAL_SCHEMA_VERSION = 3
-CURRENT_DAY_SCHEMA_VERSION = 15
+CURRENT_DAY_SCHEMA_VERSION = 16
 
 
 def load_json(path: Path) -> dict[str, Any]:

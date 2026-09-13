@@ -186,6 +186,8 @@ export interface DayResponse {
   };
   overview: {
     active_seconds: number;
+    /** Mac screen activity excluding entertainment, before cross-device sharing. */
+    mac_non_entertainment_seconds?: number;
     offline_seconds: number;
     combined_nonoverlap_seconds: number;
     longest_focus_seconds: number;

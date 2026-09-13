@@ -55,8 +55,8 @@ const STATE_LABELS: Record<CellState, string> = {
   error: "读取失败",
   missing: "数据缺失",
   partial: "数据不完整",
-  empty: "无活动记录",
-  ready: "活动时间",
+  empty: "无非娱乐活动",
+  ready: "Mac 非娱乐屏幕时间",
   future: "尚未到来",
 };
 const WEEKDAYS = ["一", "二", "三", "四", "五", "六", "日"];
@@ -87,11 +87,11 @@ function longDate(date: string) {
 function activityLabel(cell: DayCell): string {
   if (cell.seconds === null) return STATE_LABELS[cell.state];
   if (cell.state === "partial") return `已记录 ${fmtDuration(cell.seconds)} · 数据不完整`;
-  if (cell.state === "empty") return "0秒 · 无活动记录";
-  return `活动时间 ${fmtDuration(cell.seconds)}`;
+  if (cell.state === "empty") return "0秒 · 无 Mac 非娱乐活动";
+  return `Mac 非娱乐屏幕时间 ${fmtDuration(cell.seconds)}`;
 }
 
-function readWindow(window: MonthWindow, result: RangeResponse, mode: DayMode): DayCell[] {
+export function readWindow(window: MonthWindow, result: RangeResponse, mode: DayMode): DayCell[] {
   if (!Array.isArray(result.days) || result.start !== window.start || result.end !== window.end || result.mode !== mode) {
     throw new Error("返回的日期范围与请求不一致。");
   }
@@ -106,7 +106,7 @@ function readWindow(window: MonthWindow, result: RangeResponse, mode: DayMode): 
     const day = records.get(date);
     if (!day) return { date, state: "missing", seconds: null, issues: ["未返回当天数据。"] };
     if (duplicates.has(date)) return { date, state: "partial", seconds: null, issues: ["返回了重复的日期记录。"] };
-    const value = day.overview?.combined_nonoverlap_seconds;
+    const value = day.overview?.mac_non_entertainment_seconds;
     const seconds = validSeconds(value) ? value : null;
     const complete = day.quality?.complete === true && seconds !== null;
     return {
@@ -286,7 +286,7 @@ export function AnnualRhythm({ currentDate, selectedDate, dayMode, visible, onSe
       <header className="kw-annual-header">
         <div className="kw-annual-heading"><h2>年度活动</h2><p><time dateTime={firstDate}>{longDate(firstDate)}</time><span aria-hidden="true">—</span><time dateTime={requestEnd}>{longDate(requestEnd)}</time></p></div>
         <div className="kw-annual-stats" aria-live="polite">
-          <span className="kw-annual-stat kw-metric-pill"><strong data-stat="total" data-seconds={totalSeconds ?? undefined}>{totalSeconds === null ? "—" : `${(totalSeconds / 3600).toLocaleString("zh-CN", { maximumFractionDigits: 1 })}小时`}</strong><small>活动时间</small></span>
+          <span className="kw-annual-stat kw-metric-pill"><strong data-stat="total" data-seconds={totalSeconds ?? undefined}>{totalSeconds === null ? "—" : `${(totalSeconds / 3600).toLocaleString("zh-CN", { maximumFractionDigits: 1 })}小时`}</strong><small>Mac 非娱乐</small></span>
           <span className="kw-annual-stat kw-metric-pill"><strong data-stat="active-days" data-count={activeDays ?? undefined}>{activeDays === null ? "—" : `${activeDays}天`}</strong><small>有活动日</small></span>
           <span className="kw-annual-stat kw-metric-pill"><strong className="kw-annual-average" data-stat="average" data-seconds={averageSeconds ?? undefined}>{averageSeconds === null ? "—" : fmtDuration(averageSeconds)}</strong><small>每日平均</small></span>
         </div>
@@ -306,7 +306,7 @@ export function AnnualRhythm({ currentDate, selectedDate, dayMode, visible, onSe
         <div className="kw-annual-chart" style={{ "--annual-weeks": weekCount } as CSSProperties}>
           <div className="kw-annual-months" aria-hidden="true">{monthLabels.map((month) => <span key={month.key} style={{ gridColumn: `${month.column} / span 3` }}>{month.label}</span>)}</div>
           <div className="kw-annual-weekdays" aria-hidden="true">{WEEKDAYS.map((day) => <span key={day}>{day}</span>)}</div>
-          <div className="kw-annual-grid" role="grid" aria-label={`${longDate(firstDate)}至${longDate(requestEnd)}每日活动时间`} aria-rowcount={7} aria-colcount={weekCount} aria-busy={loading}>
+          <div className="kw-annual-grid" role="grid" aria-label={`${longDate(firstDate)}至${longDate(requestEnd)}每日 Mac 非娱乐屏幕时间`} aria-rowcount={7} aria-colcount={weekCount} aria-busy={loading}>
             {WEEKDAYS.map((weekday, row) => <div className="kw-annual-grid-row" role="row" aria-label={`星期${weekday}`} key={weekday}>
               {Array.from({ length: weekCount }, (_, week) => {
                 const index = week * 7 + row - mondayOffset;

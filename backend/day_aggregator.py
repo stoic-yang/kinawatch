@@ -106,6 +106,16 @@ def _compact_seconds(value: float) -> int | float:
     return int(rounded) if rounded.is_integer() else rounded
 
 
+def _mac_non_entertainment_seconds(events: Iterable[dict[str, Any]]) -> int | float:
+    """Use native Mac allocations, before sharing time with mobile devices."""
+    return _compact_seconds(sum(
+        float(event.get("device_duration_seconds", event["duration_seconds"]))
+        for event in events
+        if event.get("source_type", "activitywatch-rest") in {"activitywatch-rest", "kinawatch-local"}
+        and event.get("category") != "entertainment"
+    ))
+
+
 def _device_summary(
     events: list[dict[str, Any]],
     sources: list[dict[str, Any]],
@@ -509,6 +519,7 @@ class DayAggregator:
             },
             "overview": {
                 "active_seconds": active_seconds,
+                "mac_non_entertainment_seconds": _mac_non_entertainment_seconds(events),
                 "offline_seconds": offline_seconds,
                 "combined_nonoverlap_seconds": max(
                     0.0,
