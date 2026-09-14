@@ -23,8 +23,10 @@ const JOURNAL_NAV = [
   { id: "health", label: "健康", icon: "health" },
   { id: "words", label: "单词", icon: "words" },
   { id: "beliefs", label: "信念", icon: "beliefs" },
+  { id: "servers", label: "服务器", icon: "server" },
 ];
 const BeliefsPage = lazy(() => import("./BeliefsPage").then(module => ({default: module.BeliefsPage})));
+const ServersPage = lazy(() => import("./ServersPage").then(module => ({default: module.ServersPage})));
 
 export function Journal(app: ConceptProps) {
   const [page, setPage] = useState("journal");
@@ -73,6 +75,7 @@ export function Journal(app: ConceptProps) {
         <HealthPage active={page === "health"} app={app} state={health}/>
         <WordsPage active={page === "words"} app={app}/>
         <TimetablePage active={page === "timetable"} state={timetable}/>
+        {page === "servers" && <Suspense fallback={<p role="status">正在读取服务器…</p>}><ServersPage active/></Suspense>}
         <section className="journal-writing-page" hidden={page !== "journal"} aria-label="日记">
           <div className="journal-writing-layout">
             <aside className="journal-context kw-card" aria-label="日记参考与大纲"><div className="journal-context-content">

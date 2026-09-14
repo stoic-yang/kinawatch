@@ -31,6 +31,12 @@ needed.
 
 ## Safety boundaries
 
+- The opt-in server monitor may run only the bundled read-only collector through
+  existing locally configured SSH aliases. Keep host/command input out of HTTP,
+  verified host keys, no agent forwarding, bounded output, visible stale/error
+  states and automatic viewing-lease teardown. Never install remote files,
+  mutate remote processes, persist command lines, or start collection on ordinary
+  diary requests. See `docs/SERVERS.md`.
 - Bind only to `127.0.0.1` or `localhost`; do not add broad CORS.
 - Treat ActivityWatch, its database, and all local configuration as read-only.
 - The separately authorized recovery workflow may install an explicitly selected,

@@ -25,6 +25,7 @@ function Icon({kind}: {kind: string}) {
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18m-13 4h2m4 0h2m-8 4h2"/></>,
     rhythm: <path d="M3 15h3l3-9 4 13 3-14 2 9h3"/>,
     health: <path d="M20.5 13.2A8.7 8.7 0 0 1 10.8 3.5 8.7 8.7 0 1 0 20.5 13.2Z"/>,
+    server: <><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.01M7 17.5h.01m4-11h6m-6 11h6"/></>,
     words: <><path d="M12 5c-3-2-7-2-10-1v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Zm0 0v15"/></>,
     beliefs: <><circle cx="12" cy="12" r="9"/><path d="m16 8-2.5 5.5L8 16l2.5-5.5L16 8Z"/></>,
     flow: <><path d="M6 4v16m4-13h10m-10 5h7m-7 5h10"/><circle cx="6" cy="7" r="1.5"/><circle cx="6" cy="17" r="1.5"/></>,

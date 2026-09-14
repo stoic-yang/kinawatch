@@ -28,6 +28,7 @@ from .multi_device_activity import MultiDeviceActivity
 from .journal_repository import JournalRepository
 from .paths import PROJECT_ROOT
 from .timetable import read_timetable
+from .server_monitor import ServerMonitor
 from .personal_health import HealthImportConflict, MAX_IMPORT_BYTES, PersonalHealthStore
 from .workflow_writer import (
     WorkflowWriteConflict,
@@ -71,6 +72,8 @@ class DashboardApplication:
         self._personal_health_lock = threading.Lock()
         self._anki: AnkiStore | None = None
         self._anki_lock = threading.Lock()
+        self._server_monitor: ServerMonitor | None = None
+        self._server_monitor_lock = threading.Lock()
         self.journals = journals or JournalRepository(settings)
         edit_store = (
             getattr(activitywatch, "activity_edits", None)
@@ -120,6 +123,17 @@ class DashboardApplication:
     def timetable(self) -> dict:
         configured = self.settings.raw.get("timetable", {}).get("file")
         return read_timetable(self.settings.configured_path(configured) if configured else None)
+
+    def servers(self) -> dict:
+        with self._server_monitor_lock:
+            if self._server_monitor is None:
+                self._server_monitor = ServerMonitor(self.settings.raw.get("server_monitor", {}))
+        return self._server_monitor.read()
+
+    def close(self) -> None:
+        with self._server_monitor_lock:
+            if self._server_monitor is not None:
+                self._server_monitor.close()
 
     def health(self) -> dict[str, Any]:
         journal_health = self.journals.health()
@@ -450,6 +464,12 @@ class IdleHTTPServer(ThreadingHTTPServer):
     def touch(self) -> None:
         self.last_request_monotonic = time.monotonic()
 
+    def server_close(self) -> None:
+        close = getattr(self.application, "close", None)
+        if close:
+            close()
+        super().server_close()
+
     def serve_until_idle(self) -> None:
         if self.idle_timeout_seconds == 0:
             self.serve_forever(poll_interval=1.0)
@@ -494,6 +514,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 payload = self.server.application.words(parameters)
             elif parsed.path == "/api/timetable":
                 payload = self.server.application.timetable()
+            elif parsed.path == "/api/servers":
+                payload = self.server.application.servers()
             elif parsed.path == "/api/settings":
                 payload = self.server.application.runtime_settings()
             elif parsed.path == "/api/day":

@@ -15,6 +15,11 @@
   "journal_schema_version": 3,
   "activity_schema_version": 2,
   "day_schema_version": 14,
+  "server_monitor": {
+    "enabled": false,
+    "hosts": [],
+    "jump_host": ""
+  },
   "health_sync": {
     "enabled": false,
     "file": "~/Library/Mobile Documents/iCloud~is~workflow~my~workflows/Documents/KinaWatch/health.json"

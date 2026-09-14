@@ -7,6 +7,11 @@ database, or require a Kina workspace.
 
 ## ActivityWatch boundary
 
+The optional [server monitor](SERVERS.md) uses existing SSH aliases and an
+in-memory, read-only Linux collector. Streams exist only while the server page
+is being viewed; they do not feed ActivityWatch, write journals, or require a
+separate monitoring service.
+
 The separate vocabulary page consumes AnkiConnect through an on-demand read-only
 adapter. Its endpoint, local cache, field mapping and statistics are documented
 in [Words](WORDS.md); it does not feed or modify ActivityWatch or journals.
