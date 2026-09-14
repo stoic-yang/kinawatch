@@ -20,6 +20,12 @@
     "hosts": [],
     "jump_host": ""
   },
+  "mcp_services": {
+    "enabled": false,
+    "runtime_python": "",
+    "cloudflared": "",
+    "legacy_services": []
+  },
   "health_sync": {
     "enabled": false,
     "file": "~/Library/Mobile Documents/iCloud~is~workflow~my~workflows/Documents/KinaWatch/health.json"

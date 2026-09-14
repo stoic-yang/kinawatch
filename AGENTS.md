@@ -31,6 +31,15 @@ needed.
 
 ## Safety boundaries
 
+- The explicitly enabled MCP service center may browse configured local folder
+  roots and create/start/stop authenticated external coding-tools-mcp instances
+  only after user actions. Use private external profile storage, fixed runtime
+  executables, OAuth, safe mode, loopback binds and validated process identities.
+  No automatic folder exposure, package install, credential rotation or existing
+  service migration. Never tunnel the dashboard itself. Preserve explicitly
+  configured legacy services; use synthetic folders for MCP write/exec tests.
+  MCP instances are user-started persistent services and survive page closure.
+  See `docs/MCP_SERVICES.md`.
 - The opt-in server monitor may run only the bundled read-only collector through
   existing locally configured SSH aliases. Keep host/command input out of HTTP,
   verified host keys, no agent forwarding, bounded output, visible stale/error

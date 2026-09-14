@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { MCPServicesPanel } from "./MCPServicesPanel";
 import { Pause, Play, RefreshCw, Search, Server } from "lucide-react";
 import { bytes, duration, filterProcesses, gpuMemory, hostStatus, metric, percent, type Metric, type ProcessFilter, type ServerHost } from "./serverMonitor";
 import { useServerMonitor } from "./useServerMonitor";
@@ -45,20 +46,29 @@ function HostCard({ host, elapsed, failed }: { host: ServerHost; elapsed: number
 }
 
 export function ServersPage({ active }: { active: boolean }) {
+  const [view, setView] = useState(() => window.location.hash === "#servers-mcp" ? "mcp" : "monitor");
+  useEffect(() => {
+    const restore = () => setView(window.location.hash === "#servers-mcp" ? "mcp" : "monitor");
+    window.addEventListener("hashchange", restore); window.addEventListener("popstate", restore);
+    return () => { window.removeEventListener("hashchange", restore); window.removeEventListener("popstate", restore); };
+  }, []);
   const [paused, setPaused] = useState(false);
   const [selected, setSelected] = useState("");
   const [filter, setFilter] = useState<ProcessFilter>("work");
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(50);
-  const state = useServerMonitor(active, paused);
+  const state = useServerMonitor(active && view === "monitor", paused);
   const hosts = state.response?.hosts ?? [];
   const host = hosts.find(item => item.alias === selected) ?? hosts[0];
   const processes = filterProcesses(host?.data?.processes ?? [], filter, query);
   const stale = host && hostStatus(host, state.elapsed, !!state.error) !== "online";
   return <section id="server-monitor-page" className="servers-page kw-page" hidden={!active} aria-label="服务器">
-    <header className="kw-page-heading"><div><h1 className="kw-page-title">服务器</h1><p className="servers-caption">{paused ? "已暂停刷新" : "资源与进程 · 每 3 秒更新"}</p></div>
-      <div className="servers-actions"><button type="button" onClick={() => setPaused(value => !value)} aria-pressed={paused}>{paused ? <Play size={14}/> : <Pause size={14}/>} {paused ? "继续" : "暂停"}</button>
-        <button type="button" onClick={state.reload} disabled={state.loading || paused} aria-label="刷新服务器状态"><RefreshCw size={14}/></button></div></header>
+    <header className="kw-page-heading"><div><h1 className="kw-page-title">服务器</h1><p className="servers-caption">{view === "mcp" ? "本机工作区 · 供网页 ChatGPT 使用" : paused ? "已暂停刷新" : "资源与进程 · 每 3 秒更新"}</p></div>
+      {view === "monitor" && <div className="servers-actions"><button type="button" onClick={() => setPaused(value => !value)} aria-pressed={paused}>{paused ? <Play size={14}/> : <Pause size={14}/>} {paused ? "继续" : "暂停"}</button>
+        <button type="button" onClick={state.reload} disabled={state.loading || paused} aria-label="刷新服务器状态"><RefreshCw size={14}/></button></div>}</header>
+    <div className="server-page-tabs" role="tablist" aria-label="服务器页面"><button type="button" role="tab" aria-selected={view === "monitor"} onClick={() => { setView("monitor"); window.location.hash = "servers"; }}>服务器监控</button><button type="button" role="tab" aria-selected={view === "mcp"} onClick={() => { setView("mcp"); window.location.hash = "servers-mcp"; }}>MCP 服务</button></div>
+    {view === "mcp" && <MCPServicesPanel active={active}/>}
+    <div hidden={view !== "monitor"}>
     {state.error && <p className="servers-api-error" role="alert">{state.error} {hosts.some(item => item.data) && "当前保留上次数据。"}</p>}
     {state.response && !state.response.enabled ? <div className="servers-empty"><Server size={32}/><h2>还没有接入服务器</h2><p>在本机配置中启用服务器监控，添加已有的 SSH 主机别名后重启 KinaWatch。</p></div> : <>
       {!hosts.length ? <div className="servers-empty" role="status"><Server size={32}/><p>{state.error ? "监控暂时不可用" : "正在读取服务器…"}</p></div> : <>
@@ -75,5 +85,6 @@ export function ServersPage({ active }: { active: boolean }) {
         </section>
       </>}
     </>}
+    </div>
   </section>;
 }

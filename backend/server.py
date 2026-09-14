@@ -29,6 +29,7 @@ from .journal_repository import JournalRepository
 from .paths import PROJECT_ROOT
 from .timetable import read_timetable
 from .server_monitor import ServerMonitor
+from .mcp_services import MCPServiceCenter, MCPServiceBusy, MCPServiceError
 from .personal_health import HealthImportConflict, MAX_IMPORT_BYTES, PersonalHealthStore
 from .workflow_writer import (
     WorkflowWriteConflict,
@@ -74,6 +75,8 @@ class DashboardApplication:
         self._anki_lock = threading.Lock()
         self._server_monitor: ServerMonitor | None = None
         self._server_monitor_lock = threading.Lock()
+        self._mcp_services: MCPServiceCenter | None = None
+        self._mcp_services_lock = threading.Lock()
         self.journals = journals or JournalRepository(settings)
         edit_store = (
             getattr(activitywatch, "activity_edits", None)
@@ -134,6 +137,13 @@ class DashboardApplication:
         with self._server_monitor_lock:
             if self._server_monitor is not None:
                 self._server_monitor.close()
+
+    @property
+    def mcp_services(self) -> MCPServiceCenter:
+        with self._mcp_services_lock:
+            if self._mcp_services is None:
+                self._mcp_services = MCPServiceCenter(self.settings.raw.get("mcp_services", {}))
+            return self._mcp_services
 
     def health(self) -> dict[str, Any]:
         journal_health = self.journals.health()
@@ -516,6 +526,12 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 payload = self.server.application.timetable()
             elif parsed.path == "/api/servers":
                 payload = self.server.application.servers()
+            elif parsed.path == "/api/mcp/services":
+                payload = self.server.application.mcp_services.read()
+            elif parsed.path == "/api/mcp/folders":
+                payload = self.server.application.mcp_services.browse(_first(parameters, "path"))
+            elif parsed.path == "/api/mcp/logs":
+                payload = self.server.application.mcp_services.logs(_first(parameters, "id"))
             elif parsed.path == "/api/settings":
                 payload = self.server.application.runtime_settings()
             elif parsed.path == "/api/day":
@@ -543,6 +559,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self._serve_static(parsed.path)
                 return
             self._write_json(payload)
+        except PermissionError as exc:
+            self._write_json({"ok": False, "error": str(exc)}, status=403)
         except (
             ValueError,
             KeyError,
@@ -558,6 +576,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         self.server.touch()
         if not self._validate_request_authority():
+            return
+        if urlparse(self.path).path.startswith("/api/mcp/"):
+            self._mcp_action()
             return
         if urlparse(self.path).path != "/api/personal-health/import":
             self._write_json({"ok": False, "error": "not found"}, status=404)
@@ -584,6 +605,32 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self._write_json({"ok": False, "error": str(exc)}, status=400)
         except Exception:
             self._write_json({"ok": False, "error": "健康数据导入失败，原有记录已保留。"}, status=500)
+
+    def _mcp_action(self) -> None:
+        if self.headers.get("X-KinaWatch-MCP") != "1":
+            self._write_json({"error": "请从 KinaWatch 服务管理页面操作"}, status=403)
+            return
+        if self.headers.get_content_type() != "application/json" or self.headers.get("Transfer-Encoding"):
+            self._write_json({"error": "需要 JSON 请求"}, status=400)
+            return
+        try:
+            self.connection.settimeout(8)
+            payload = self._read_json(8192)
+            center = self.server.application.mcp_services
+            actions = {"/api/mcp/services": center.create, "/api/mcp/action": center.action, "/api/mcp/password": center.password}
+            action = actions.get(urlparse(self.path).path)
+            if action is None:
+                self._write_json({"error": "not found"}, status=404)
+                return
+            self._write_json(action(payload))
+        except PermissionError as exc:
+            self._write_json({"error": str(exc)}, status=403)
+        except MCPServiceBusy as exc:
+            self._write_json({"error": str(exc)}, status=409)
+        except (MCPServiceError, WorkflowWriteValidation) as exc:
+            self._write_json({"error": str(exc)}, status=400)
+        except (OSError, ValueError, TypeError, KeyError):
+            self._write_json({"error": "服务操作未完成，请检查配置或日志后重试"}, status=400)
 
     def do_PUT(self) -> None:
         self.server.touch()

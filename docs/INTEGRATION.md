@@ -7,6 +7,12 @@ database, or require a Kina workspace.
 
 ## ActivityWatch boundary
 
+The optional [MCP service center](MCP_SERVICES.md) manages separately installed
+coding-tools-mcp and cloudflared processes only after explicit folder selection
+and start. Profiles and credentials remain in local application data; existing
+services retain their original URLs and authorization. It is independent of the
+dashboard's journal writers and its on-demand SSH metrics collector.
+
 The optional [server monitor](SERVERS.md) uses existing SSH aliases and an
 in-memory, read-only Linux collector. Streams exist only while the server page
 is being viewed; they do not feed ActivityWatch, write journals, or require a

@@ -16,6 +16,7 @@ ActivityWatch。它通过本机只读 REST API 获取事件，并保持自己的
 
 ## Highlights
 
+- MCP 服务：在「服务器」页面选择本机工作文件夹，启动独立 HTTPS／OAuth 服务供网页 ChatGPT 使用；统一查看状态、启停和连接信息。见 [MCP 服务管理](docs/MCP_SERVICES.md)。
 - 服务器：通过已有 SSH 别名按需查看 CPU、内存、全部 GPU 和训练进程；支持直连、进程搜索和命令详情，离开页面后自动释放采集连接。见 [服务器监控](docs/SERVERS.md)。
 - 日记：Markdown 实时显示与安静的自动保存，工作流竖向时间线和 Kina 总结分栏参考。
 - 时间线：缩放、活动详情与独立工作流描述编辑，长描述不会撑高活动列表。
