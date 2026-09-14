@@ -27,16 +27,20 @@ function HostCard({ host, elapsed, failed }: { host: ServerHost; elapsed: number
         <Meter label="CPU" value={data.cpu} detail={`${metric(data.cores, 0)} 核 · Load ${data.load.join(" / ")}`}/>
         <Meter label="内存" value={percent(data.memory.used, data.memory.total)} detail={`${bytes(data.memory.used)} / ${bytes(data.memory.total)}`}/>
       </div>
-      <div className="server-gpus">{data.gpus.map(gpu => <section key={gpu.index} aria-label={`GPU ${gpu.index}`}>
+      <div className="server-gpus">{data.gpus.map(gpu => <section className="server-resource-section" key={gpu.index} aria-label={`GPU ${gpu.index}`}>
         <div className="server-gpu-title"><strong>GPU {gpu.index}</strong><span>{gpu.name}</span></div>
-        <div className="server-gpu-metrics"><span>利用率 <b>{metric(gpu.util, 0)}{gpu.util !== null && "%"}</b></span>
-          <span>显存 <b>{gpuMemory(gpu.used_mib)} / {gpuMemory(gpu.total_mib)}</b></span>
-          <span>{metric(gpu.temperature, 0)} °C · {metric(gpu.power, 0)} W</span></div>
+        <div className="server-resources">
+          <Meter label="GPU 利用率" value={gpu.util} detail={`${metric(gpu.temperature, 0)} °C · ${metric(gpu.power, 0)} W`}/>
+          <Meter label="显存" value={percent(gpu.used_mib, gpu.total_mib)} detail={`${gpuMemory(gpu.used_mib)} / ${gpuMemory(gpu.total_mib)}`}/>
+        </div>
       </section>)}{!data.gpus.length && <p className="server-no-gpu">{data.errors.length ? "GPU 数据暂时不可用" : "未检测到 NVIDIA GPU"}</p>}</div>
-      <details className="server-extra"><summary>磁盘与系统 <span>已运行 {duration(data.uptime)}</span></summary>
-        {data.disks.map(disk => <p key={disk.path}><span>{disk.path}</span><span>{metric(disk.percent)}% · 剩余 {bytes(disk.free)}</span></p>)}
-        <p><span>Swap</span><span>{bytes(data.swap.used)} / {bytes(data.swap.total)}</span></p>
-      </details>
+      <section className="server-resource-section" aria-label="磁盘与 Swap">
+        <div className="server-resources">
+          {data.disks.map(disk => <Meter key={disk.path} label={`磁盘 ${disk.path}`} value={percent(disk.used, disk.total)} detail={`${bytes(disk.used)} / ${bytes(disk.total)}`}/>)}
+          <Meter label="Swap" value={percent(data.swap.used, data.swap.total)} detail={data.swap.total === 0 ? "未启用" : `${bytes(data.swap.used)} / ${bytes(data.swap.total)}`}/>
+        </div>
+      </section>
+      <p className="server-uptime">已运行 {duration(data.uptime)}</p>
     </> : <div className="server-waiting"><Server size={25}/><p>{status === "connecting" ? "正在建立 SSH 连接…" : "暂时无法连接服务器"}</p></div>}
     {(host.error || data?.errors.length) ? <div className="server-errors" role="status">{host.error && <p>{host.error}</p>}{data?.errors.map((error, i) => <p key={i}>{error}</p>)}</div> : null}
     <footer>{age === null ? "尚未收到样本" : `${status === "online" ? "更新于" : "上次数据"} ${age < 60 ? `${age}秒前` : duration(age) + "前"}`}

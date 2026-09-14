@@ -17,25 +17,23 @@
 .server-status[data-status="online"] { color: var(--kw-ui-success, #39806a); }
 .server-status[data-status="offline"], .servers-api-error, .server-errors { color: var(--kw-ui-danger); }
 .server-status[data-status="stale"] { color: var(--kw-ui-warning, #a17a36); }
-.server-resources { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 27px 0 24px; }
+.server-resources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 27px 0 24px; }
+.server-meter { min-width: 0; }
 .server-meter > div:first-child { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.server-meter > div > span { font-size: 12px; }
-.server-meter strong { font-size: 25px; font-weight: 500; letter-spacing: -.04em; }
+.server-meter > div > span { font-size: 12px; overflow-wrap: anywhere; }
+.server-meter strong { font-size: 25px; font-weight: 500; letter-spacing: -.04em; white-space: nowrap; }
 .server-meter strong small { font-size: 12px; margin-left: 3px; color: var(--kw-ui-muted); }
 .server-meter-track { height: 4px; margin-top: 11px; background: var(--kw-ui-control); border-radius: 4px; overflow: hidden; }
 .server-meter-track > span { display: block; height: 100%; background: var(--kw-ui-chart); border-radius: inherit; }
-.server-meter p { margin: 8px 0 0; color: var(--kw-ui-muted); font-size: 10px; line-height: 1.6; }
+.server-meter p { margin: 8px 0 0; color: var(--kw-ui-muted); font-size: 10px; line-height: 1.6; overflow-wrap: anywhere; }
 .server-card:not([data-status="online"]) .server-meter-track > span { background: var(--kw-ui-muted); }
-.server-gpus > section { padding: 15px 0; border-top: 1px solid var(--kw-ui-separator); }
+.server-resource-section { padding: 22px 0; border-top: 1px solid var(--kw-ui-separator); }
+.server-resource-section .server-resources { margin: 0; }
 .server-gpu-title { display: flex; gap: 10px; align-items: baseline; font-size: 11px; }
 .server-gpu-title strong { font-weight: 600; white-space: nowrap; }
 .server-gpu-title > span { color: var(--kw-ui-muted); overflow-wrap: anywhere; }
-.server-gpu-metrics { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 14px; color: var(--kw-ui-muted); font-size: 11px; margin-top: 10px; }
-.server-gpu-metrics b { color: var(--kw-ui-ink); font-weight: 500; margin-left: 4px; }
-.server-extra { font-size: 11px; border-top: 1px solid var(--kw-ui-separator); padding-top: 14px; }
-.server-extra summary { cursor: pointer; color: var(--kw-ui-muted); }
-.server-extra summary > span { float: right; }
-.server-extra p { display: flex; justify-content: space-between; gap: 12px; }
+.server-gpu-title + .server-resources { margin-top: 16px; }
+.server-uptime { margin: 0; padding-top: 14px; border-top: 1px solid var(--kw-ui-separator); color: var(--kw-ui-muted); font-size: 10px; }
 .server-errors { font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; margin-top: 16px; }
 .server-errors p { margin: 5px 0; }
 .server-card footer { margin-top: 17px; display: flex; gap: 10px; justify-content: space-between; font-size: 10px; color: var(--kw-ui-muted); }

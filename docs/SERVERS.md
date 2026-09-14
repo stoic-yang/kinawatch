@@ -7,6 +7,12 @@ arguments; unknown names remain unknown. Process CPU uses 100% per logical core.
 GPU memory is reported in MiB by NVIDIA and displayed as GiB; system memory uses
 bytes. Small allocations remain in MiB rather than rounding to zero GiB. Missing measurements never become zero.
 
+CPU, memory, GPU utilization, GPU memory, disk usage and swap share the same
+meter layout: label, percentage, bar and measurement details. Disk and swap
+meters are always visible alongside the other resources. Capacity percentages
+use the displayed used / total amounts. Temperature and power
+remain secondary readings under GPU utilization.
+
 Enable it in the private local KinaWatch configuration, then restart the service:
 
 ```json
