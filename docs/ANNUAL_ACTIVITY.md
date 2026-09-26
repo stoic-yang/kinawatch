@@ -21,3 +21,14 @@ Day cache schema 16 invalidates historical totals. Missing or invalid annual
 values remain incomplete in the UI and never fall back to multi-device totals.
 The existing routine-day boundary, fixed heat scale and incomplete-source
 handling continue to apply.
+
+The header also shows the daily average for the latest seven routine days,
+including the current day, and the current ISO week (Monday through the current
+day). Both use the same Mac metric and include complete zero-activity days in
+the denominator. The current day is still accumulating; future days never enter
+either average. Tooltips show each date range and denominator. Missing, failed
+or incomplete days produce an unavailable average rather than an assumed zero.
+These recent metrics remain anchored to the current day when browsing historical
+years. Their reads share the annual monthly requests and include the preceding
+December when needed at New Year; incomplete older history does not suppress
+an otherwise complete recent average.

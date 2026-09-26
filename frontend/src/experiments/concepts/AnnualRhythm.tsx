@@ -10,7 +10,7 @@ import {
 } from "react";
 import { fetchRange, type DayMode, type RangeDay, type RangeResponse } from "../../api";
 import { ViewportTooltip, type ViewportTooltipAnchor } from "../../components/ViewportTooltip";
-import { fmtDuration, shiftDate } from "../../lib/format";
+import { fmtDuration, shiftDate, startOfISOWeek } from "../../lib/format";
 import "./annual-rhythm.css";
 
 export type AnnualRhythmProps = {
@@ -69,6 +69,37 @@ function datesBetween(start: string, end: string): string[] {
   const dates: string[] = [];
   for (let date = start; date <= end; date = shiftDate(date, 1)) dates.push(date);
   return dates;
+}
+
+export function activityAverage(cells: Record<string, DayCell>, start: string, end: string): {
+  start: string; end: string; days: number; state: CellState; seconds: number | null;
+} {
+  const days = datesBetween(start, end).map((date) => cells[date]);
+  const complete = days.length > 0 && days.every((cell) => cell
+    && (cell.state === "ready" || cell.state === "empty") && validSeconds(cell.seconds));
+  const state = complete ? "ready" : days.some((cell) => cell?.state === "error") ? "error"
+    : days.some((cell) => !cell || cell.state === "loading") ? "loading" : "partial";
+  return {
+    start, end, days: days.length, state,
+    seconds: complete ? days.reduce((sum, cell) => sum + cell.seconds!, 0) / days.length : null,
+  };
+}
+
+export function annualWindows(dates: string[], requestEnd: string, currentDate: string): MonthWindow[] {
+  // Recent metrics always describe the current week, even in a historical year.
+  // Include the preceding December at New Year without duplicating annual reads.
+  const requested = [...new Set([
+    ...dates.filter((date) => date <= requestEnd),
+    ...datesBetween(shiftDate(currentDate, -6), currentDate),
+  ])].sort();
+  const groups = new Map<string, string[]>();
+  for (const date of requested) {
+    const month = date.slice(0, 7);
+    const group = groups.get(month);
+    if (group) group.push(date);
+    else groups.set(month, [date]);
+  }
+  return [...groups.values()].map((monthDates) => ({ start: monthDates[0], end: monthDates[monthDates.length - 1], dates: monthDates }));
 }
 
 function heatLevel(seconds: number | null): number {
@@ -140,18 +171,8 @@ export function AnnualRhythm({ currentDate, selectedDate, dayMode, visible, onSe
   const firstDate = dates[0];
   const lastDate = dates[dates.length - 1];
   const requestEnd = lastDate < currentDate ? lastDate : currentDate;
-  const requestKey = `${dayMode}:${rangeMode}:${firstDate}:${requestEnd}`;
-  const windows = useMemo<MonthWindow[]>(() => {
-    const groups = new Map<string, string[]>();
-    for (const date of dates) {
-      if (date > requestEnd) continue;
-      const month = date.slice(0, 7);
-      const group = groups.get(month);
-      if (group) group.push(date);
-      else groups.set(month, [date]);
-    }
-    return [...groups.values()].map((monthDates) => ({ start: monthDates[0], end: monthDates[monthDates.length - 1], dates: monthDates }));
-  }, [dates, requestEnd]);
+  const requestKey = `${dayMode}:${rangeMode}:${firstDate}:${requestEnd}:${currentDate}`;
+  const windows = useMemo(() => annualWindows(dates, requestEnd, currentDate), [dates, requestEnd, currentDate]);
 
   useEffect(() => {
     if (!visible) return;
@@ -227,6 +248,11 @@ export function AnnualRhythm({ currentDate, selectedDate, dayMode, visible, onSe
   const totalSeconds = complete ? arrived.reduce((sum, cell) => sum + cell.seconds!, 0) : null;
   const activeDays = complete ? counts.ready : null;
   const averageSeconds = totalSeconds === null ? null : totalSeconds / arrived.length;
+  const recentAverages = [
+    { id: "recent-average", label: "最近七天平均", ...activityAverage(current?.cells ?? {}, shiftDate(currentDate, -6), currentDate) },
+    { id: "week-average", label: "当周平均", ...activityAverage(current?.cells ?? {}, startOfISOWeek(currentDate), currentDate) },
+  ];
+  const recentIncomplete = recentAverages.some((average) => average.state !== "ready");
   const status = loading ? "loading" : counts.error > 0 ? "error" : complete ? "ready" : "partial";
   const mondayOffset = (new Date(`${firstDate}T12:00:00Z`).getUTCDay() + 6) % 7;
   const weekCount = Math.ceil((mondayOffset + dates.length) / 7);
@@ -289,6 +315,9 @@ export function AnnualRhythm({ currentDate, selectedDate, dayMode, visible, onSe
           <span className="kw-annual-stat kw-metric-pill"><strong data-stat="total" data-seconds={totalSeconds ?? undefined}>{totalSeconds === null ? "—" : `${(totalSeconds / 3600).toLocaleString("zh-CN", { maximumFractionDigits: 1 })}小时`}</strong><small>Mac 非娱乐</small></span>
           <span className="kw-annual-stat kw-metric-pill"><strong data-stat="active-days" data-count={activeDays ?? undefined}>{activeDays === null ? "—" : `${activeDays}天`}</strong><small>有活动日</small></span>
           <span className="kw-annual-stat kw-metric-pill"><strong className="kw-annual-average" data-stat="average" data-seconds={averageSeconds ?? undefined}>{averageSeconds === null ? "—" : fmtDuration(averageSeconds)}</strong><small>每日平均</small></span>
+          {recentAverages.map((average) => <span key={average.id} className="kw-annual-stat kw-metric-pill" title={`${longDate(average.start)} — ${longDate(average.end)}，按 ${average.days} 天平均，含当天和零活动日；当天仍在累计${average.state === "ready" ? "" : `；${STATE_LABELS[average.state]}`}`}>
+            <strong className="kw-annual-average" data-stat={average.id} data-state={average.state} data-seconds={average.seconds ?? undefined}>{average.seconds === null ? "—" : fmtDuration(average.seconds)}</strong><small>{average.label}</small>
+          </span>)}
         </div>
         <div className="kw-annual-controls">
           <div className="kw-annual-range-switch kw-segmented-control" role="group" aria-label="年度统计范围">
@@ -327,11 +356,12 @@ export function AnnualRhythm({ currentDate, selectedDate, dayMode, visible, onSe
           </div>
         </div>
       </div>
-      {!loading && !complete && <footer className="kw-annual-footer">
+      {!loading && (!complete || recentIncomplete) && <footer className="kw-annual-footer">
         <div className="kw-annual-coverage" role="status">
           {counts.missing > 0 && <span className="kw-annual-state-key"><i data-state="missing" />缺失 {counts.missing} 天</span>}
           {counts.partial > 0 && <span className="kw-annual-state-key"><i data-state="partial" />不完整 {counts.partial} 天</span>}
           {counts.error > 0 && <span className="kw-annual-state-key"><i data-state="error" />读取失败 {counts.error} 天</span>}
+          {recentIncomplete && <span>近期平均数据不完整</span>}
           <button type="button" className="kw-annual-retry" onClick={() => setRetry((value) => value + 1)}>重新读取</button>
         </div>
       </footer>}
