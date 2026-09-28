@@ -9,7 +9,7 @@ import { build } from "esbuild";
 const directory = await mkdtemp(join(tmpdir(), "kinawatch-annual-"));
 after(() => rm(directory, { recursive: true, force: true }));
 await build({ entryPoints: [fileURLToPath(new URL("../src/experiments/concepts/AnnualRhythm.tsx", import.meta.url))], outfile: join(directory, "annual.mjs"), bundle: true, platform: "node", format: "esm", loader: { ".css": "empty" } });
-const { readWindow, activityAverage, annualWindows } = await import(pathToFileURL(join(directory, "annual.mjs")).href);
+const { readWindow, activityAverage, annualWindows, previousWeekRange } = await import(pathToFileURL(join(directory, "annual.mjs")).href);
 const date = "2026-09-12";
 const window = { start: date, end: date, dates: [date] };
 const row = value => ({ date, overview: { combined_nonoverlap_seconds: 99999, active_seconds: 80000, mac_non_entertainment_seconds: value }, quality: { complete: true, issues: [] } });
@@ -72,10 +72,30 @@ test("averages do not treat missing or incomplete days as zero or block on unrel
 
 test("calendar-year reads include recent cross-year days once and omit future dates", () => {
   const windows = annualWindows(["2026-01-01", "2026-01-02", "2026-01-03"], "2026-01-02", "2026-01-02");
-  assert.deepEqual(windows.map(({start, end}) => [start, end]), [["2025-12-27", "2025-12-31"], ["2026-01-01", "2026-01-02"]]);
+  assert.deepEqual(windows.map(({start, end}) => [start, end]), [["2025-12-22", "2025-12-31"], ["2026-01-01", "2026-01-02"]]);
   const dates = windows.flatMap(window => window.dates);
-  assert.equal(dates.length, 7);
-  assert.equal(new Set(dates).size, 7);
+  assert.equal(dates.length, 12);
+  assert.equal(new Set(dates).size, 12);
   const historical = annualWindows(["2024-01-01"], "2024-12-31", "2026-01-02");
-  assert.equal(historical.flatMap(window => window.dates).length, 8);
+  assert.equal(historical.flatMap(window => window.dates).length, 13);
+});
+
+test("previous week is a complete Monday-Sunday range across week, year and leap-day boundaries", () => {
+  for (const [today, start, end] of [
+    ["2026-09-28", "2026-09-21", "2026-09-27"],
+    ["2026-09-27", "2026-09-14", "2026-09-20"],
+    ["2026-01-02", "2025-12-22", "2025-12-28"],
+    ["2026-01-05", "2025-12-29", "2026-01-04"],
+    ["2024-03-04", "2024-02-26", "2024-03-03"],
+  ]) assert.deepEqual(previousWeekRange(today), { start, end });
+});
+
+test("previous-week average includes zero days and excludes the current week", () => {
+  const dates = ["2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27", "2026-09-28"];
+  const cells = cellsFor(dates, [0, 3600, 7200, 10800, 14400, 18000, 21600, 86400]);
+  const { start, end } = previousWeekRange("2026-09-28");
+  assert.equal(activityAverage(cells, start, end).seconds, 10800);
+  assert.equal(activityAverage(cells, start, end).days, 7);
+  cells["2026-09-22"].state = "missing";
+  assert.equal(activityAverage(cells, start, end).seconds, null);
 });
