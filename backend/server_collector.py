@@ -24,6 +24,125 @@ def number(value):
         return None
 
 
+def cgroup_v2_paths():
+    """Resolve our unified cgroup against the visible mount (including namespaces)."""
+    try:
+        membership = next(line[3:] for line in read_text("/proc/self/cgroup").splitlines()
+                          if line.startswith("0::"))
+        for line in read_text("/proc/self/mountinfo").splitlines():
+            left, _, right = line.partition(" - ")
+            if right.split()[0] != "cgroup2":
+                continue
+            fields = left.split()
+            decode = lambda text: re.sub(r"\\([0-7]{3})", lambda m: chr(int(m[1], 8)), text)
+            root, mount = decode(fields[3]), decode(fields[4])
+            relative = os.path.relpath(membership, root)
+            if relative == ".." or relative.startswith("../"):
+                continue
+            path = os.path.normpath(os.path.join(mount, relative))
+            paths = [path]
+            while path != mount:
+                path = os.path.dirname(path)
+                paths.append(path)
+            return paths
+    except (OSError, StopIteration, IndexError, ValueError):
+        pass
+    return []
+
+
+def cgroup_value(path, name):
+    try:
+        return read_text(os.path.join(path, name), 4096).strip()
+    except OSError:
+        return None
+
+
+def finite_limit(value):
+    if value is None or value == "max":
+        return None
+    try:
+        result = int(value)
+        return result if result >= 0 else None
+    except ValueError:
+        return None
+
+
+def cpu_set_size(value):
+    if not value:
+        return None
+    try:
+        total = 0
+        for item in value.split(","):
+            bounds = [int(part) for part in item.split("-")]
+            if len(bounds) not in (1, 2) or min(bounds) < 0 or bounds[-1] < bounds[0]:
+                return None
+            total += bounds[-1] - bounds[0] + 1
+        return total or None
+    except ValueError:
+        return None
+
+
+class SystemResources:
+    """Use bounded cgroup v2 counters instead of host /proc in containers."""
+    def __init__(self):
+        self.paths = cgroup_v2_paths()
+        self.cpu_previous = None
+
+    def sample(self, memory, host_cpu, now):
+        host_cores = os.cpu_count()
+        cores, cpu_path = host_cores, None
+        # Choose the tightest visible quota, retaining its accounting scope.
+        for path in self.paths:
+            quota = cgroup_value(path, "cpu.max")
+            if quota:
+                parts = quota.split()
+                if len(parts) == 2:
+                    amount, period = finite_limit(parts[0]), finite_limit(parts[1])
+                    if amount and period and (cores is None or amount / period <= cores):
+                        cores, cpu_path = amount / period, path
+        if self.paths:
+            cpus = cpu_set_size(cgroup_value(self.paths[0], "cpuset.cpus.effective"))
+            if cpus and (cores is None or cpus < cores):
+                cores = cpus
+                cpu_path = self.paths[0]
+        cpu, cpu_scope = host_cpu, "host"
+        if cpu_path:
+            cpu_scope, cpu = "cgroup", None
+            try:
+                stats = dict(line.split() for line in (cgroup_value(cpu_path, "cpu.stat") or "").splitlines())
+                usage = finite_limit(stats.get("usage_usec"))
+            except ValueError:
+                usage = None
+            previous = self.cpu_previous
+            identity = (cpu_path, cores)
+            if usage is not None:
+                if previous and previous[0] == identity and now > previous[2] and usage >= previous[1]:
+                    cpu = min(100.0, (usage - previous[1]) / 1e6 / (now - previous[2]) / cores * 100)
+                self.cpu_previous = identity, usage, now
+            else:
+                self.cpu_previous = None
+        else:
+            self.cpu_previous = None
+
+        total = memory["MemTotal"]
+        available = memory.get("MemAvailable", memory["MemFree"])
+        ram = dict(total=total, used=total - available, available=available)
+        swap = dict(total=memory["SwapTotal"], used=memory["SwapTotal"] - memory["SwapFree"])
+        memory_scope, memory_path = "host", None
+        for path in self.paths:
+            limit = finite_limit(cgroup_value(path, "memory.max"))
+            if limit is not None and limit > 0 and limit <= total:
+                total, memory_path = limit, path
+        if memory_path:
+            memory_scope = "cgroup"
+            used = finite_limit(cgroup_value(memory_path, "memory.current"))
+            ram = dict(total=total, used=used, available=max(0, total - used) if used is not None else None)
+            swap = dict(total=finite_limit(cgroup_value(memory_path, "memory.swap.max")),
+                        used=finite_limit(cgroup_value(memory_path, "memory.swap.current")))
+        return dict(cpu=cpu, cores=cores, memory=ram, swap=swap,
+                    cpu_scope=cpu_scope, memory_scope=memory_scope)
+
+
 def task_label(argv):
     """Labels come from this process's argv, never inferred from a parent run."""
     options = {}
@@ -64,6 +183,7 @@ class Collector:
         self.hz = os.sysconf("SC_CLK_TCK")
         self.page_size = os.sysconf("SC_PAGE_SIZE")
         self.cpu_previous = self.cpu_ticks()
+        self.system_resources = SystemResources()
         self.process_cache = {}
         self.owner_cache = {}
         self.gpu_apps = []
@@ -156,6 +276,7 @@ class Collector:
         for line in read_text("/proc/meminfo").splitlines():
             key, value = line.split(":", 1)
             memory[key] = int(value.split()[0]) * 1024
+        system = self.system_resources.sample(memory, cpu, started)
         uptime = float(read_text("/proc/uptime").split()[0])
         gpus = []
         try:
@@ -177,7 +298,7 @@ class Collector:
         if started - self.disks_at >= 15:
             self.disks = []
             devices = set()
-            for path in ("/", "/home"):
+            for path in ("/", "/home", "/root/autodl-tmp", "/root/autodl-fs"):
                 try:
                     device = os.stat(path).st_dev
                     if device in devices:
@@ -195,11 +316,8 @@ class Collector:
         processes = self.processes(time.monotonic(), uptime)
         usage = resource.getrusage(resource.RUSAGE_SELF)
         children = resource.getrusage(resource.RUSAGE_CHILDREN)
-        return dict(hostname=socket.gethostname().split(".")[0], time=time.time(), cpu=cpu,
-                    cores=os.cpu_count(), load=read_text("/proc/loadavg").split()[:3], uptime=uptime,
-                    memory=dict(total=memory["MemTotal"], used=memory["MemTotal"] - memory.get("MemAvailable", memory["MemFree"]),
-                                available=memory.get("MemAvailable", memory["MemFree"])),
-                    swap=dict(total=memory["SwapTotal"], used=memory["SwapTotal"] - memory["SwapFree"]),
+        return dict(hostname=socket.gethostname().split(".")[0], time=time.time(), **system,
+                    load=read_text("/proc/loadavg").split()[:3], uptime=uptime,
                     disks=self.disks, gpus=gpus, processes=processes, errors=errors,
                     collector=dict(pid=os.getpid(), cost_ms=(time.monotonic() - started) * 1000,
                                    peak_rss_kib=usage.ru_maxrss,

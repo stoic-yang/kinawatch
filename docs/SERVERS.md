@@ -13,6 +13,19 @@ meters are always visible alongside the other resources. Capacity percentages
 use the displayed used / total amounts. Temperature and power
 remain secondary readings under GPU utilization.
 
+For cgroup v2 instances, CPU capacity uses the tightest visible `cpu.max`
+quota and effective cpuset, rather than the host CPU count. CPU utilization is
+the `cpu.stat` usage delta divided by elapsed time and that capacity; the first
+sample is unavailable. Bounded memory uses `memory.max` and `memory.current`
+(including cache), and swap uses that same cgroup's swap counters. The page labels
+container resources, shows CPU/RAM once per SSH host, and lists every GPU below
+them. Host load averages are omitted for container CPU because they describe
+the physical host. Unbounded ordinary hosts retain their existing `/proc` metrics;
+unavailable scoped counters remain unknown. Visible ancestor limits are respected;
+limits hidden above a cgroup namespace cannot be discovered by this collector.
+Optional `/root/autodl-tmp` and `/root/autodl-fs` mounts are sampled alongside
+`/` and `/home`, with repeated devices omitted.
+
 Enable it in the private local KinaWatch configuration, then restart the service:
 
 ```json
@@ -30,8 +43,20 @@ verified known-host keys. Empty `jump_host` explicitly selects direct access,
 overriding inherited ProxyJump / ProxyCommand. A single optional jump alias may
 be configured. No UU integration is required. Credentials remain with OpenSSH;
 the public example defaults to disabled with no hosts. Supports 1–8 aliases,
-a macOS/Linux client with OpenSSH, and Linux `/proc`, `/usr/bin/python3` and optional `nvidia-smi` on the remote host.
+a macOS/Linux client with OpenSSH, and Linux `/proc`, a standard-library Python
+interpreter (default `/usr/bin/python3`) and optional `nvidia-smi` on the remote host.
 Other operating systems are not supported by this collector.
+
+For rented instances, configure a private OpenSSH alias with its hostname, port,
+user and dedicated `IdentityFile`, then add that alias once to `hosts`. Verify
+`BatchMode=yes` authentication with `ControlPath=none` before restarting; an
+expiring authenticated master is not sufficient for ongoing monitoring. Keep
+private keys, real addresses and host configuration outside the public repository.
+If the image lacks `/usr/bin/python3`, set `server_monitor.python_paths` to a
+mapping such as `{"compute-rental": "/opt/conda/bin/python"}`. Only configured
+aliases and absolute paths containing letters, digits, `_`, `.`, `/` and `-`
+are accepted. This is local configuration; HTTP clients cannot select an
+interpreter, command or host. Existing hosts keep the default interpreter.
 
 ## Collection and lifecycle
 

@@ -89,6 +89,21 @@ class ServerMonitorTests(unittest.TestCase):
         command = ssh_command("compute-a", "gateway")
         self.assertEqual(command[command.index("-J") + 1], "gateway")
 
+    def test_private_per_host_python_path_is_validated_and_used_by_worker(self):
+        raw = {"enabled": True, "hosts": ["a", "b"], "python_paths": {"b": "/opt/conda/bin/python"}}
+        configuration(raw)
+        with patch("backend.server_monitor.HostWorker.start"):
+            monitor = ServerMonitor(raw)
+            monitor.read()
+            self.assertEqual(monitor.workers["a"].python_path, "/usr/bin/python3")
+            self.assertEqual(monitor.workers["b"].python_path, "/opt/conda/bin/python")
+        command = ssh_command("b", "", "/opt/conda/bin/python")
+        self.assertEqual(command[-4:], ["b", "/opt/conda/bin/python", "-u", "-"])
+        for paths in ([], {"other": "/usr/bin/python3"}, {"a": "python3"}, {"a": "/tmp/a b"},
+                      {"a": "/tmp/python;touch"}, {"a": "/tmp/$(command)"}, {"a": None}):
+            with self.subTest(paths=paths), self.assertRaises(ValueError):
+                configuration({**raw, "python_paths": paths})
+
     def test_normalization_retains_all_gpus_nulls_units_and_plain_text(self):
         raw = copy.deepcopy(SAMPLE)
         raw["hostname"] = "\x1b[31mhost\x00"
@@ -106,6 +121,17 @@ class ServerMonitorTests(unittest.TestCase):
                            ("processes", [{}] * 4097), ("swap", {"total": -1}), ("errors", "error")]:
             raw = copy.deepcopy(SAMPLE); raw[key] = value
             with self.subTest(key=key), self.assertRaises(ValueError):
+                normalize_snapshot(raw)
+
+    def test_container_scope_survives_normalization_and_old_samples_stay_compatible(self):
+        raw = copy.deepcopy(SAMPLE)
+        raw.update(cpu_scope="cgroup", memory_scope="cgroup", cores=1.5)
+        self.assertEqual(normalize_snapshot(raw)["cpu_scope"], "cgroup")
+        self.assertEqual(normalize_snapshot(raw)["cores"], 1.5)
+        self.assertEqual(normalize_snapshot(SAMPLE)["memory_scope"], "host")
+        for scope in ("unknown", {}, None):
+            raw["cpu_scope"] = scope
+            with self.assertRaises(ValueError):
                 normalize_snapshot(raw)
 
     def test_disabled_and_unviewed_monitors_never_start_ssh(self):

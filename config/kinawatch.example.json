@@ -18,7 +18,8 @@
   "server_monitor": {
     "enabled": false,
     "hosts": [],
-    "jump_host": ""
+    "jump_host": "",
+    "python_paths": {}
   },
   "mcp_services": {
     "enabled": false,

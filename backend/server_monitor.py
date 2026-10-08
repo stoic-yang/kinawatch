@@ -18,6 +18,7 @@ STARTUP_SECONDS = 45
 STREAM_TIMEOUT_SECONDS = 20
 MAX_RECORD_BYTES = 4 * 1024 * 1024
 ALIAS = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z")
+PYTHON_PATH = re.compile(r"/[A-Za-z0-9_./-]{1,255}\Z")
 
 
 def clean(value: object, limit: int = 240) -> str:
@@ -40,10 +41,19 @@ def configuration(raw: object) -> tuple[bool, list[str], str]:
         raise ValueError("请配置 1–8 个不重复的 SSH 主机别名")
     if not isinstance(jump, str) or (jump and not ALIAS.fullmatch(jump)):
         raise ValueError("跳板必须是一个 SSH 别名，直连时留空")
+    python_paths(raw, hosts)
     return True, hosts, jump
 
 
-def ssh_command(alias: str, jump: str) -> list[str]:
+def python_paths(raw: dict, hosts: list[str]) -> dict[str, str]:
+    paths = raw.get("python_paths", {})
+    if (not isinstance(paths, dict) or any(alias not in hosts or not isinstance(path, str)
+            or not PYTHON_PATH.fullmatch(path) for alias, path in paths.items())):
+        raise ValueError("python_paths 必须使用已配置的主机别名和无空格的绝对 Python 路径")
+    return paths
+
+
+def ssh_command(alias: str, jump: str, python_path: str = "/usr/bin/python3") -> list[str]:
     # Only locally configured aliases enter argv. Never accept commands from HTTP.
     command = ["ssh", "-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
                "-o", "ConnectTimeout=30", "-o", "ServerAliveInterval=10",
@@ -54,7 +64,7 @@ def ssh_command(alias: str, jump: str) -> list[str]:
         command.extend(["-J", jump])
     else:
         command.extend(["-o", "ProxyJump=none", "-o", "ProxyCommand=none"])
-    return command + [alias, "/usr/bin/python3", "-u", "-"]
+    return command + [alias, python_path, "-u", "-"]
 
 
 def normalize_snapshot(value: object) -> dict:
@@ -88,6 +98,11 @@ def normalize_snapshot(value: object) -> dict:
     result.update(hostname=clean(value["hostname"], 128),
                   memory=fields(value.get("memory"), "total used available"),
                   swap=fields(value.get("swap"), "total used"))
+    for key in ("cpu_scope", "memory_scope"):
+        scope = value.get(key, "host")
+        if scope not in ("host", "cgroup"):
+            raise ValueError("监控资源口径无效")
+        result[key] = scope
     load, errors = value.get("load", []), value.get("errors", [])
     if not isinstance(load, list) or len(load) > 3 or not isinstance(errors, list) or len(errors) > 16:
         raise ValueError("监控数据格式无效")
@@ -108,9 +123,11 @@ def normalize_snapshot(value: object) -> dict:
 
 
 class HostWorker(threading.Thread):
-    def __init__(self, alias: str, jump: str, source: bytes, previous: dict | None = None):
+    def __init__(self, alias: str, jump: str, source: bytes, previous: dict | None = None,
+                 python_path: str = "/usr/bin/python3"):
         super().__init__(daemon=True, name="server-monitor-" + alias)
         self.alias, self.jump, self.source = alias, jump, source
+        self.python_path = python_path
         self.lock = threading.Lock()
         self.stop_event = threading.Event()
         self.last_viewed = time.monotonic()
@@ -154,7 +171,7 @@ class HostWorker(threading.Thread):
         try:
             with self.lock:
                 self.state.update(connected=False, samples=0)
-            process = subprocess.Popen(ssh_command(self.alias, self.jump), stdin=subprocess.PIPE,
+            process = subprocess.Popen(ssh_command(self.alias, self.jump, self.python_path), stdin=subprocess.PIPE,
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
             with selectors.DefaultSelector() as selector:
                 for stream, event, label in ((process.stdin, selectors.EVENT_WRITE, "stdin"),
@@ -220,6 +237,7 @@ class HostWorker(threading.Thread):
 class ServerMonitor:
     def __init__(self, raw: object):
         self.enabled, self.hosts, self.jump = configuration(raw)
+        self.python_paths = dict(python_paths(raw, self.hosts)) if self.enabled else {}
         self.lock = threading.Lock()
         self.workers: dict[str, HostWorker] = {}
         self.closed = False
@@ -231,7 +249,8 @@ class ServerMonitor:
                 for alias in self.hosts:
                     worker = self.workers.get(alias)
                     if worker is None or not worker.is_alive():
-                        worker = HostWorker(alias, self.jump, source, worker.state if worker else None)
+                        worker = HostWorker(alias, self.jump, source, worker.state if worker else None,
+                                            self.python_paths.get(alias, "/usr/bin/python3"))
                         self.workers[alias] = worker
                         worker.start()
                     worker.touch()

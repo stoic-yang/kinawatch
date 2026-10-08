@@ -4,6 +4,7 @@ export interface ServerProcess {
   cpu: Metric; rss: Metric; gpu_mib: Metric; age: Metric; start: Metric;
 }
 export interface ServerData {
+  cpu_scope?: "host" | "cgroup"; memory_scope?: "host" | "cgroup";
   hostname: string; time: number; cpu: Metric; cores: Metric; uptime: Metric; load: string[]; errors: string[];
   memory: { total: Metric; used: Metric; available: Metric }; swap: { total: Metric; used: Metric };
   disks: { path: string; total: Metric; used: Metric; free: Metric; percent: Metric }[];

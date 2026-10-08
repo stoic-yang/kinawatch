@@ -24,8 +24,8 @@ function HostCard({ host, elapsed, failed }: { host: ServerHost; elapsed: number
       <span className="server-status" data-status={status}><i/>{STATUS[status]}</span></header>
     {data ? <>
       <div className="server-resources">
-        <Meter label="CPU" value={data.cpu} detail={`${metric(data.cores, 0)} 核 · Load ${data.load.join(" / ")}`}/>
-        <Meter label="内存" value={percent(data.memory.used, data.memory.total)} detail={`${bytes(data.memory.used)} / ${bytes(data.memory.total)}`}/>
+        <Meter label={data.cpu_scope === "cgroup" ? "CPU · 容器" : "CPU"} value={data.cpu} detail={data.cpu_scope === "cgroup" ? `${metric(data.cores, Number.isInteger(data.cores) ? 0 : 2)} 核配额 · GPU 共享` : `${metric(data.cores, 0)} 核 · Load ${data.load.join(" / ")}`}/>
+        <Meter label={data.memory_scope === "cgroup" ? "内存 · 容器" : "内存"} value={percent(data.memory.used, data.memory.total)} detail={`${bytes(data.memory.used)} / ${bytes(data.memory.total)}${data.memory_scope === "cgroup" ? " · 含缓存" : ""}`}/>
       </div>
       <div className="server-gpus">{data.gpus.map(gpu => <section className="server-resource-section" key={gpu.index} aria-label={`GPU ${gpu.index}`}>
         <div className="server-gpu-title"><strong>GPU {gpu.index}</strong><span>{gpu.name}</span></div>
@@ -40,7 +40,7 @@ function HostCard({ host, elapsed, failed }: { host: ServerHost; elapsed: number
           <Meter label="Swap" value={percent(data.swap.used, data.swap.total)} detail={data.swap.total === 0 ? "未启用" : `${bytes(data.swap.used)} / ${bytes(data.swap.total)}`}/>
         </div>
       </section>
-      <p className="server-uptime">已运行 {duration(data.uptime)}</p>
+      <p className="server-uptime">{data.cpu_scope === "cgroup" || data.memory_scope === "cgroup" ? "宿主机已运行" : "已运行"} {duration(data.uptime)}</p>
     </> : <div className="server-waiting"><Server size={25}/><p>{status === "connecting" ? "正在建立 SSH 连接…" : "暂时无法连接服务器"}</p></div>}
     {(host.error || data?.errors.length) ? <div className="server-errors" role="status">{host.error && <p>{host.error}</p>}{data?.errors.map((error, i) => <p key={i}>{error}</p>)}</div> : null}
     <footer>{age === null ? "尚未收到样本" : `${status === "online" ? "更新于" : "上次数据"} ${age < 60 ? `${age}秒前` : duration(age) + "前"}`}
